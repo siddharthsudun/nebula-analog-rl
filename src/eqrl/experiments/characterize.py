@@ -17,9 +17,8 @@ import json
 from pathlib import Path
 
 from eqrl.circuits.ctle import DesignVars, netlist
-from eqrl.envs.equalizer_env import _margins
 from eqrl.envs.pvt import corner_grid, evaluate_corners
-from eqrl.specs import DEFAULT_SPEC, Spec
+from eqrl.specs import DEFAULT_SPEC, Spec, hard_pass
 
 
 def load_design(path: str, key: str | None) -> DesignVars:
@@ -38,8 +37,7 @@ def characterize(dv: DesignVars, spec: Spec = DEFAULT_SPEC) -> dict:
     results = evaluate_corners(dv, spec, mode="full", fast=False)
     rows, all_pass = [], True
     for (proc, vdd, temp), m in results.items():
-        mg = _margins(m, spec) if m.ok else {}
-        passed = m.ok and all(v >= 0 for v in mg.values())
+        passed, _ = hard_pass(m, spec)
         all_pass &= passed
         rows.append({
             "corner": proc, "vdd": round(vdd, 3), "temp_c": temp,

@@ -59,9 +59,11 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         self.target_range = target_range
         self.pvt = pvt
         # voltage x temperature stress points on the current process corner (no reload;
-        # V and T are alterparam'd). Nominal + hot-low-V + cold-high-V bracket the drift.
+        # V and T are alterparam'd). Nominal + hot/low-V is the binding pair for this
+        # topology (boost & peak-freq drift down hot); cold/high-V is verified in final
+        # characterization. Two corners keeps per-step cost ~2x instead of 3x.
         vlo, vnom, vhi = spec.vdd_corners()
-        self._vt = [(vnom, 27.0), (vlo, 125.0), (vhi, 0.0)]
+        self._vt = [(vnom, 27.0), (vlo, 125.0)]
         self.action_space = spaces.Box(-1.0, 1.0, shape=(N_PARAM,), dtype=np.float32)
         # obs = params(7) + norm measures(4) + target(1) + boost_gap(1) + fpk_gap(1)
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(N_PARAM + 7,),

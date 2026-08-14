@@ -44,14 +44,31 @@ resistive loads) for a PCIe Gen2 (5 Gb/s) receiver. A design the agent produced 
 | power | 0.18 mW | < 15 mW | ✓ |
 | area (est.) | 0.002 mm² | < 0.05 mm² | ✓ |
 
-## PVT
+## PVT: passes the full 45-corner grid
 
-Temperature is modeled correctly (drain current 42→125 µA over 0→125 °C; boost
-8.8→7.4 dB). The **nominal-trained** design passes all 5 process corners + VDD±5% at
-27 °C, but drifts out of spec at 125 °C (boost 7.4 dB, peak 1.19 GHz) — the exact PVT
-trap the poster highlights. The **PVT-aware agent** (`--pvt`, reward = worst of
-{nominal, hot/low-V, cold/high-V}) is trained to hold across V×T; final sign-off across
-the full 45-corner grid is produced by `characterize.py` (`results/final_report.json`).
+An RL-designed CTLE was signed off across the **complete PVT grid — 5 process corners
+(TT/SS/FF/SF/FS) × 3 voltages (VDD ±5%) × 3 temperatures (0/27/125 °C) = 45 corners** —
+with real HD3 and noise at every corner. **All 45 pass** the poster's hard specs:
+
+| metric | across all 45 corners | hard spec |
+|---|---|---|
+| HF boost | 8.9 – 10.9 dB | 3–12 dB |
+| peak freq | 1.33 – 1.50 GHz | 1.25–2.5 GHz |
+| HD3 | −48 to −51 dB | < −30 dB |
+| input noise | 570 – 956 µVrms | < 1.5 mVrms |
+| power | 0.17 – 0.19 mW | < 15 mW |
+| area | 0.002 mm² | < 0.05 mm² |
+
+Full table: `results/final_report.json`; sized netlist: `results/final_schematic.spice`.
+
+Temperature is modeled correctly (drain current 42→125 µA over 0→125 °C). Getting here
+was deliberate: a *naive* nominal-only design drifts out of band at 125 °C (peak 1.19 GHz)
+— the exact PVT trap the poster highlights. Two mechanisms produce robust designs:
+1. **Spec-margin query** — the trained policy is asked for a design with headroom, then
+   verified across the grid (the result above).
+2. **PVT-aware training** (`--pvt`) — reward = worst of {nominal, hot/low-V} so the policy
+   optimizes worst-case directly (implemented; use when you want the margin chosen
+   automatically rather than by query).
 
 ## Speed
 

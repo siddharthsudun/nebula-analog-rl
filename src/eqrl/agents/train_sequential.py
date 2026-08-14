@@ -30,7 +30,7 @@ def main() -> None:
                 n_steps=1024, batch_size=128, gamma=0.95, gae_lambda=0.95,
                 ent_coef=0.005, learning_rate=3e-4)
     # checkpoint so a converged model is on disk even if we stop early
-    ckpt = CheckpointCallback(save_freq=4096, save_path="results/checkpoints",
+    ckpt = CheckpointCallback(save_freq=2048, save_path="results/checkpoints",
                               name_prefix="seq")
     model.learn(total_timesteps=args.timesteps, progress_bar=False, callback=ckpt)
     model.save(args.out)
