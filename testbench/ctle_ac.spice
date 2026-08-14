@@ -1,27 +1,41 @@
 * Hand-written CTLE AC testbench (Phase 0 sanity check)
-* Behavioral source-degenerated diff pair. Run: ngspice -b testbench/ctle_ac.spice
-* You should see a peaking response whose zero moves with Rs*Cs.
+* Behavioral source-degenerated diff pair with REAL source nodes.
+* Run: ngspice -b testbench/ctle_ac.spice
+* Physics: DC gain = gm*Rl/(1+gm*Rs/2); zero at 1/(Rs*Cs); HF boost = 1+gm*Rs/2.
+* You should see a peaking response whose zero/boost move with Rs, Cs.
 .temp 27
-.param vdd=1.8 gm=13m rs=1k cs=200f rl=1k
+.param vdd=1.8 gm=13m rs=1k cs=200f rl=1k rtail=50k cl=30f
 
 Vdd vdd 0 {vdd}
-Vin inp inn AC 1
 
-Gp outp 0 inp inn {gm}
-Gn outn 0 inn inp {gm}
+* differential AC drive, both nodes ground-referenced (gives DC path + AC=1 diff)
+Vinp inp 0 AC 0.5
+Vinn inn 0 AC -0.5
+
+* transconductors with real source nodes: i(drain->source) = gm*(vgate - vsource)
+G1 outp sp inp sp {gm}
+G2 outn sn inn sn {gm}
+
+* tail paths to ground (DC operating point for the source nodes)
+Rtp sp 0 {rtail}
+Rtn sn 0 {rtail}
+
+* source degeneration network between the two sources
 Rs sp sn {rs}
 Cs sp sn {cs}
+
+* resistive loads + load caps
 Rlp vdd outp {rl}
 Rln vdd outn {rl}
-Clp outp 0 30f
-Cln outn 0 30f
+Clp outp 0 {cl}
+Cln outn 0 {cl}
 
 .control
 ac dec 50 1e6 10e9
-meas ac dc_gain  FIND vdb(outp) AT=1e6
-meas ac peak_val MAX vdb(outp) FROM=1e8 TO=1e10
-print dc_gain peak_val
-* uncomment to plot interactively:
-* plot vdb(outp)
+let voutdb = db(v(outp) - v(outn))
+meas ac dc_gain  FIND voutdb AT=1e6
+meas ac peak_val MAX voutdb FROM=1e8 TO=1e10
+let boost = peak_val - dc_gain
+print dc_gain peak_val boost
 .endc
 .end

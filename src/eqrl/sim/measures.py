@@ -33,7 +33,7 @@ class Measures:
 
 def peaking(dv: DesignVars, **corner) -> tuple[float, float, float]:
     """Return (dc_gain_db, boost_db, peak_freq_ghz) from an AC run."""
-    r = ng.ac(netlist(dv, analysis="ac", **corner))
+    r = ng.ac(netlist(dv, analysis="none", **corner))
     mag = r["mag_db"]
     freq = r["freq"]
     dc = float(mag[0])

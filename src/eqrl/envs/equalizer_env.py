@@ -59,7 +59,7 @@ class EqualizerEnv(gym.Env):  # type: ignore[misc]
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 1,
                  corner: str = "tt", pvt: bool = False):
         super().__init__()
-        self.spec = spec
+        self.target = spec
         self.horizon = horizon
         self.corner = corner
         self.pvt = pvt
@@ -82,15 +82,15 @@ class EqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def _evaluate(self, dv):
         if not self.pvt:
-            return measure_all(dv, corner=self.corner, vdd=self.spec.vdd_nominal)
+            return measure_all(dv, corner=self.corner, vdd=self.target.vdd_nominal)
         # PVT: return the WORST corner (Phase 3). Simplified worst-by-reward selection.
         from eqrl.envs.pvt import worst_corner  # lazy import; added in Phase 3
-        return worst_corner(dv, self.spec)
+        return worst_corner(dv, self.target)
 
     def step(self, action):
         dv = decode_action(action)
         m = self._evaluate(dv)
-        reward, passed, info = compute_reward(m, self.spec)
+        reward, passed, info = compute_reward(m, self.target)
         info["design"] = dv.__dict__
         self._t += 1
         terminated = passed or self._t >= self.horizon

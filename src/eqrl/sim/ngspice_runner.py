@@ -50,9 +50,12 @@ def run(netlist: str, *, control: str, timeout: float = 60.0) -> dict[str, np.nd
         return {"data": data, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
-def ac(netlist: str, node: str = "outp", **kw) -> dict[str, np.ndarray]:
-    """Run an AC analysis, return frequency + magnitude(dB) arrays."""
-    control = f"ac dec 50 1e6 10e9\nwrdata $OUT frequency vdb({node})"
+def ac(netlist: str, **kw) -> dict[str, np.ndarray]:
+    """Run an AC analysis, return frequency + differential magnitude(dB) arrays."""
+    # wrdata auto-prepends the scale (frequency) column — do NOT list it explicitly.
+    control = ("ac dec 50 1e6 10e9\n"
+               "let voutdb = db(v(outp) - v(outn))\n"
+               "wrdata $OUT voutdb")
     res = run(netlist, control=control, **kw)
     arr = np.atleast_2d(res["data"])
     return {"freq": arr[:, 0], "mag_db": arr[:, 1]}
@@ -65,7 +68,7 @@ def _selftest() -> int:
     for cs in (50e-15, 200e-15, 800e-15):
         dv = DesignVars(cs=cs)
         try:
-            r = ac(make_netlist(dv, analysis="ac"))
+            r = ac(make_netlist(dv, analysis="none"))
         except NgspiceError as e:
             print(f"[FAIL] {e}")
             return 1

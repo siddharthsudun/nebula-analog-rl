@@ -55,7 +55,7 @@ def decode_action(a) -> DesignVars:
         x = float(a[i])
         x = (x + 1) / 2 if x < 0 else x          # accept [-1,1]
         x = min(max(x, 0.0), 1.0)
-        if hi / max(lo, 1e-18) > 50:             # log-scale wide ranges
+        if lo > 0 and hi / lo > 50:              # log-scale wide, strictly-positive ranges
             v = lo * (hi / lo) ** x
         else:
             v = lo + (hi - lo) * x
@@ -70,35 +70,36 @@ def netlist(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
     analysis: "ac" (peaking), "op" (power), "noise", "tran" (HD3/eye).
     NOTE: Phase 0 uses a behavioral gm; replace M1/M2 with SKY130 models in Phase 1.
     """
-    gm = dv.i_tail / 0.15            # rough gm estimate for behavioral phase
-    ana = {
-        "ac":    ".ac dec 50 1e6 10e9",
-        "op":    ".op",
-        "noise": ".noise v(outp,outn) vin dec 20 10e6 5e9",
-        "tran":  ".tran 1p 40n",
-    }[analysis]
+    # behavioral gm ~ 2*I/Vov with Vov ~ 0.15 V (Phase 0; replaced by SKY130 models later)
+    gm = dv.i_tail / 0.15
+    c_load = 30e-15
 
-    return f"""* CTLE testbench  corner={corner} vdd={vdd} temp={temp_c}C  analysis={analysis}
+    # differential input: transient uses a 100 MHz sine for HD3; AC uses AC=0.5/-0.5
+    src = (f"Vinp inp 0 AC 0.5 SIN(0 0.05 100e6)\n"
+           f"Vinn inn 0 AC -0.5 SIN(0 -0.05 100e6)")
+
+    core = f"""* CTLE testbench  corner={corner} vdd={vdd} temp={temp_c}C  analysis={analysis}
 .temp {temp_c}
 .param vdd={vdd}
 Vdd vdd 0 {{vdd}}
-Vcm cm 0 {vdd/2}
-
-* differential input source (AC + transient capable)
-Vin  inp inn AC 1 SIN(0 0.05 100e6)
-Rcm_p inp cm 1e9
-Rcm_n inn cm 1e9
-
-* --- behavioral diff pair with source degeneration (Phase 0) ---
-Gp outp 0 inp inn {gm}
-Gn outn 0 inn inp {gm}
-Rs  sp sn {dv.rs}
-Cs  sp sn {dv.cs}
+{src}
+* source-degenerated transconductors with real source nodes
+G1 outp sp inp sp {gm}
+G2 outn sn inn sn {gm}
+Rtp sp 0 50k
+Rtn sn 0 50k
+Rs sp sn {dv.rs}
+Cs sp sn {dv.cs}
 Rlp vdd outp {dv.r_load}
 Rln vdd outn {dv.r_load}
-Cl_p outp 0 30f
-Cl_n outn 0 30f
-
-{ana}
-.end
+Clp outp 0 {c_load}
+Cln outn 0 {c_load}
 """
+    tail = {
+        "none":  "",     # analysis supplied by a .control block in the runner
+        "ac":    ".ac dec 50 1e6 10e9",
+        "op":    ".op",
+        "noise": ".noise v(outp) vinp dec 20 10e6 5e9",
+        "tran":  ".tran 2p 40n",
+    }[analysis]
+    return core + tail + "\n.end\n"

@@ -8,34 +8,36 @@ Deadlines (from poster): Abstract 6 Aug · Shortlist 12 Aug · **Final submissio
 
 ---
 
-## Phase 0 — Infra & simulator loop  *(gates everything)*
+## Phase 0 — Infra & simulator loop  *(gates everything)* ✅ DONE
 **Goal:** a hand-written CTLE netlist simulates in ngspice and we can read numbers back
 from Python.
 
-- [ ] `brew install ngspice`; confirm `ngspice --version`
+- [x] `brew install ngspice` — ngspice 47 installed.
 - [ ] Install SKY130 SPICE models (open_pdks / volare) OR IHP sg13g2. Record path.
-- [ ] Hand-write a CTLE testbench in `testbench/ctle_ac.spice`, run it manually, see a
-      peaking curve.
-- [ ] `python -m eqrl.sim.ngspice_runner --selftest` runs that netlist and parses AC output.
-- [ ] Extract **one** real number end-to-end (peak gain in dB) from Python.
+      *(still behavioral; real PDK models come in Phase 1)*
+- [x] Hand-write a CTLE testbench in `testbench/ctle_ac.spice`, run it, see a peaking curve.
+- [x] `eqrl.sim.ngspice_runner --selftest` runs the netlist and parses AC output.
+- [x] Extract peak gain in dB from Python.
 
-**Exit criterion:** Python prints a peaking value that changes when you change Rs/Cs.
-If this isn't done by ~1 week in, escalate — everything downstream depends on it.
+**Exit criterion MET:** boost responds correctly to Cs (50fF→3.0dB, 200fF→11dB,
+800fF→15dB, with peak freq dropping as Cs rises — matches source-degeneration theory).
 
-## Phase 1 — Measurement suite + Gym env
+## Phase 1 — Measurement suite + Gym env  *(mostly done; PDK + HD3/noise/eye remain)*
 **Goal:** a `EqualizerEnv.step(action)` returns a real observation + reward at TT.
 
-- [ ] `measures.py`: peaking, peak freq, DC gain, power (op point), area (analytic).
-- [ ] Add HD3 (transient + FFT) and input-referred noise (`.noise`).
-- [ ] `circuits/ctle.py`: parametric netlist generator from an action vector.
-- [ ] `envs/equalizer_env.py`: Gymnasium env, action=sizes, obs=measures, reward=margins.
-- [ ] Env passes `gymnasium.utils.env_checker`.
+- [x] `measures.py`: peaking, peak freq, DC gain, power, area (analytic). ✅
+- [ ] **Swap behavioral gm for real SKY130 device models** (biggest remaining analog task).
+- [ ] Fill in HD3 (transient + FFT) and input-referred noise (`.noise`) — currently stubbed.
+- [x] `circuits/ctle.py`: parametric netlist generator from an action vector. ✅
+- [x] `envs/equalizer_env.py`: Gymnasium env; reward = margins + all-pass bonus. ✅
+- [x] Env passes `gymnasium.utils.env_checker`. ✅
 
-## Phase 2 — RL that beats a sweep at TT
+## Phase 2 — RL that beats a sweep at TT  *(loop proven; needs real training runs)*
 **Goal:** trained agent hits the TT spec, and does it in fewer sims than the baseline.
 
-- [ ] `baselines/sweep.py`: random search + grid + (optional) Bayesian (skopt/Optuna).
-- [ ] `agents/train.py`: PPO or DDPG (stable-baselines3). Log sims-to-spec.
+- [x] `baselines/sweep.py`: random + Bayesian (Optuna). ✅ (ran 80 real sims)
+- [x] `agents/train.py`: PPO (stable-baselines3) trains through the ngspice loop. ✅
+- [ ] Long training run until the agent passes TT spec (400-step smoke test done, not enough).
 - [ ] **Headline plot:** best-spec-margin vs #SPICE-evals, RL vs baselines.
 - [ ] Agent produces a sized schematic meeting TT specs.
 
