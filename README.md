@@ -111,11 +111,17 @@ python -m eqrl.sim.ngspice_runner --selftest
 python -m eqrl.agents.train --spec configs/pcie_gen2.yaml
 ```
 
-## Status
+## Status — working end to end on real SKY130
 
-Scaffold. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased plan and the current
-milestone. **Phase 0 (get a CTLE simulating + measuring in ngspice) gates everything —
-do not touch the RL code until that green.**
+- Real `sky130_fd_pr` transistor CTLE; real AC peaking, HD3, input-referred noise,
+  power, area through ngspice.
+- Resident libngspice server: ~44 ms/eval (**~350× faster** than relaunching ngspice).
+- Sequential RL agent that **generalizes across specs**: median **3.5 SPICE sims/spec**
+  vs **25 for Bayesian** search (~7×), solving all held-out targets.
+- Correct PVT temperature modeling; PVT-aware training for V×T robustness.
+
+**See [`RESULTS.md`](RESULTS.md) for the numbers and plots.** Roadmap and per-phase status
+in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## References
 
