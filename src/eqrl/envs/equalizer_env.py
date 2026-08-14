@@ -57,12 +57,13 @@ class EqualizerEnv(gym.Env):  # type: ignore[misc]
     metadata = {"render_modes": []}
 
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 1,
-                 corner: str = "tt", pvt: bool = False):
+                 corner: str = "tt", pvt: bool = False, fast: bool = True):
         super().__init__()
         self.target = spec
         self.horizon = horizon
         self.corner = corner
         self.pvt = pvt
+        self.fast = fast   # fast measurement (AC+power+area) for training speed
         n = len(ACTION_SPACE)
         self.action_space = spaces.Box(-1.0, 1.0, shape=(n,), dtype=np.float32)
         # obs = normalized measurement vector (fixed 10 dims, see Measures)
@@ -82,7 +83,8 @@ class EqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def _evaluate(self, dv):
         if not self.pvt:
-            return measure_all(dv, corner=self.corner, vdd=self.target.vdd_nominal)
+            return measure_all(dv, corner=self.corner, vdd=self.target.vdd_nominal,
+                               fast=self.fast)
         # PVT: return the WORST corner (Phase 3). Simplified worst-by-reward selection.
         from eqrl.envs.pvt import worst_corner  # lazy import; added in Phase 3
         return worst_corner(dv, self.target)

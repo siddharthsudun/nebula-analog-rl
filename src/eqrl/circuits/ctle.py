@@ -63,43 +63,125 @@ def decode_action(a) -> DesignVars:
     return DesignVars(**vals)
 
 
+C_LOAD = 30e-15   # next-stage input cap the CTLE drives [F]
+VCM = 0.9         # input common-mode [V]
+AC_AMP = 0.5      # AC drive amplitude per side (differential AC=1)
+TRAN_AMP = 0.05   # 100 MHz transient amplitude per side for HD3 [V]
+
+# default backend now that the SKY130 PDK is installed; "behavioral" is the fast fallback
+DEFAULT_MODELS = "sky130"
+
+_ANALYSIS = {
+    "none":  "",     # analysis supplied by a .control block in the runner
+    "ac":    ".ac dec 50 1e6 10e9",
+    "op":    ".op",
+    "noise": ".noise v(outp) vinp dec 20 10e6 5e9",
+    "tran":  ".tran 2p 40n",
+}
+
+
 def netlist(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
-            corner: str = "tt", analysis: str = "ac") -> str:
-    """Build a CTLE testbench netlist for the requested analysis.
+            corner: str = "tt", analysis: str = "ac", models: str | None = None) -> str:
+    """Build a CTLE testbench netlist.
 
-    analysis: "ac" (peaking), "op" (power), "noise", "tran" (HD3/eye).
-    NOTE: Phase 0 uses a behavioral gm; replace M1/M2 with SKY130 models in Phase 1.
+    models="sky130" -> real sky130_fd_pr transistors + corner .lib (PVT-aware).
+    models="behavioral" -> VCCS transconductors (fast, PDK-free fallback).
+    analysis: "none"/"ac"/"op"/"noise"/"tran".
     """
-    # behavioral gm ~ 2*I/Vov with Vov ~ 0.15 V (Phase 0; replaced by SKY130 models later)
+    models = models or DEFAULT_MODELS
+    src = (f"Vcm cm 0 {VCM}\n"
+           f"Vinp inp cm AC {AC_AMP} SIN(0 {TRAN_AMP} 100e6)\n"
+           f"Vinn inn cm AC -{AC_AMP} SIN(0 -{TRAN_AMP} 100e6)")
+
+    if models == "sky130":
+        core = _core_sky130(dv, vdd, corner, src)
+    elif models == "behavioral":
+        core = _core_behavioral(dv, vdd, src)
+    else:
+        raise ValueError(f"unknown models={models!r}")
+
+    header = f"* CTLE  corner={corner} vdd={vdd} temp={temp_c}C analysis={analysis} models={models}\n"
+    header += f".temp {temp_c}\n.param vdd={vdd}\nVdd vdd 0 {{vdd}}\n"
+    return header + src + "\n" + core + _ANALYSIS[analysis] + "\n.end\n"
+
+
+def param_deck(corner: str = "tt") -> str:
+    """A parametric, control-block-free SKY130 CTLE deck for the persistent server.
+
+    All design variables are `.param`s (w,l in um; itail,rs,cs,rl; vddp). The server
+    re-evaluates candidates with `alterparam ...; reset` — models load only once.
+    """
+    from eqrl.circuits.pdk import lib_include
+    return (
+        f"* CTLE param deck (server) corner={corner}\n"
+        f"{lib_include(corner)}\n"
+        ".temp 27\n"
+        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8\n"
+        "Vdd vdd 0 {vddp}\n"
+        "Vcm cm 0 'vddp/2'\n"
+        f"Vinp inp cm AC {AC_AMP} SIN(0 {TRAN_AMP} 100e6)\n"
+        f"Vinn inn cm AC -{AC_AMP} SIN(0 -{TRAN_AMP} 100e6)\n"
+        "XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L={l} W={w} nf=1 m=1\n"
+        "XM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L={l} W={w} nf=1 m=1\n"
+        "Itp sp 0 'itail/2'\n"
+        "Itn sn 0 'itail/2'\n"
+        "Rs sp sn {rs}\n"
+        "Cs sp sn {cs}\n"
+        "Rlp vdd outp {rl}\n"
+        "Rln vdd outn {rl}\n"
+        f"Clp outp 0 {C_LOAD}\n"
+        f"Cln outn 0 {C_LOAD}\n"
+        ".end\n"
+    )
+
+
+def dv_to_params(dv: DesignVars) -> dict[str, float]:
+    """Design variables -> deck `.param` values (W/L clamped to sky130 minimums, um)."""
+    return {
+        "w": max(dv.w_in * 1e6, 0.42),
+        "l": max(dv.l_in * 1e6, 0.15),
+        "itail": dv.i_tail,
+        "rs": dv.rs,
+        "cs": dv.cs,
+        "rl": dv.r_load,
+    }
+
+
+def _core_sky130(dv: DesignVars, vdd: float, corner: str, src: str) -> str:
+    """Transistor-level source-degenerated CTLE on the SKY130 PDK.
+
+    M1/M2 are nfet_01v8 input devices; each source is sunk by an ideal tail current
+    (i_tail/2). Rs||Cs bridges the sources (the degeneration that makes the peaking
+    zero). Resistive loads set the DC gain. Bulk = ground.
+    """
+    from eqrl.circuits.pdk import lib_include
+
+    w_um = max(dv.w_in * 1e6, 0.42)     # sky130 nfet min width
+    l_um = max(dv.l_in * 1e6, 0.15)     # sky130 nfet min length
+    i_leg = dv.i_tail / 2.0
+    return (
+        f"{lib_include(corner)}\n"
+        f"XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L={l_um:.4f} W={w_um:.4f} nf=1 m=1\n"
+        f"XM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L={l_um:.4f} W={w_um:.4f} nf=1 m=1\n"
+        f"Itp sp 0 {i_leg}\n"
+        f"Itn sn 0 {i_leg}\n"
+        f"Rs sp sn {dv.rs}\n"
+        f"Cs sp sn {dv.cs}\n"
+        f"Rlp vdd outp {dv.r_load}\n"
+        f"Rln vdd outn {dv.r_load}\n"
+        f"Clp outp 0 {C_LOAD}\n"
+        f"Cln outn 0 {C_LOAD}\n"
+    )
+
+
+def _core_behavioral(dv: DesignVars, vdd: float, src: str) -> str:
+    """VCCS-based CTLE (no PDK). gm ~ i_tail / Vov, Vov ~ 0.15 V."""
     gm = dv.i_tail / 0.15
-    c_load = 30e-15
-
-    # differential input: transient uses a 100 MHz sine for HD3; AC uses AC=0.5/-0.5
-    src = (f"Vinp inp 0 AC 0.5 SIN(0 0.05 100e6)\n"
-           f"Vinn inn 0 AC -0.5 SIN(0 -0.05 100e6)")
-
-    core = f"""* CTLE testbench  corner={corner} vdd={vdd} temp={temp_c}C  analysis={analysis}
-.temp {temp_c}
-.param vdd={vdd}
-Vdd vdd 0 {{vdd}}
-{src}
-* source-degenerated transconductors with real source nodes
-G1 outp sp inp sp {gm}
-G2 outn sn inn sn {gm}
-Rtp sp 0 50k
-Rtn sn 0 50k
-Rs sp sn {dv.rs}
-Cs sp sn {dv.cs}
-Rlp vdd outp {dv.r_load}
-Rln vdd outn {dv.r_load}
-Clp outp 0 {c_load}
-Cln outn 0 {c_load}
-"""
-    tail = {
-        "none":  "",     # analysis supplied by a .control block in the runner
-        "ac":    ".ac dec 50 1e6 10e9",
-        "op":    ".op",
-        "noise": ".noise v(outp) vinp dec 20 10e6 5e9",
-        "tran":  ".tran 2p 40n",
-    }[analysis]
-    return core + tail + "\n.end\n"
+    return (
+        f"G1 outp sp inp sp {gm}\n"
+        f"G2 outn sn inn sn {gm}\n"
+        f"Rtp sp 0 50k\nRtn sn 0 50k\n"
+        f"Rs sp sn {dv.rs}\nCs sp sn {dv.cs}\n"
+        f"Rlp vdd outp {dv.r_load}\nRln vdd outn {dv.r_load}\n"
+        f"Clp outp 0 {C_LOAD}\nCln outn 0 {C_LOAD}\n"
+    )

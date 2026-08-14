@@ -19,7 +19,8 @@ class NgspiceError(RuntimeError):
     pass
 
 
-def run(netlist: str, *, control: str, timeout: float = 60.0) -> dict[str, np.ndarray]:
+def run(netlist: str, *, control: str, timeout: float = 60.0,
+        require_output: bool = True) -> dict[str, np.ndarray]:
     """Run a netlist with a `.control ... .endc` block that writes CSV via `wrdata`.
 
     `control` is the body of the control block (without the `.control`/`.endc` lines).
@@ -42,11 +43,12 @@ def run(netlist: str, *, control: str, timeout: float = 60.0) -> dict[str, np.nd
         except subprocess.TimeoutExpired:
             raise NgspiceError(f"ngspice timed out after {timeout}s")
 
-        if not out.exists() or out.stat().st_size == 0:
+        has_data = out.exists() and out.stat().st_size > 0
+        if require_output and not has_data:
             raise NgspiceError(
                 f"ngspice produced no data.\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
             )
-        data = np.loadtxt(out)
+        data = np.loadtxt(out) if has_data else np.empty(0)
         return {"data": data, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
@@ -59,6 +61,29 @@ def ac(netlist: str, **kw) -> dict[str, np.ndarray]:
     res = run(netlist, control=control, **kw)
     arr = np.atleast_2d(res["data"])
     return {"freq": arr[:, 0], "mag_db": arr[:, 1]}
+
+
+def transient(netlist: str, tstep: float = 20e-12, tstop: float = 100e-9,
+              **kw) -> dict[str, np.ndarray]:
+    """Run a transient, linearize to a uniform grid, return (t, vdiff) arrays."""
+    control = (f"tran {tstep} {tstop}\n"
+               "linearize\n"
+               "let vd = v(outp) - v(outn)\n"
+               "wrdata $OUT vd")
+    res = run(netlist, control=control, timeout=kw.pop("timeout", 120.0), **kw)
+    arr = np.atleast_2d(res["data"])
+    return {"t": arr[:, 0], "vd": arr[:, 1]}
+
+
+def noise_total(netlist: str, **kw) -> float:
+    """Run a .noise analysis, return integrated input-referred noise (Vrms)."""
+    control = ("noise v(outp,outn) Vinp dec 20 10e6 5e9\n"
+               "print inoise_total")
+    res = run(netlist, control=control, require_output=False, **kw)
+    for line in res["stdout"].splitlines():
+        if "inoise_total" in line and "=" in line:
+            return float(line.split("=")[1].strip().split()[0])
+    raise NgspiceError(f"inoise_total not found.\n{res['stdout']}")
 
 
 def _selftest() -> int:
