@@ -1,0 +1,23 @@
+# PCIe Gen 2 receiver equalizer target — matches eqrl.specs.Spec defaults.
+# The LLM wrapper can also generate one of these from a natural-language prompt.
+data_rate_gbps: 5.0
+nyquist_ghz: 2.5
+
+target_boost_db: 9.0
+boost_db_min: 3.0
+boost_db_max: 12.0
+peak_freq_lo_ghz: 1.25
+peak_freq_hi_ghz: 2.5
+
+hd3_db_max: -30.0
+noise_vrms_max: 0.0015
+power_w_max: 0.015
+area_mm2_max: 0.05
+
+eye_h_ui_min: 0.4
+eye_v_mv_min: 100.0
+
+process_corners: [tt, ss, ff, sf, fs]
+vdd_nominal: 1.8
+vdd_tolerance: 0.05
+temps_c: [0.0, 27.0, 125.0]

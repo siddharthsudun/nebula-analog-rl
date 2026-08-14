@@ -1,0 +1,18 @@
+# core
+numpy
+scipy
+matplotlib
+pyyaml
+
+# RL
+gymnasium
+stable-baselines3[extra]
+
+# baselines
+optuna
+
+# LLM wrapper (bonus)
+anthropic
+
+# optional SPICE python wrapper (raw ngspice also works)
+# PySpice

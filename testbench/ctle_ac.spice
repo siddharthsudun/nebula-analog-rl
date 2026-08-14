@@ -1,0 +1,27 @@
+* Hand-written CTLE AC testbench (Phase 0 sanity check)
+* Behavioral source-degenerated diff pair. Run: ngspice -b testbench/ctle_ac.spice
+* You should see a peaking response whose zero moves with Rs*Cs.
+.temp 27
+.param vdd=1.8 gm=13m rs=1k cs=200f rl=1k
+
+Vdd vdd 0 {vdd}
+Vin inp inn AC 1
+
+Gp outp 0 inp inn {gm}
+Gn outn 0 inn inp {gm}
+Rs sp sn {rs}
+Cs sp sn {cs}
+Rlp vdd outp {rl}
+Rln vdd outn {rl}
+Clp outp 0 30f
+Cln outn 0 30f
+
+.control
+ac dec 50 1e6 10e9
+meas ac dc_gain  FIND vdb(outp) AT=1e6
+meas ac peak_val MAX vdb(outp) FROM=1e8 TO=1e10
+print dc_gain peak_val
+* uncomment to plot interactively:
+* plot vdb(outp)
+.endc
+.end

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.zip
+results/*.png
+results/*.csv
+results/*.zip
+!results/.gitkeep
+.DS_Store
+*.raw
+*.out
+# PDK models are large — vendor them locally, don't commit
+pdk/
