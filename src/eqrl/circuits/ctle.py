@@ -115,8 +115,12 @@ def param_deck(corner: str = "tt") -> str:
     return (
         f"* CTLE param deck (server) corner={corner}\n"
         f"{lib_include(corner)}\n"
-        ".temp 27\n"
-        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8\n"
+        # fail fast: skip dynamic gmin/source stepping so non-convergent designs return
+        # in ~ms (agent learns to avoid them) instead of grinding for seconds.
+        ".options gminsteps=0 srcsteps=0 itl1=100\n"
+        # temperature via an alterparam'd option (shared-mode `set temp` is ignored).
+        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8 tempc=27\n"
+        ".options temp={tempc}\n"
         "Vdd vdd 0 {vddp}\n"
         "Vcm cm 0 'vddp/2'\n"
         f"Vinp inp cm AC {AC_AMP} SIN(0 {TRAN_AMP} 100e6)\n"

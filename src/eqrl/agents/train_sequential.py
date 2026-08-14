@@ -17,6 +17,7 @@ def main() -> None:
     p.add_argument("--timesteps", type=int, default=40_000)
     p.add_argument("--horizon", type=int, default=20)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--pvt", action="store_true", help="worst-case V x T robust training")
     p.add_argument("--out", default="results/seq_agent.zip")
     args = p.parse_args()
 
@@ -24,7 +25,7 @@ def main() -> None:
     from stable_baselines3.common.callbacks import CheckpointCallback
 
     env = SequentialEqualizerEnv(spec=DEFAULT_SPEC, horizon=args.horizon,
-                                 fast=True, seed=args.seed)
+                                 fast=True, seed=args.seed, pvt=args.pvt)
     model = PPO("MlpPolicy", env, seed=args.seed, verbose=1,
                 n_steps=1024, batch_size=128, gamma=0.95, gae_lambda=0.95,
                 ent_coef=0.005, learning_rate=3e-4)

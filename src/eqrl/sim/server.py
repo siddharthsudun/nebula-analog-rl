@@ -53,9 +53,9 @@ class NgspiceServer:
     def _prime(self, dv: DesignVars, vdd: float, temp_c: float) -> None:
         p = dv_to_params(dv)
         p["vddp"] = vdd
+        p["tempc"] = temp_c
         for k, v in p.items():
             self._ng.exec_command(f"alterparam {k}={v:.6g}")
-        self._ng.exec_command(f"set temp={temp_c:g}")
         self._ng.exec_command("reset")
 
     def _read(self, name: str, ncol: int = 2) -> np.ndarray:
@@ -118,11 +118,16 @@ class NgspiceServer:
         self.close()
 
 
-# module-level singleton so the env reuses one resident simulator per corner
-_SERVERS: dict[str, NgspiceServer] = {}
+# libngspice is effectively a process singleton — multiple NgSpiceShared instances share
+# state and corrupt each other. So we keep ONE resident server and reload the deck when a
+# different PROCESS corner is needed (voltage/temperature don't reload — they're params).
+_SERVER: NgspiceServer | None = None
 
 
 def get_server(corner: str = "tt") -> NgspiceServer:
-    if corner not in _SERVERS:
-        _SERVERS[corner] = NgspiceServer(corner)
-    return _SERVERS[corner]
+    global _SERVER
+    if _SERVER is None:
+        _SERVER = NgspiceServer(corner)
+    else:
+        _SERVER.set_corner(corner)   # reloads only if the process corner changed
+    return _SERVER
