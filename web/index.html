@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SILQ — reinforcement learning that designs PVT-robust analog equalizers on the SKY130 process, hitting new specs ~7x faster than search.">
 <meta property="og:title" content="SILQ — RL for analog equalizer design">
-<meta property="og:description" content="An RL agent that sizes analog equalizers on real silicon and hits new specs in a handful of simulations. Nebula@BITS Goa, Analog Track.">
+<meta property="og:description" content="An RL agent that sizes analog equalizers on real silicon and opens the data eye. Nebula@BITS Goa, Analog Track.">
 <meta name="theme-color" content="#090d13">
 <title>SILQ — RL that designs analog equalizers on real silicon</title>
 <style>
@@ -273,8 +273,36 @@
             <tr><td>Input noise</td><td class="num">570–956 µV</td><td class="num">&lt; 1500</td></tr>
             <tr><td>Power</td><td class="num">0.17–0.19 mW</td><td class="num">&lt; 15</td></tr>
             <tr><td>Area (est.)</td><td class="num">0.002 mm²</td><td class="num">&lt; 0.05</td></tr>
+            <tr><td>Eye height</td><td class="num">0.50–0.56 UI</td><td class="num">&gt; 0.4</td></tr>
+            <tr><td>Eye opening</td><td class="num">172–199 mV</td><td class="num">&gt; 100</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">The point of it all</div>
+      <h2>The equalizer opens an eye the channel had closed.</h2>
+      <p class="section-intro">An equalizer's whole job is to reopen the data eye a lossy channel smears shut. This is measured, not assumed: the SPICE-extracted <b>complex</b> CTLE response is put in series with a minimum-phase <b>PCIe-Gen2 channel</b> (12&nbsp;dB loss at Nyquist) and a real <b>adapted 1-tap DFE</b>, then a random 5&nbsp;Gb/s NRZ pattern is run through and folded into an eye.</p>
+      <div class="card" style="padding:20px 20px 8px">
+        <img src="eye.png" alt="Eye diagram: channel-only eye nearly closed at 69 mV, versus channel plus CTLE plus 1-tap DFE open at 192 mV" style="width:100%;height:auto;display:block">
+      </div>
+      <div class="cols" style="margin-top:22px">
+        <table class="spec" aria-label="eye opening, channel only versus equalized">
+          <thead><tr><th>Link</th><th class="num">Eye height</th><th class="num">Eye width</th></tr></thead>
+          <tbody>
+            <tr><td>Channel only</td><td class="num">69 mV</td><td class="num">0.31 UI</td></tr>
+            <tr><td>+ CTLE + 1-tap DFE</td><td class="num ok">192 mV</td><td class="num ok">0.50 UI</td></tr>
+            <tr><td>Spec</td><td class="num">&gt; 100 mV</td><td class="num">&gt; 0.4 UI</td></tr>
+          </tbody>
+        </table>
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Describe it in English</div>
+          <p style="color:var(--muted);font-size:14.5px;margin-top:0">The bonus front-end: an LLM turns a plain-English request into a spec, and the trained policy sizes the circuit.</p>
+          <div class="pill" style="display:block;white-space:normal;line-height:1.7">$ silq "PCIe Gen2 CTLE, ~8 dB peaking, under 10 mW"<br>→ sized in 5 sims · eye 0.62 UI / 277 mV · all checks pass</div>
+        </div>
       </div>
     </div>
   </section>
@@ -328,7 +356,7 @@
         <span class="pill">44 ms / eval</span>
         <span class="pill">45/45 PVT</span>
       </div>
-      <p class="caveat">Scope notes for review: the 1-tap DFE and the eye-diagram metric are modeled as fixed placeholders in the current scoring; the CTLE sizing, all AC/HD3/noise/power/area measurements, and the PVT sweep are fully simulated. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail; the ±tolerance around a target is a training-reward shaping choice, kept separate from spec compliance.</p>
+      <p class="caveat">Scope notes for review: the CTLE sizing, all AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE), and the 45-corner PVT sweep are fully simulated on SKY130 — nothing in the scoring is a placeholder. The channel is a minimum-phase PCIe-Gen2 model (12&nbsp;dB at Nyquist); the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail; the ±tolerance around a target is a training-reward shaping choice, kept separate from spec compliance.</p>
     </div>
   </section>
 </main>

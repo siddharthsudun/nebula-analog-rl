@@ -58,8 +58,32 @@ with real HD3 and noise at every corner. **All 45 pass** the poster's hard specs
 | input noise | 570 – 956 µVrms | < 1.5 mVrms |
 | power | 0.17 – 0.19 mW | < 15 mW |
 | area | 0.002 mm² | < 0.05 mm² |
+| eye height | 0.50 – 0.56 UI | > 0.4 UI |
+| eye opening | 172 – 199 mV | > 100 mV |
 
 Full table: `results/final_report.json`; sized netlist: `results/final_schematic.spice`.
+
+## Eye diagram: the equalizer actually opens the eye
+
+The eye is measured, not assumed. The SPICE-extracted **complex** CTLE response is put in
+series with a minimum-phase **PCIe-Gen2 channel** (skin + dielectric loss, 12 dB at
+Nyquist) and a real **adapted 1-tap DFE**, then a random NRZ pattern is run through it and
+folded (Monte-Carlo). At 5 Gb/s the raw channel eye is nearly shut; SILQ's CTLE + DFE
+reopens it:
+
+| link | eye height | eye width |
+|---|---|---|
+| channel only | 69 mV | 0.31 UI |
+| **+ CTLE + 1-tap DFE** | **192 mV** | **0.50 UI** |
+
+Figure: `results/eye.png` (closed vs open). The 1-tap DFE is adapted to cancel the first
+post-cursor and demonstrably helps on its own.
+
+## Describe it in English → get a circuit
+
+`python -m eqrl.solve "PCIe Gen2 CTLE with about 8 dB of peaking, under 10 mW"` parses the
+request (LLM, with a keyword fallback), has the trained policy size a CTLE in ~5 sims, and
+prints the sized, fully-characterized circuit (incl. the real eye) — the bonus deliverable.
 
 Temperature is modeled correctly (drain current 42→125 µA over 0→125 °C). Getting here
 was deliberate: a *naive* nominal-only design drifts out of band at 125 °C (peak 1.19 GHz)

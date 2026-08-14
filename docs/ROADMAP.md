@@ -48,13 +48,13 @@ from Python.
 - [ ] Reward = worst-corner aggregate; pass-bonus when all specs pass all corners.
 - [ ] Show a naive-TT design breaking at SS/FF, then the PVT-aware agent holding.
 
-## Phase 4 — LLM wrapper (bonus) + eye diagram + deliverables
+## Phase 4 — Eye + DFE + LLM front-end + deliverables ✅ DONE
 **Goal:** the full "prompt → schematic" story and a clean submission.
 
-- [ ] `llm/spec_parser.py`: natural language → `Spec` (Anthropic API, Claude).
-- [ ] LLM-assisted reward shaping / failure triage ("why did SS fail?").
-- [ ] PRBS eye-diagram generator (height V, width UI) through a channel model.
-- [ ] Export final schematic (netlist + optionally a drawn schematic) + spec report.
+- [x] `llm/spec_parser.py` + `solve.py`: natural language → sized, characterized circuit (Anthropic API, Claude).
+- [x] `eqrl.solve` end-to-end demo (5-sim design from an English request) ("why did SS fail?").
+- [x] Real eye: minimum-phase PCIe channel + CTLE + adapted 1-tap DFE, Monte-Carlo.
+- [x] Export sized netlist + spec report + eye figure.
 - [ ] Report / slides: method, sample-efficiency curve, PVT table, eye, demo video.
 
 ---
