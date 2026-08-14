@@ -82,6 +82,22 @@ class NgspiceServer:
         arr = self._read("ac.data")
         return {"freq": arr[:, 0], "mag_db": arr[:, 1]}
 
+    def ac_complex(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0,
+                   fstop: float = 40e9) -> dict:
+        """Complex differential transfer function H(f) = v(outp)-v(outn) for AC=1 input.
+
+        Wider band than ac() because the eye needs the response out to several harmonics.
+        wrdata writes a complex vector as [scale, real, imag].
+        """
+        self._prime(dv, vdd, temp_c)
+        out = self._dir / "acx.data"
+        out.unlink(missing_ok=True)
+        self._analysis(f"ac dec 40 1e6 {fstop:g}")
+        self._ng.exec_command("let vd = v(outp)-v(outn)")
+        self._ng.exec_command(f"wrdata {out} vd")
+        arr = self._read("acx.data")
+        return {"freq": arr[:, 0], "H": arr[:, 1] + 1j * arr[:, 2]}
+
     def noise_total(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0) -> float:
         self._prime(dv, vdd, temp_c)
         out = self._dir / "noise.data"

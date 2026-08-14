@@ -80,12 +80,16 @@ def input_noise(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -
     return srv.noise_total(dv, vdd=vdd, temp_c=temp_c)
 
 
-def eye(dv: DesignVars) -> tuple[float, float]:
-    """PRBS eye height/width through a channel model.
+def eye(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -> tuple[float, float]:
+    """Eye height (UI) and vertical opening (mV) through channel + CTLE + 1-tap DFE.
 
-    TODO(Phase 4): drive PRBS through channel + CTLE + DFE, build eye, measure H/V.
+    Uses the SPICE-measured complex CTLE response, a PCIe-Gen2 channel, and a real DFE.
     """
-    return 0.5, 120.0  # (UI, mV) stub
+    from eqrl.sim.eye import compute_eye
+
+    r = srv.ac_complex(dv, vdd=vdd, temp_c=temp_c)
+    res = compute_eye(r["freq"], r["H"])
+    return res.width_ui, res.height_v * 1e3    # (UI, mV)
 
 
 def measure_all(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
@@ -115,7 +119,7 @@ def measure_all(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
     try:
         m.hd3_db = hd3_db(srv, dv, vdd, temp_c)
         m.noise_vrms = input_noise(srv, dv, vdd, temp_c)
-        m.eye_h_ui, m.eye_v_mv = eye(dv)
+        m.eye_h_ui, m.eye_v_mv = eye(srv, dv, vdd, temp_c)
     except NgspiceError:
         return Measures(ok=False)
     return m
