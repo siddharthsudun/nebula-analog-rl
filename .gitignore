@@ -13,3 +13,5 @@ results/*.zip
 *.out
 # PDK models are large — vendor them locally, don't commit
 pdk/
+results/checkpoints/
+results/*.zip
