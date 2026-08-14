@@ -32,8 +32,9 @@ class Spec:
     eye_h_ui_min: float = 0.4
     eye_v_mv_min: float = 100.0
 
-    # the specific boost we are targeting this run (within [min, max])
+    # the specific boost we are targeting this run (within [min, max]) and its tolerance
     target_boost_db: float = 9.0
+    boost_tol_db: float = 1.5
 
     # PVT corners to enforce
     process_corners: tuple[str, ...] = ("tt", "ss", "ff", "sf", "fs")

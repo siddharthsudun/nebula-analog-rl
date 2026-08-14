@@ -26,11 +26,16 @@ def _margins(m: Measures, spec: Spec) -> dict[str, float]:
 
     Each is scaled so ~1.0 means 'comfortably met' and negative means 'violated'.
     """
-    boost_err = -abs(m.boost_db - spec.target_boost_db) / 3.0            # want == target
-    fpk_ok = 1.0 if spec.peak_freq_lo_ghz <= m.peak_freq_ghz <= spec.peak_freq_hi_ghz else -1.0
+    boost_err = (spec.boost_tol_db - abs(m.boost_db - spec.target_boost_db)) / spec.boost_tol_db  # >=0 within tol
+    lo, hi, f = spec.peak_freq_lo_ghz, spec.peak_freq_hi_ghz, m.peak_freq_ghz
+    if lo <= f <= hi:
+        fpk = 1.0
+    else:                                                                # smooth gradient toward band
+        edge = lo if f < lo else hi
+        fpk = -min(abs(f - edge) / edge, 2.0)
     return {
         "boost":  boost_err,
-        "fpeak":  fpk_ok,
+        "fpeak":  fpk,
         "hd3":    (spec.hd3_db_max - m.hd3_db) / 10.0,                   # lower is better
         "noise":  (spec.noise_vrms_max - m.noise_vrms) / spec.noise_vrms_max,
         "power":  (spec.power_w_max - m.power_w) / spec.power_w_max,
