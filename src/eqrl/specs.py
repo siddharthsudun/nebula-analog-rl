@@ -47,5 +47,26 @@ class Spec:
         return (v * (1 - self.vdd_tolerance), v, v * (1 + self.vdd_tolerance))
 
 
+def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
+    """Poster's HARD spec compliance (pass/fail), distinct from the training-reward
+    tolerance. Boost is the tunable 3-12 dB *range*, not a per-corner target tolerance.
+
+    Returns (all_pass, per-check dict).
+    """
+    if not getattr(m, "ok", False):
+        return False, {"sim_ok": False}
+    checks = {
+        "boost_range": spec.boost_db_min <= m.boost_db <= spec.boost_db_max,
+        "peak_in_band": spec.peak_freq_lo_ghz <= m.peak_freq_ghz <= spec.peak_freq_hi_ghz,
+        "hd3": m.hd3_db < spec.hd3_db_max,
+        "noise": m.noise_vrms < spec.noise_vrms_max,
+        "power": m.power_w < spec.power_w_max,
+        "area": m.area_mm2 < spec.area_mm2_max,
+        "eye_h": m.eye_h_ui >= spec.eye_h_ui_min,
+        "eye_v": m.eye_v_mv >= spec.eye_v_mv_min,
+    }
+    return all(checks.values()), checks
+
+
 # convenience default used across the repo
 DEFAULT_SPEC = Spec()

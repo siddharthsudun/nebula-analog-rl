@@ -53,9 +53,9 @@ class NgspiceServer:
     def _prime(self, dv: DesignVars, vdd: float, temp_c: float) -> None:
         p = dv_to_params(dv)
         p["vddp"] = vdd
+        p["tempc"] = temp_c
         for k, v in p.items():
             self._ng.exec_command(f"alterparam {k}={v:.6g}")
-        self._ng.exec_command(f"set temp={temp_c:g}")
         self._ng.exec_command("reset")
 
     def _read(self, name: str, ncol: int = 2) -> np.ndarray:
@@ -81,6 +81,22 @@ class NgspiceServer:
         self._ng.exec_command(f"wrdata {out} vdb")
         arr = self._read("ac.data")
         return {"freq": arr[:, 0], "mag_db": arr[:, 1]}
+
+    def ac_complex(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0,
+                   fstop: float = 40e9) -> dict:
+        """Complex differential transfer function H(f) = v(outp)-v(outn) for AC=1 input.
+
+        Wider band than ac() because the eye needs the response out to several harmonics.
+        wrdata writes a complex vector as [scale, real, imag].
+        """
+        self._prime(dv, vdd, temp_c)
+        out = self._dir / "acx.data"
+        out.unlink(missing_ok=True)
+        self._analysis(f"ac dec 40 1e6 {fstop:g}")
+        self._ng.exec_command("let vd = v(outp)-v(outn)")
+        self._ng.exec_command(f"wrdata {out} vd")
+        arr = self._read("acx.data")
+        return {"freq": arr[:, 0], "H": arr[:, 1] + 1j * arr[:, 2]}
 
     def noise_total(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0) -> float:
         self._prime(dv, vdd, temp_c)
@@ -118,11 +134,16 @@ class NgspiceServer:
         self.close()
 
 
-# module-level singleton so the env reuses one resident simulator per corner
-_SERVERS: dict[str, NgspiceServer] = {}
+# libngspice is effectively a process singleton — multiple NgSpiceShared instances share
+# state and corrupt each other. So we keep ONE resident server and reload the deck when a
+# different PROCESS corner is needed (voltage/temperature don't reload — they're params).
+_SERVER: NgspiceServer | None = None
 
 
 def get_server(corner: str = "tt") -> NgspiceServer:
-    if corner not in _SERVERS:
-        _SERVERS[corner] = NgspiceServer(corner)
-    return _SERVERS[corner]
+    global _SERVER
+    if _SERVER is None:
+        _SERVER = NgspiceServer(corner)
+    else:
+        _SERVER.set_corner(corner)   # reloads only if the process corner changed
+    return _SERVER

@@ -1,0 +1,49 @@
+{
+  "rows": [
+    {
+      "target": 5.0,
+      "rl_sims": 4,
+      "bo_sims": 34
+    },
+    {
+      "target": 5.86,
+      "rl_sims": 5,
+      "bo_sims": 22
+    },
+    {
+      "target": 6.71,
+      "rl_sims": 4,
+      "bo_sims": 25
+    },
+    {
+      "target": 7.57,
+      "rl_sims": 2,
+      "bo_sims": 16
+    },
+    {
+      "target": 8.43,
+      "rl_sims": 3,
+      "bo_sims": 43
+    },
+    {
+      "target": 9.29,
+      "rl_sims": 5,
+      "bo_sims": 5
+    },
+    {
+      "target": 10.14,
+      "rl_sims": 2,
+      "bo_sims": 32
+    },
+    {
+      "target": 11.0,
+      "rl_sims": 3,
+      "bo_sims": null
+    }
+  ],
+  "rl_median_sims": 3.5,
+  "bo_median_sims": 25.0,
+  "rl_solved": 8,
+  "bo_solved": 7,
+  "n_targets": 8
+}

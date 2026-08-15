@@ -15,3 +15,6 @@ results/*.zip
 pdk/
 results/checkpoints/
 results/*.zip
+
+# vercel
+.vercel/

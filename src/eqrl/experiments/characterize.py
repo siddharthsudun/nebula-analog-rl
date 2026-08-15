@@ -17,9 +17,8 @@ import json
 from pathlib import Path
 
 from eqrl.circuits.ctle import DesignVars, netlist
-from eqrl.envs.equalizer_env import _margins
 from eqrl.envs.pvt import corner_grid, evaluate_corners
-from eqrl.specs import DEFAULT_SPEC, Spec
+from eqrl.specs import DEFAULT_SPEC, Spec, hard_pass
 
 
 def load_design(path: str, key: str | None) -> DesignVars:
@@ -38,8 +37,7 @@ def characterize(dv: DesignVars, spec: Spec = DEFAULT_SPEC) -> dict:
     results = evaluate_corners(dv, spec, mode="full", fast=False)
     rows, all_pass = [], True
     for (proc, vdd, temp), m in results.items():
-        mg = _margins(m, spec) if m.ok else {}
-        passed = m.ok and all(v >= 0 for v in mg.values())
+        passed, _ = hard_pass(m, spec)
         all_pass &= passed
         rows.append({
             "corner": proc, "vdd": round(vdd, 3), "temp_c": temp,
@@ -47,18 +45,21 @@ def characterize(dv: DesignVars, spec: Spec = DEFAULT_SPEC) -> dict:
             "boost_db": round(m.boost_db, 2), "fpk_ghz": round(m.peak_freq_ghz, 2),
             "hd3_db": round(m.hd3_db, 1), "noise_uv": round(m.noise_vrms * 1e6, 1),
             "power_mw": round(m.power_w * 1e3, 2), "area_mm2": round(m.area_mm2, 4),
+            "eye_h_ui": round(m.eye_h_ui, 2), "eye_v_mv": round(m.eye_v_mv, 0),
         })
     return {"design": dv.__dict__, "all_pvt_pass": all_pass, "corners": rows}
 
 
 def print_table(report: dict) -> None:
-    hdr = f"{'corner':6} {'vdd':5} {'T':4} {'boost':6} {'fpk':5} {'hd3':6} {'noise':6} {'pwr':6} {'area':7} {'pass'}"
+    hdr = (f"{'corner':6} {'vdd':5} {'T':4} {'boost':6} {'fpk':5} {'hd3':6} "
+           f"{'noise':6} {'pwr':6} {'eyeH':5} {'eyeV':5} {'pass'}")
     print(hdr)
     print("-" * len(hdr))
     for r in report["corners"]:
         print(f"{r['corner']:6} {r['vdd']:<5} {r['temp_c']:<4.0f} "
               f"{r['boost_db']:<6} {r['fpk_ghz']:<5} {r['hd3_db']:<6} "
-              f"{r['noise_uv']:<6} {r['power_mw']:<6} {r['area_mm2']:<7} "
+              f"{r['noise_uv']:<6} {r['power_mw']:<6} "
+              f"{r['eye_h_ui']:<5} {r['eye_v_mv']:<5.0f} "
               f"{'PASS' if r['passed'] else 'FAIL'}")
     print("-" * len(hdr))
     print("ALL PVT PASS" if report["all_pvt_pass"] else "SOME CORNERS FAIL")

@@ -48,7 +48,8 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 20,
                  corner: str = "tt", fast: bool = True, step_size: float = 0.18,
-                 target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None):
+                 target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
+                 pvt: bool = False):
         super().__init__()
         self.base_spec = spec
         self.horizon = horizon
@@ -56,6 +57,13 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         self.fast = fast
         self.step_size = step_size
         self.target_range = target_range
+        self.pvt = pvt
+        # voltage x temperature stress points on the current process corner (no reload;
+        # V and T are alterparam'd). Nominal + hot/low-V is the binding pair for this
+        # topology (boost & peak-freq drift down hot); cold/high-V is verified in final
+        # characterization. Two corners keeps per-step cost ~2x instead of 3x.
+        vlo, vnom, vhi = spec.vdd_corners()
+        self._vt = [(vnom, 27.0), (vlo, 125.0)]
         self.action_space = spaces.Box(-1.0, 1.0, shape=(N_PARAM,), dtype=np.float32)
         # obs = params(7) + norm measures(4) + target(1) + boost_gap(1) + fpk_gap(1)
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(N_PARAM + 7,),
@@ -69,9 +77,21 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def _measure(self, x: np.ndarray) -> Measures:
         dv = decode_action(x)                       # x in [0,1]; decode accepts it
-        self.n_sims += 1
-        return measure_all(dv, corner=self.corner, vdd=self.base_spec.vdd_nominal,
-                           fast=self.fast)
+        if not self.pvt:
+            self.n_sims += 1
+            return measure_all(dv, corner=self.corner, vdd=self.base_spec.vdd_nominal,
+                               fast=self.fast)
+        # PVT-aware: return the worst (lowest-reward) V x T corner on this process corner
+        worst_m, worst_r = None, 1e18
+        for vdd, temp in self._vt:
+            self.n_sims += 1
+            m = measure_all(dv, corner=self.corner, vdd=vdd, temp_c=temp, fast=self.fast)
+            if not m.ok:
+                return m
+            r, _, _ = compute_reward(m, self._spec())
+            if r < worst_r:
+                worst_r, worst_m = r, m
+        return worst_m
 
     def _obs(self, m: Measures) -> np.ndarray:
         spec = self._spec()
