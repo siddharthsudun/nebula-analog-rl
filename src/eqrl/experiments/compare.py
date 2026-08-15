@@ -1,8 +1,24 @@
-"""Headline experiment: RL vs sweep sample efficiency.
+"""Sample efficiency at ONE fixed target: RL vs random vs Bayesian.
 
-Runs random search, (optional) Bayesian, and a PPO agent on the SAME env with the SAME
-per-eval tracking, then writes histories + a plot of best-reward-so-far vs #SPICE-evals.
-This is the graph that proves the poster's own ask: reach spec in fewer simulations.
+Companion to `generalization.py`, which sweeps across targets. Same estimator in both:
+**total SPICE evaluations until the first design that passes**, counted identically for
+every arm.
+
+WHAT CHANGED AND WHY
+--------------------
+The previous version ran PPO against `EqualizerEnv(horizon=1)` — the one-step bandit
+whose `reset()` returns a vector of zeros. With a constant observation and gamma=0 a
+policy cannot condition on anything; it can only learn a state-independent action
+distribution, which is random search with extra machinery. That is why the committed
+`results/summary.json` showed PPO at 659 sims against Bayesian's 57: the number was
+measuring the wrong environment, not the algorithm.
+
+RL now runs on `SequentialEqualizerEnv`, the target-randomized MDP the policy is
+actually trained on, and every arm counts sims the same way. Both the random and
+Bayesian arms sample the design space directly, so no arm gets a free reset.
+
+Counting note: `SequentialEqualizerEnv.n_sims` increments on reset AND on each step, so
+reading it captures the resets that a per-step counter would miss.
 """
 from __future__ import annotations
 
@@ -12,97 +28,140 @@ from pathlib import Path
 
 import numpy as np
 
-from eqrl.agents.tracking import TrackWrapper
-from eqrl.envs.equalizer_env import EqualizerEnv
+from eqrl.circuits.ctle import ACTION_SPACE, decode_action
+from eqrl.envs.equalizer_env import _margins
+from eqrl.envs.sequential_env import SequentialEqualizerEnv
+from eqrl.experiments.generalization import live_constraints
 from eqrl.specs import DEFAULT_SPEC
+from eqrl.sim.measures import measure_all
+
+N_PARAM = len(ACTION_SPACE)
 
 
-def run_random(budget: int, seed: int = 0) -> TrackWrapper:
-    env = TrackWrapper(EqualizerEnv(fast=True))
-    env.reset(seed=seed)
+def _passes(m, spec) -> bool:
+    return bool(m.ok) and all(v >= 0 for v in _margins(m, spec).values())
+
+
+def _score(m, spec) -> float:
+    if not m.ok:
+        return -1e9
+    return float(sum(np.clip(v, -2, 1) for v in _margins(m, spec).values()))
+
+
+def run_random(spec, budget: int, seed: int = 0) -> dict:
+    """Uniform sampling of the design box. Domain is [0,1] — the decoder's own units."""
     rng = np.random.default_rng(seed)
-    for _ in range(budget):
-        env.step(rng.uniform(-1, 1, env.action_space.shape[0]))
-    return env
+    best, best_design, first = -1e18, None, None
+    for i in range(budget):
+        a = rng.uniform(0.0, 1.0, size=N_PARAM)
+        dv = decode_action(a, domain="unit")
+        m = measure_all(dv, corner="tt", vdd=spec.vdd_nominal, fast=True)
+        s = _score(m, spec)
+        if s > best:
+            best, best_design = s, dv.__dict__.copy()
+        if first is None and _passes(m, spec):
+            first = i + 1
+            break
+    return {"method": "random", "first_pass_sim": first, "best_score": best,
+            "best_design": best_design, "budget": budget}
 
 
-def run_bayes(budget: int, seed: int = 0) -> TrackWrapper | None:
+def run_bayes(spec, budget: int, seed: int = 0) -> dict | None:
     try:
         import optuna
     except ImportError:
         return None
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    env = TrackWrapper(EqualizerEnv(fast=True))
-    env.reset(seed=seed)
-    n = env.action_space.shape[0]
+    state = {"i": 0, "first": None, "best": -1e18, "design": None}
+    study = optuna.create_study(direction="maximize",
+                                sampler=optuna.samplers.TPESampler(seed=seed))
 
     def obj(trial):
-        a = np.array([trial.suggest_float(f"a{j}", -1, 1) for j in range(n)])
-        _, r, _, _, _ = env.step(a)
-        return r
+        a = np.array([trial.suggest_float(f"a{j}", 0, 1) for j in range(N_PARAM)])
+        dv = decode_action(a, domain="unit")
+        m = measure_all(dv, corner="tt", vdd=spec.vdd_nominal, fast=True)
+        state["i"] += 1
+        s = _score(m, spec)
+        if s > state["best"]:
+            state["best"], state["design"] = s, dv.__dict__.copy()
+        if state["first"] is None and _passes(m, spec):
+            state["first"] = state["i"]
+            study.stop()
+        return s
 
-    optuna.create_study(direction="maximize",
-                        sampler=optuna.samplers.TPESampler(seed=seed)
-                        ).optimize(obj, n_trials=budget)
-    return env
+    study.optimize(obj, n_trials=budget)
+    return {"method": "bayesian", "first_pass_sim": state["first"],
+            "best_score": state["best"], "best_design": state["design"],
+            "budget": budget}
 
 
-def run_rl(budget: int, seed: int = 0) -> TrackWrapper:
+def run_rl(model_path: str, spec, budget: int, starts: int = 3, seed: int = 0) -> dict:
+    """Trained policy on the sequential env, counting every restart."""
     from stable_baselines3 import PPO
 
-    env = TrackWrapper(EqualizerEnv(fast=True, horizon=1))
-    model = PPO("MlpPolicy", env, seed=seed, verbose=0,
-                n_steps=256, batch_size=64, gamma=0.0, ent_coef=0.01)
-    model.learn(total_timesteps=budget)
-    return env
-
-
-def plot(histories: dict, out: str) -> None:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    for name, h in histories.items():
-        ax.plot(h.n_sims, h.best_reward, label=name, linewidth=2)
-    ax.set_xlabel("# SPICE evaluations")
-    ax.set_ylabel("best reward so far")
-    ax.set_title("Sample efficiency: RL vs sweep (SKY130 CTLE)")
-    ax.legend()
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=130)
-    print(f"plot -> {out}")
+    model = PPO.load(model_path)
+    env = SequentialEqualizerEnv(fast=True, seed=seed)
+    n0, first, best, design = env.n_sims, None, -1e18, None
+    for s in range(starts):
+        obs, _ = env.reset(seed=seed * 100 + s)
+        env._target = spec.target_boost_db
+        obs = env._obs(env._measure(env._x))
+        for _ in range(env.horizon):
+            if env.n_sims - n0 >= budget:
+                break
+            action, _ = model.predict(obs, deterministic=True)
+            obs, r, term, trunc, info = env.step(action)
+            if r > best:
+                best, design = float(r), info.get("design")
+            if info.get("passed"):
+                first = env.n_sims - n0
+                break
+            if trunc:
+                break
+        if first is not None:
+            break
+    return {"method": "PPO (RL)", "first_pass_sim": first, "best_score": best,
+            "best_design": design, "budget": budget,
+            "train_env_steps": int(getattr(model, "num_timesteps", 0)) or None}
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--budget", type=int, default=1500)
+    p.add_argument("--budget", type=int, default=300)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--model", default="results/seq_agent.zip",
+                   help="trained sequential policy; RL arm is skipped if absent")
     p.add_argument("--outdir", default="results")
     args = p.parse_args()
     Path(args.outdir).mkdir(exist_ok=True)
+    spec = DEFAULT_SPEC
 
     runs = {}
-    print("== random =="); runs["random"] = run_random(args.budget, args.seed)
-    b = run_bayes(args.budget, args.seed)
+    print("== random ==")
+    runs["random"] = run_random(spec, args.budget, args.seed)
+    b = run_bayes(spec, args.budget, args.seed)
     if b:
-        print("== bayesian =="); runs["bayesian"] = b
-    print("== PPO =="); runs["PPO (RL)"] = run_rl(args.budget, args.seed)
+        print("== bayesian ==")
+        runs["bayesian"] = b
+    if Path(args.model).exists():
+        print("== PPO (RL) ==")
+        runs["PPO (RL)"] = run_rl(args.model, spec, args.budget, seed=args.seed)
+    else:
+        print(f"[skip] RL arm: no trained policy at {args.model}. Train one with "
+              f"`python -m eqrl.agents.train_sequential` first — an untrained or "
+              f"missing policy must not be reported as an RL result.")
 
-    summary = {}
-    for name, env in runs.items():
-        h = env.h
-        h.to_csv(f"{args.outdir}/history_{name.split()[0].lower()}.csv")
-        summary[name] = {
-            "first_pass_sim": h.first_pass_sim,
-            "best_reward": max(h.best_reward),
-            "best_design": h.best_design,
-        }
-        print(f"{name:14s} first_pass={h.first_pass_sim} best_reward={max(h.best_reward):.2f}")
+    for name, r in runs.items():
+        print(f"{name:14s} first_pass={r['first_pass_sim']} best={r['best_score']:.2f}")
 
+    summary = {
+        "accounting": "total SPICE evaluations to first pass; identical for every arm",
+        "target_boost_db": spec.target_boost_db,
+        "live_constraints": live_constraints(spec, fast=True),
+        **runs,
+    }
     Path(f"{args.outdir}/summary.json").write_text(json.dumps(summary, indent=2))
-    plot({n: e.h for n, e in runs.items()}, f"{args.outdir}/sample_efficiency.png")
+    print(f"\nsummary -> {args.outdir}/summary.json")
 
 
 if __name__ == "__main__":

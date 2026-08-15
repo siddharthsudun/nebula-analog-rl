@@ -31,6 +31,18 @@ from eqrl.specs import DEFAULT_SPEC, Spec
 N_PARAM = len(ACTION_SPACE)          # 7 design variables (normalized in [0,1])
 _MEAS_KEYS = ["boost_db", "peak_freq_ghz", "power_w", "area_mm2"]
 
+#: Reward for a candidate the guard layer rejects (`guarded=True`).
+#:
+#: Chosen to match the env's existing penalty for a non-convergent simulation (-5.0 in
+#: `_shaped`), so a design that fails validation is treated exactly like a design that
+#: failed to simulate — both are "we have no trustworthy measurement here", and neither
+#: should look more attractive than a real but poor design.
+#:
+#: This is a MODELLING CHOICE, not a fact. A larger magnitude teaches stronger avoidance
+#: of the infeasible region; a smaller one lets the agent ignore it. Override with
+#: `SequentialEqualizerEnv(invalid_reward=...)` once you have evidence either way.
+INVALID_REWARD = -5.0
+
 
 def _shaped(m: Measures, spec: Spec) -> tuple[float, bool]:
     """Dense score (sum of clipped margins) + all-pass flag, without the terminal bonus."""
@@ -49,8 +61,17 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 20,
                  corner: str = "tt", fast: bool = True, step_size: float = 0.18,
                  target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
-                 pvt: bool = False):
+                 pvt: bool = False, guarded: bool = False,
+                 invalid_reward: float = INVALID_REWARD):
         super().__init__()
+        self.guarded = guarded
+        self.invalid_reward = invalid_reward
+        self._guard = None
+        self._last_invalid = None
+        self.n_invalid = 0
+        if guarded:
+            from eqrl.evaluator import build_evaluator
+            self._guard = build_evaluator(spec, corner=corner, fast=fast)
         self.base_spec = spec
         self.horizon = horizon
         self.corner = corner
@@ -77,6 +98,19 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def _measure(self, x: np.ndarray) -> Measures:
         dv = decode_action(x)                       # x in [0,1]; decode accepts it
+        if self._guard is not None:
+            # Guarded path: nothing reaches the reward without passing Tiers 1-4.
+            # A rejected candidate is returned as Measures(ok=False), which is exactly
+            # how a non-convergent simulation is already represented — both mean "no
+            # trustworthy measurement here", and the reward path already handles it.
+            self.n_sims += 1
+            verdict = self._guard.evaluate(dv, vdd=self.base_spec.vdd_nominal)
+            if verdict.is_valid:
+                self._last_invalid = None
+                return verdict.unwrap()
+            self._last_invalid = verdict
+            self.n_invalid += 1
+            return Measures(ok=False)
         if not self.pvt:
             self.n_sims += 1
             return measure_all(dv, corner=self.corner, vdd=self.base_spec.vdd_nominal,
@@ -137,4 +171,11 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         truncated = self._t >= self.horizon
         info = {"passed": passed, "sim_ok": m.ok, "target_boost": self._target,
                 "design": decode_action(self._x).__dict__, "measures": m.as_dict()}
+        if self._guard is not None and self._last_invalid is not None:
+            # Absolute penalty, not a delta: an INVALID carries no measurement, so
+            # "improvement since the last score" is not a meaningful quantity here.
+            reward = self.invalid_reward
+            info["invalid_check"] = self._last_invalid.check.value
+            info["invalid_reason"] = self._last_invalid.reason
+            info["artifact_dir"] = str(self._last_invalid.artifact_dir)
         return self._obs(m), reward, terminated, truncated, info

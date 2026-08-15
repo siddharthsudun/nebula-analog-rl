@@ -95,7 +95,11 @@ class EqualizerEnv(gym.Env):  # type: ignore[misc]
         return worst_corner(dv, self.target)
 
     def step(self, action):
-        dv = decode_action(action)
+        # action_space is Box(-1, 1) and the action is an ABSOLUTE sizing, so the
+        # decoder must be told the domain. (SequentialEqualizerEnv is different: its
+        # Box(-1,1) action is a *delta* applied to an internal [0,1] state, so it
+        # decodes with the default "unit" domain.)
+        dv = decode_action(action, domain="pm1")
         m = self._evaluate(dv)
         reward, passed, info = compute_reward(m, self.target)
         info["design"] = dv.__dict__

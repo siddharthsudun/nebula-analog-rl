@@ -41,20 +41,38 @@ ACTION_SPACE = {
 }
 
 
-def decode_action(a) -> DesignVars:
-    """Map a normalized action in [0,1]^7 (or [-1,1]) to physical DesignVars.
+def decode_action(a, domain: str = "unit") -> DesignVars:
+    """Map a normalized action to physical DesignVars.
 
-    Accepts either [0,1] or [-1,1]; log-scales the wide-range knobs.
+    domain="unit" : a is in [0, 1]^7   (the internal representation)
+    domain="pm1"  : a is in [-1, 1]^7  (a gym Box(-1,1) policy output)
+
+    The domain is EXPLICIT and must be. The previous version tried to infer it with
+    `x = (x + 1) / 2 if x < 0 else x`, which is not a coordinate change but a branch:
+    it mapped negative inputs onto [0, 0.5] while leaving positive inputs on [0, 1].
+    That made the mapping discontinuous and non-monotonic at zero —
+
+        a = -0.01  ->  w_in =  9.77 um
+        a = +0.00  ->  w_in =  1.00 um     (a cliff, mid-range)
+
+    — which is exactly where a tanh-squashed policy puts most of its probability mass.
+    Inference is impossible in principle anyway: 0.3 is a valid point in both domains
+    and means different things in each, so the caller has to say.
+
+    Wide, strictly-positive ranges are log-scaled so the search resolves small values.
     """
-    import math
-
     keys = list(ACTION_SPACE.keys())
+    if domain == "pm1":
+        x_norm = [(float(v) + 1.0) / 2.0 for v in a]      # linear over the WHOLE range
+    elif domain == "unit":
+        x_norm = [float(v) for v in a]
+    else:
+        raise ValueError(f"unknown domain {domain!r}; use 'unit' or 'pm1'")
+
     vals = {}
     for i, k in enumerate(keys):
         lo, hi = ACTION_SPACE[k]
-        x = float(a[i])
-        x = (x + 1) / 2 if x < 0 else x          # accept [-1,1]
-        x = min(max(x, 0.0), 1.0)
+        x = min(max(x_norm[i], 0.0), 1.0)
         if lo > 0 and hi / lo > 50:              # log-scale wide, strictly-positive ranges
             v = lo * (hi / lo) ** x
         else:

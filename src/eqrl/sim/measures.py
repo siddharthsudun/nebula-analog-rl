@@ -43,6 +43,34 @@ def peaking(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float
     return dc, float(mag[i] - dc), float(freq[i] / 1e9)
 
 
+def bandwidth_ghz(freq: np.ndarray, mag_db: np.ndarray) -> float | None:
+    """Upper -3 dB frequency relative to the DC level, searching above the peak.
+
+    Returns None when the sweep never falls to DC-3 dB. That case is deliberately NOT
+    reported as "bandwidth = the last frequency in the sweep": doing so makes every
+    design look identical at the sweep edge and hides the fact that the number is
+    unmeasurable. Callers must handle None rather than receive a plausible constant.
+
+    Pure function on arrays, so it is testable without a simulator.
+    """
+    dc = float(mag_db[0])
+    i = int(np.argmax(mag_db))
+    below = np.where(mag_db[i:] <= dc - 3.0)[0]
+    if not below.size:
+        return None
+    return float(freq[i + below[0]] / 1e9)
+
+
+def peak_is_at_sweep_edge(freq: np.ndarray, mag_db: np.ndarray, *, tol: int = 1) -> bool:
+    """True when argmax lands on (or within `tol` points of) the last sample.
+
+    A 'peak' at the edge of the sweep is usually a sweep artifact — the response was
+    still rising when we stopped looking — not a resonance. Worth checking before
+    trusting peak_freq_ghz.
+    """
+    return int(np.argmax(mag_db)) >= len(mag_db) - 1 - tol
+
+
 def power(dv: DesignVars, vdd: float = 1.8) -> float:
     """DC power = VDD * total supply current (tail currents through the loads)."""
     return vdd * dv.i_tail

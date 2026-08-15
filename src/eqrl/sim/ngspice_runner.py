@@ -52,10 +52,16 @@ def run(netlist: str, *, control: str, timeout: float = 60.0,
         return {"data": data, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
-def ac(netlist: str, **kw) -> dict[str, np.ndarray]:
-    """Run an AC analysis, return frequency + differential magnitude(dB) arrays."""
+def ac(netlist: str, *, fstart: float = 1e6, fstop: float = 1e11,
+       decade_pts: int = 50, **kw) -> dict[str, np.ndarray]:
+    """Run an AC analysis, return frequency + differential magnitude(dB) arrays.
+
+    fstop defaults to 100 GHz, not the old 10 GHz: this topology's -3 dB point sits
+    around 57 GHz at nominal bias, so a 10 GHz ceiling made bandwidth unmeasurable and
+    pinned every reading to the sweep edge. See eqrl.sim.server.AC_FSTOP.
+    """
     # wrdata auto-prepends the scale (frequency) column — do NOT list it explicitly.
-    control = ("ac dec 50 1e6 10e9\n"
+    control = (f"ac dec {decade_pts} {fstart:g} {fstop:g}\n"
                "let voutdb = db(v(outp) - v(outn))\n"
                "wrdata $OUT voutdb")
     res = run(netlist, control=control, **kw)

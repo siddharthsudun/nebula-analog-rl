@@ -25,6 +25,22 @@ from eqrl.circuits.ctle import DesignVars, dv_to_params, param_deck  # noqa: E40
 from eqrl.sim.ngspice_runner import NgspiceError  # noqa: E402
 
 
+#: AC sweep for the gain/peaking measurement.
+#:
+#: This used to stop at 10 GHz, which is BELOW this topology's -3 dB point (~57 GHz at
+#: nominal bias for the reference design). Every bandwidth reading therefore saturated
+#: at the sweep edge and looked constant no matter what the design did. 100 GHz clears
+#: the -3 dB point with margin while staying inside the range where the SKY130 BSIM
+#: models are meaningful.
+#:
+#: NOTE: widening the sweep can change `peak_freq_ghz` for any design whose old argmax
+#: landed on the 10 GHz boundary — those were sweep artifacts, not peaks. Results
+#: measured before this change should be regenerated.
+AC_FSTART = 1e6
+AC_FSTOP = 1e11
+AC_DECADE_PTS = 40
+
+
 class NgspiceServer:
     """A resident libngspice instance bound to one process corner."""
 
@@ -76,7 +92,7 @@ class NgspiceServer:
         self._prime(dv, vdd, temp_c)
         out = self._dir / "ac.data"
         out.unlink(missing_ok=True)
-        self._analysis("ac dec 40 1e6 10e9")
+        self._analysis(f"ac dec {AC_DECADE_PTS} {AC_FSTART:g} {AC_FSTOP:g}")
         self._ng.exec_command("let vdb = db(v(outp)-v(outn))")
         self._ng.exec_command(f"wrdata {out} vdb")
         arr = self._read("ac.data")
