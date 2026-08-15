@@ -1,0 +1,42 @@
+{
+  "model": "results\\seq_agent.zip",
+  "num_timesteps": 40960,
+  "training_spice_sims": 44707,
+  "training_wall_clock_s": 21741,
+  "action_std_mean": 0.857400119304657,
+  "corner": "tt",
+  "fast_mode": true,
+  "guarded": false,
+  "seed": 0,
+  "note": "fast=True means hd3/noise/eye were hardcoded constants during training; only boost and peak-frequency were live constraints. See generalization.live_constraints().",
+  "spot_check": [
+    {
+      "target": 5.0,
+      "sims_to_pass": 8,
+      "sims_used": 8,
+      "boost_db": 5.731276729999999,
+      "fpk_ghz": 1.58489319
+    },
+    {
+      "target": 7.0,
+      "sims_to_pass": 7,
+      "sims_used": 7,
+      "boost_db": 7.92060622,
+      "fpk_ghz": 1.33352143
+    },
+    {
+      "target": 9.0,
+      "sims_to_pass": 5,
+      "sims_used": 5,
+      "boost_db": 10.396596409999999,
+      "fpk_ghz": 2.37137371
+    },
+    {
+      "target": 11.0,
+      "sims_to_pass": 7,
+      "sims_used": 7,
+      "boost_db": 10.30730707,
+      "fpk_ghz": 1.49623566
+    }
+  ]
+}
