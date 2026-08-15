@@ -72,26 +72,55 @@ def _assert_direction(xs, ys, sign: int, *, what: str, knob: str):
     )
 
 
-def bandwidth_ghz(freq: np.ndarray, mag_db: np.ndarray) -> float:
-    """Upper -3 dB point relative to the DC level, searching above the peak.
+def bandwidth_ghz(freq: np.ndarray, mag_db: np.ndarray, ref: str = "peak") -> float:
+    """Upper -3 dB point, searching above the peak.
 
-    Raises if the sweep never reaches -3 dB. Returning the last frequency instead
-    would silently report 'bandwidth == sweep edge' for every design, which makes the
-    metric look constant and hides the real defect (too narrow an AC sweep).
+    ref="peak" : 3 dB below the maximum. The only definition that works for an
+                 ATTENUATING equalizer, where the DC level is the floor rather than a
+                 plateau — the measured SKY130 stage has DC gain -10.6 dB and peaks at
+                 -0.35 dB, so it never falls 3 dB below DC at any frequency.
+    ref="dc"   : 3 dB below the DC level. Valid only when the stage has DC gain.
+
+    Raises if the sweep never reaches -3 dB, rather than returning the sweep edge —
+    reporting 'bandwidth == last frequency' for every design makes the metric look
+    constant and hides the real defect.
     """
-    dc = float(mag_db[0])
     i = int(np.argmax(mag_db))
-    below = np.where(mag_db[i:] <= dc - 3.0)[0]
+    level = float(mag_db[i]) if ref == "peak" else float(mag_db[0])
+    below = np.where(mag_db[i:] <= level - 3.0)[0]
     if not below.size:
         raise AssertionError(
-            f"AC sweep never falls to DC-3dB ({dc - 3.0:.2f} dB); it ends at "
+            f"AC sweep never falls to {ref}-3dB ({level - 3.0:.2f} dB); it ends at "
             f"{mag_db[-1]:.2f} dB at {freq[-1] / 1e9:.1f} GHz. Bandwidth is not "
-            "measurable over this frequency range — widen the sweep."
+            f"measurable over this range with ref={ref!r}."
         )
     return float(freq[i + below[0]] / 1e9)
 
 
-AC_WIDE = "ac dec 30 1e6 1e13\nlet vdb = db(v(outp)-v(outn))\nwrdata $OUT vdb"
+def bias_valid_itail(r_load: float, vdd: float = 1.8, headroom_v: float = 0.4) -> float:
+    """Largest tail current the supply can sustain through a given load.
+
+    MEASURED consequence of ignoring this: at i_tail=4 mA into the default 1 kohm load,
+    each leg drops 2.0 V across a 1.8 V rail. The stage stops amplifying entirely —
+    there is no peak anywhere, just gate-drain feedthrough climbing monotonically from
+    -15.9 dB at 1 GHz to -9.5 dB at 10 THz. argmax then lands on the last sweep point
+    and every derived metric is meaningless.
+    """
+    return 2.0 * (vdd - headroom_v) / r_load
+
+
+def bias_valid_rload(i_tail: float, vdd: float = 1.8, headroom_v: float = 0.4) -> float:
+    """Largest load resistor that still leaves the output inside the rails.
+
+    Each leg carries i_tail/2 through R_load, so the DC drop is (i_tail/2)*R_load. Once
+    that approaches VDD the output node is pinned at the bottom rail and the input
+    device leaves saturation — the stage stops being an amplifier. Sweeps that ignore
+    this are not testing the circuit, they are testing a collapsed bias point.
+    """
+    return (vdd - headroom_v) / (i_tail / 2.0)
+
+
+AC_WIDE = "ac dec 30 1e6 1e11\nlet vdb = db(v(outp)-v(outn))\nwrdata $OUT vdb"
 """A wider AC control than the production `ngspice_runner.ac` (1e6..1e10).
 
 Bandwidth for this topology lands around 57 GHz, so the production sweep cannot see
@@ -168,7 +197,13 @@ def _pdk() -> bool:
         return False
 
 
-def _sweep_pipeline(field: str, values, models: str, *, wide: bool = False):
+def peak_at_edge(freq: np.ndarray, mag_db: np.ndarray, tol: int = 1) -> bool:
+    """A 'peak' on the last sweep sample is a stopped sweep, not a resonance."""
+    return int(np.argmax(mag_db)) >= len(mag_db) - 1 - tol
+
+
+def _sweep_pipeline(field: str, values, models: str, *, wide: bool = False,
+                    raw: bool = False):
     """Run the real netlist + ngspice + parser once per value.
 
     wide=True uses AC_WIDE so bandwidth is reachable; everything else is identical to
@@ -185,6 +220,9 @@ def _sweep_pipeline(field: str, values, models: str, *, wide: bool = False):
             res = run(deck, control=AC_WIDE)
             arr = np.atleast_2d(res["data"])
             freq, mag = arr[:, 0], arr[:, 1]
+            if raw:
+                out.append((freq, mag))
+                continue
         else:
             r = ac(deck)
             freq, mag = r["freq"], r["mag_db"]
@@ -253,27 +291,83 @@ class TestPipelineSky130:
         assert_increasing(rs, [r["peaking_db"] for r in res],
                           what="peaking_db", knob="rs")
 
-    def test_itail_increases_bandwidth(self):
-        it = np.linspace(0.5e-3, 4e-3, N_POINTS)
+    def test_itail_increases_bandwidth_while_the_bias_survives(self):
+        """MEASURED: 0.5 mA -> -3dB at 8.91 GHz; 2.0 mA -> 12.59 GHz. Bandwidth rises
+        with current exactly as theory says — but only up to the point where the leg
+        current can still fit across the supply. Past ~2.8 mA into the default 1 kohm
+        load the stage collapses (see the companion test below)."""
+        r_load = DesignVars().r_load
+        it = np.linspace(0.5e-3, bias_valid_itail(r_load), N_POINTS)
         res = _sweep_pipeline("i_tail", it, "sky130", wide=True)
         assert_increasing(it, [r["bandwidth_ghz"] for r in res],
                           what="bandwidth_ghz", knob="i_tail")
 
-    def test_rload_increases_dc_gain(self):
-        rl = np.linspace(200.0, 3000.0, N_POINTS)
+    def test_itail_beyond_the_supply_collapses_the_stage(self):
+        """The same cliff as the r_load case, reached from the other axis.
+
+        At 4 mA into 1 kohm the response has no peak at all: it climbs monotonically
+        with frequency (pure Cgd feedthrough), so argmax lands on the last sweep sample
+        and 'peak frequency' becomes an artifact of where the sweep happened to stop.
+        Tier 2 checks 5 and 7 are what stop this reaching the reward.
+        """
+        r_load = DesignVars().r_load
+        dead_it = bias_valid_itail(r_load) * 1.6
+        res = _sweep_pipeline("i_tail", [dead_it], "sky130", wide=True, raw=True)
+        freq, mag = res[0]
+        assert peak_at_edge(freq, mag), (
+            "expected a collapsed stage whose 'peak' is the last sweep point"
+        )
+        assert (dead_it / 2) * r_load > 1.8, "sanity: the leg drop must exceed VDD"
+
+    def test_rload_increases_dc_gain_while_the_bias_survives(self):
+        """Swept only over loads the supply can actually sustain.
+
+        MEASURED: with the 2 mA default tail, DC gain rises to +2.8 dB at 1133 ohm,
+        turns over by 1600 ohm, and collapses to -39.7 dB by 3000 ohm. That is not a
+        gain curve — past ~1400 ohm the 1 mA leg current drops more than VDD across the
+        load, the output pins at the bottom rail and the input device leaves saturation.
+        Theory only describes the stage while it is biased, so the sweep stops there.
+        `test_rload_beyond_the_supply_collapses_the_stage` covers the other side.
+        """
+        i_tail = DesignVars().i_tail
+        rl_max = bias_valid_rload(i_tail)
+        rl = np.linspace(200.0, rl_max, N_POINTS)
         res = _sweep_pipeline("r_load", rl, "sky130")
         assert_increasing(rl, [r["dc_gain_db"] for r in res],
                           what="dc_gain_db", knob="r_load")
 
+    def test_rload_beyond_the_supply_collapses_the_stage(self):
+        """The region the guards exist to reject.
+
+        A load big enough to drop more than VDD is not a low-gain design, it is a dead
+        one. The simulator still returns a number, which is exactly the failure mode
+        guards.py Tier 2 (checks 5 and 7: saturation and node-within-rails) is for.
+        Without those checks the optimizer sees '-39 dB' as an ordinary bad reward and
+        keeps the region in play.
+        """
+        i_tail = DesignVars().i_tail
+        rl_max = bias_valid_rload(i_tail)
+        ok = _sweep_pipeline("r_load", [rl_max * 0.8], "sky130")[0]
+        dead = _sweep_pipeline("r_load", [rl_max * 2.5], "sky130")[0]
+        assert dead["dc_gain_db"] < ok["dc_gain_db"] - 10.0, (
+            f"expected a collapsed bias past the supply limit, but DC gain only moved "
+            f"{ok['dc_gain_db']:.2f} -> {dead['dc_gain_db']:.2f} dB"
+        )
+        drop_v = (i_tail / 2) * rl_max * 2.5
+        assert drop_v > 1.8, f"sanity: {drop_v:.2f} V across the load exceeds VDD"
+
 
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
+@pytest.mark.xfail(strict=True, reason=(
+    "CONFIRMED BY SIMULATION: w_dfe changes no measured quantity. It appears in "
+    "ACTION_SPACE and in every exported design, but dv_to_params() omits it and "
+    "neither param_deck() nor _core_sky130() contains a DFE element, so one seventh "
+    "of the action space is wired to nothing. strict=True so this flips to a failure "
+    "the moment the DFE is actually connected — at which point delete the marker."))
 def test_w_dfe_is_not_a_dead_parameter():
     """w_dfe is in ACTION_SPACE and in the design vector. If it reaches nothing in the
     netlist, the agent is optimizing a knob wired to no circuit — the search will look
     healthy while one seventh of its budget does nothing.
-
-    This test documents the expectation. It is currently expected to FAIL, because the
-    1-tap DFE is absent from both the sky130 deck and the param deck.
     """
     res = _sweep_pipeline("w_dfe", np.linspace(0.0, 0.5, 4), "behavioral")
     metrics = {k: {round(r[k], 9) for r in res} for k in res[0]}
