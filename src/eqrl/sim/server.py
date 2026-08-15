@@ -12,13 +12,54 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import tempfile
 from pathlib import Path
 
 import numpy as np
 
-# libngspice lives in Homebrew's lib dir; make sure the loader can find it.
-os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/lib")
+
+def _locate_libngspice() -> None:
+    """Point PySpice at the ngspice shared library, per platform.
+
+    PySpice resolves the library from NGSPICE_LIBRARY_PATH when it is set, and falls
+    back to a bundled Windows path / the system loader otherwise. An already-set value
+    always wins, so an explicit environment (see scripts/win-env.ps1) is never
+    overridden.
+
+    This used to set DYLD_LIBRARY_PATH unconditionally, which is macOS-only: on Windows
+    the loader ignores it, PySpice looked for a Spice64_dll directory that does not
+    exist, and the resident server could not start at all.
+    """
+    if os.environ.get("NGSPICE_LIBRARY_PATH"):
+        return
+
+    if sys.platform == "darwin":
+        # libngspice lives in Homebrew's lib dir; make sure the loader can find it.
+        os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/lib")
+        return
+
+    if sys.platform == "win32":
+        # PySpice formats this with the instance id, so it needs a {} placeholder.
+        candidates = [
+            Path(os.environ.get("EQRL_NGSPICE_PREFIX", "")) / "Library" / "bin",
+            Path.home() / "eqrl-ngspice" / "Library" / "bin",
+            Path(os.environ.get("CONDA_PREFIX", "")) / "Library" / "bin",
+        ]
+        for d in candidates:
+            if (d / "ngspice.dll").exists():
+                os.environ["NGSPICE_LIBRARY_PATH"] = str(d / "ngspice{}.dll")
+                os.environ.setdefault(
+                    "SPICE_LIB_DIR", str(d.parent / "share" / "ngspice"))
+                # Python 3.8+ ignores PATH for dependent-DLL resolution.
+                if hasattr(os, "add_dll_directory") and d.is_dir():
+                    os.add_dll_directory(str(d))
+                return
+        # Leave it unset: PySpice raises a clear load error, and forcing a wrong path
+        # would turn that into a confusing one. See SETUP.md "Windows (native)".
+
+
+_locate_libngspice()
 logging.getLogger("PySpice").setLevel(logging.ERROR)
 
 from eqrl.circuits.ctle import DesignVars, dv_to_params, param_deck  # noqa: E402

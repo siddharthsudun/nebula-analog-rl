@@ -14,5 +14,9 @@ optuna
 # LLM wrapper (bonus)
 anthropic
 
-# optional SPICE python wrapper (raw ngspice also works)
-# PySpice
+# SPICE. PySpice drives libngspice in-process for the resident server, which is what
+# makes RL training on real SPICE practical (~60 ms/eval here vs ~5.4 s subprocess).
+# measure_all() -> get_server() needs it; only the ngspice_runner subprocess path does not.
+# Verified with PySpice 1.5 against ngspice 41 (it logs "Unsupported Ngspice version 41"
+# and works — PySpice 1.5 predates 41, the warning is not an error).
+PySpice

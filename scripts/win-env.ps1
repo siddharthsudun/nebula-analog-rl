@@ -26,6 +26,12 @@ $env:PATH = "$NgPrefix\shim;$NgPrefix\Library\bin;$env:PATH"
 $env:SPICE_LIB_DIR = "$NgPrefix\Library\share\ngspice"
 $env:PDK_ROOT = $PdkRoot
 
+# For the resident server (PySpice -> libngspice). src/eqrl/sim/server.py discovers this
+# on its own, but setting it explicitly makes the shell self-describing and lets a
+# non-standard install location override the search. The {} is a placeholder PySpice
+# fills with the instance id.
+$env:NGSPICE_LIBRARY_PATH = "$NgPrefix\Library\bin\ngspice{}.dll"
+
 Write-Host "ngspice   : $NgPrefix\shim\ngspice.exe (console build)"
 Write-Host "PDK_ROOT  : $env:PDK_ROOT"
 Write-Host "SPICE_LIB : $env:SPICE_LIB_DIR"
