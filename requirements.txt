@@ -16,3 +16,6 @@ anthropic
 
 # optional SPICE python wrapper (raw ngspice also works)
 # PySpice
+
+# CMA-ES baseline
+cma
