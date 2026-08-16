@@ -19,8 +19,8 @@ import pytest
 
 from eqrl.circuits.ctle import DesignVars
 from eqrl.guards import (
-    ArtifactStore, Check, DeviceOP, EvalRecord, GuardConfigError, GuardError, Invalid,
-    OperatingPoint, RunArtifacts, SearchHalted, SearchMonitor, Valid,
+    ArtifactStore, Check, DeviceOP, EvalRecord, GuardConfigError, GuardedEvaluator,
+    GuardError, Invalid, OperatingPoint, RunArtifacts, SearchHalted, SearchMonitor, Valid,
     check_circuit_sanity, check_corner_integrity, check_physical_plausibility,
     check_run_integrity, theoretical_eye_v_max_mv,
 )
@@ -401,10 +401,54 @@ class TestTier4Plausibility:
                                                     DesignVars(), art), Check.T4_EYE)
 
     def test_eye_height_above_theoretical_max(self, art):
-        dv = DesignVars(i_tail=1e-3, r_load=200.0)   # max swing = 200 mV
-        assert theoretical_eye_v_max_mv(dv) == pytest.approx(200.0)
-        assert_rejected(check_physical_plausibility(good_measures(eye_v_mv=250.0), dv, art),
+        # Differential: steering 1 mA into 200 ohm moves outp-outn over +/-200 mV,
+        # so the peak-to-peak ceiling is 400 mV, not 200.
+        dv = DesignVars(i_tail=1e-3, r_load=200.0)
+        assert theoretical_eye_v_max_mv(dv) == pytest.approx(400.0)
+        assert check_physical_plausibility(good_measures(eye_v_mv=350.0), dv, art) is None
+        assert_rejected(check_physical_plausibility(good_measures(eye_v_mv=450.0), dv, art),
                         Check.T4_EYE)
+
+    def test_eye_ceiling_is_capped_by_the_supply(self, art):
+        """A load node cannot be pulled below ground, so I_tail * R_load cannot exceed
+        VDD no matter how large the product is requested to be. Without this the ceiling
+        for 20 mA into 5 kohm is 100 V and the check can never fire."""
+        dv = DesignVars(i_tail=20e-3, r_load=5e3)          # I*R = 100 V, unreachable
+        assert theoretical_eye_v_max_mv(dv, vdd=1.8) == pytest.approx(3600.0)
+        assert_rejected(
+            check_physical_plausibility(good_measures(eye_v_mv=5000.0), dv, art, vdd=1.8),
+            Check.T4_EYE)
+
+    def test_eye_ceiling_scales_with_the_supply_it_is_given(self, art):
+        dv = DesignVars(i_tail=20e-3, r_load=5e3)
+        assert theoretical_eye_v_max_mv(dv, vdd=1.71) == pytest.approx(3420.0)
+        assert theoretical_eye_v_max_mv(dv, vdd=1.89) == pytest.approx(3780.0)
+
+    def test_simulator_command_errors_become_verdicts_not_crashes(self, store):
+        """PySpice's NgSpiceCommandError derives from NameError, so it slipped past the
+        OSError/ValueError/RuntimeError catch and terminated the whole run. A candidate
+        the simulator refuses is a verdict; only a broken harness should propagate."""
+        pyspice = pytest.importorskip("PySpice.Spice.NgSpice.Shared")
+
+        def raises(dv, artifacts=None, vdd=1.8, **kw):
+            raise pyspice.NgSpiceCommandError("ngspice refused the command")
+
+        ev = GuardedEvaluator(raises, DEFAULT_SPEC, store,
+                              require_operating_point=False)
+        verdict = ev.evaluate(DesignVars())
+        assert isinstance(verdict, Invalid)
+        assert verdict.check is Check.T1_STDERR_FAILURE
+        assert "NgSpiceCommandError" in verdict.reason
+
+    def test_unexpected_exceptions_still_propagate(self, store):
+        """The catch must stay narrow — a bug in our own code is not a design verdict."""
+        def raises(dv, artifacts=None, vdd=1.8, **kw):
+            raise KeyError("a genuine harness bug")
+
+        ev = GuardedEvaluator(raises, DEFAULT_SPEC, store,
+                              require_operating_point=False)
+        with pytest.raises(KeyError):
+            ev.evaluate(DesignVars())
 
     @pytest.mark.parametrize("field", ["dc_gain_db", "boost_db", "noise_vrms", "power_w"])
     def test_nan_and_inf_are_rejected(self, art, field):

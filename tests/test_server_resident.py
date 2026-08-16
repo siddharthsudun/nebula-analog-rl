@@ -26,9 +26,13 @@ def _server_available() -> bool:
         from eqrl.circuits import pdk
         if not pdk.available():
             return False
-        from eqrl.sim.server import NgspiceServer  # noqa: F401
-        from PySpice.Spice.NgSpice.Shared import NgSpiceShared
-        NgSpiceShared.new_instance()
+        # Must go through the project's factory. PySpice caches shared instances by id
+        # on the base class, so probing with NgSpiceShared.new_instance() directly would
+        # claim id 0 for the intolerant base class and every later NgspiceServer in the
+        # process would silently inherit it — which is exactly how the ff corner started
+        # failing on benign "Note:" output.
+        from eqrl.sim.server import _tolerant_shared_instance
+        _tolerant_shared_instance()
         return True
     except Exception:                              # noqa: BLE001 - availability probe
         return False

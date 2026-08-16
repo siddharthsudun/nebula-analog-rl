@@ -82,15 +82,71 @@ AC_FSTOP = 1e11
 AC_DECADE_PTS = 40
 
 
+#: ngspice lines that are informational, not failures. PySpice whitelists only lines
+#: beginning with "Warning:" and flags every other stderr line as a command failure
+#: (Shared.py, send_stderr). ngspice announces its DC fallback as
+#:     Note: Transient op started
+#:     Note: Transient op finished successfully
+#: on stderr, so any design whose operating point needs that fallback raises
+#: NgSpiceCommandError even though the .op solved and returned correct node voltages.
+#:
+#: MEASURED: with the default deck the ff corner takes this path while tt and ss do not,
+#: which made `set_corner("ff")` raise while the same deck run through the subprocess
+#: path returned v(sp)=0.369 V, v(outp)=1.027 V, v(nbias)=0.828 V — a perfectly good bias.
+#: Left in place this reports healthy fast-corner designs as invalid, which during
+#: training is a systematic bias against exactly the corner that converges hardest.
+#:
+#: Demoting these is safe: the guard layer's Tier 1.2 independently scans the captured
+#: stdout/stderr for real solver-failure text, so a genuine failure is still caught even
+#: when PySpice does not raise.
+_BENIGN_STDERR_PREFIXES = ("Note:",)
+
+
+def _stderr_line_is_failure(line: str) -> bool:
+    """Does this captured stderr line indicate a failed command?"""
+    s = line.strip()
+    return not (s.startswith(_BENIGN_STDERR_PREFIXES) or s.startswith("Warning:") or not s)
+
+
+def _tolerant_shared_instance():
+    """A PySpice NgSpiceShared that does not treat informational notes as errors.
+
+    PySpice sets `_error_in_stderr` inline in a static callback before handing the line
+    to the documented `send_char` hook, so the flag cannot be intercepted — it can only
+    be recomputed. `clear_output()` empties `_stderr` at the start of every command, so
+    recomputing across the whole captured list is exact: benign notes never raise the
+    flag on their own, and a genuine error line anywhere in the same command still does.
+    """
+    from PySpice.Spice.NgSpice.Shared import NgSpiceShared
+
+    class _Tolerant(NgSpiceShared):
+        def send_char(self, message, ngspice_id):
+            prefix, _, content = message.partition(" ")
+            if prefix == "stderr" and content.strip().startswith(_BENIGN_STDERR_PREFIXES):
+                self._error_in_stderr = any(_stderr_line_is_failure(l)
+                                            for l in self._stderr)
+            return super().send_char(message, ngspice_id)
+
+    ng = _Tolerant.new_instance()
+    if not isinstance(ng, _Tolerant):
+        # PySpice caches instances by id in a dict on the shared base class, so whoever
+        # calls new_instance() first decides the class for the whole process — importing
+        # a module that probes availability with NgSpiceShared.new_instance() was enough
+        # to silently give everything the intolerant base back. Re-bind instead of
+        # accepting that: _Tolerant overrides one method and adds no state.
+        ng.__class__ = _Tolerant
+    return ng
+
+
 class NgspiceServer:
     """A resident libngspice instance bound to one process corner."""
 
     def __init__(self, corner: str = "tt"):
-        from PySpice.Spice.NgSpice.Shared import NgSpiceShared, NgSpiceCommandError
+        from PySpice.Spice.NgSpice.Shared import NgSpiceCommandError
 
         self._cmd_err = NgSpiceCommandError
         self.corner = corner
-        self._ng = NgSpiceShared.new_instance()
+        self._ng = _tolerant_shared_instance()
         self._tmp = tempfile.TemporaryDirectory()
         self._dir = Path(self._tmp.name)
         self._load(corner)

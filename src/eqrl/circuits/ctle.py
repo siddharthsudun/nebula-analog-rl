@@ -8,6 +8,7 @@ The Rs*Cs zero produces the HF peaking that boosts the Nyquist band.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -85,7 +86,52 @@ def decode_action(a, domain: str = "unit") -> DesignVars:
 
 
 C_LOAD = 30e-15   # next-stage input cap the CTLE drives [F]
-VCM = 0.9         # input common-mode [V]
+#: Input common-mode, as a fraction of VDD.
+#:
+#: MEASURED, not chosen by preference. At the previous 0.5*VDD the source node sat at
+#: ~0.105 V while the tail mirror device needs ~0.40 V of Vdsat, so the mirror was in
+#: TRIODE at every bias point and delivered only 16-46% of the requested current:
+#:
+#:     requested/leg   delivered   XMtp headroom
+#:        250 uA        116 uA       -274 mV
+#:       1000 uA        326 uA       -295 mV
+#:       4000 uA        649 uA       -325 mV
+#:
+#: A triode device is a resistor, not a current source, so `i_tail` was a badly
+#: compressed non-linear knob and the mirror provided none of the PVT behaviour it was
+#: added for. Widening the mirror alone does not fix it (at 0.5*VDD even a 100 um device
+#: is still -84 mV short) — the headroom has to come from the common-mode.
+#:
+#: The tail node sits at sp = VCM - Vgs1, so VCM trades mirror headroom against input-pair
+#: headroom one-for-one. Raising it saturates the mirror over more of the space; the same
+#: move pushes the input pair out of saturation at a lower load resistance, because the
+#: output has to stay above sp + Vdsat1 and sp has just gone up.
+#:
+#: Both effects were measured. Tier 2 coverage over a 33-point (i_tail, l_in, r_load) grid
+#: at four PVT corners favours a high common-mode:
+#:
+#:      VCM        tt 1.80 27C   ss 1.71 125C   ss 1.71 0C   ff 1.89 0C   total
+#:      0.80*VDD      28/33          24/33         27/33        27/33    106/132
+#:      0.84*VDD      30/33          26/33         27/33        28/33    111/132
+#:
+#: The monotonicity suite -- the encoded physics contract, which sweeps r_load far enough
+#: to reach the input pair's limit -- favours the opposite:
+#:
+#:      VCM        0.72      0.76      0.80      0.84
+#:      failures    0/14      2/14      2/14      3/14
+#:
+#: The grid above tops out at r_load = 2 kohm and so never visits the region where the
+#: input pair binds, which is why it disagrees. The physics contract is the stronger
+#: signal: it is what asserts the simulator is measuring the circuit we think it is, and
+#: 0.72 is the only value where all of it holds. Coverage lost at high i_tail is coverage
+#: the guard correctly reports as invalid, which is a worse trade than a design space with
+#: a non-monotone gain landscape for the agent to learn.
+#:
+#: At 0.72 both devices are saturated and the mirror delivers 88-96% of the request from
+#: 0.05 mA to 2 mA at both 1.8 V and 1.71 V. Above ~5 mA the binding constraint becomes
+#: the load drop (I*R vs VDD), which is real physics for the agent to respect.
+VCM_VDD_RATIO = 0.72
+VCM = 1.8 * VCM_VDD_RATIO   # input common-mode at nominal VDD [V]
 AC_AMP = 0.5      # AC drive amplitude per side (differential AC=1)
 TRAN_AMP = 0.05   # 100 MHz transient amplitude per side for HD3 [V]
 
@@ -140,10 +186,11 @@ def param_deck(corner: str = "tt") -> str:
         # in ~ms (agent learns to avoid them) instead of grinding for seconds.
         ".options gminsteps=0 srcsteps=0 itl1=100\n"
         # temperature via an alterparam'd option (shared-mode `set temp` is ignored).
-        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8 tempc=27 wb=10 lb=0.5\n"
+        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8 tempc=27\n"
+        f".param wb=80 lb={MIRROR_L_UM} mb=2\n"
         ".options temp={tempc}\n"
         "Vdd vdd 0 {vddp}\n"
-        "Vcm cm 0 'vddp/2'\n"
+        f"Vcm cm 0 'vddp*{VCM_VDD_RATIO}'\n"
         f"Vinp inp cm AC {AC_AMP} SIN(0 {TRAN_AMP} 100e6)\n"
         f"Vinn inn cm AC -{AC_AMP} SIN(0 -{TRAN_AMP} 100e6)\n"
         "XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L={l} W={w} nf=1 m=1\n"
@@ -165,20 +212,52 @@ def param_deck(corner: str = "tt") -> str:
 # channel-length modulation), so PVT can fail the way real analog does.
 _MIRROR = (
     "Iref vdd nbias 'itail/2'\n"
-    "XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m=1\n"
-    "XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m=1\n"
-    "XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m=1\n"
+    "XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m={mb}\n"
+    "XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m={mb}\n"
+    "XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m={mb}\n"
 )
 
 
-def mirror_width_um(i_tail: float) -> float:
-    """Mirror device width, scaled with the leg current so it stays in saturation
-    (~100 uA/um current density at L=0.5 um). Clamped to sky130 limits."""
-    return float(min(max((i_tail / 2.0) / 100e-6, 0.5), 200.0))
+#: Mirror channel length. Not a style choice — mirror accuracy is set by channel-length
+#: modulation, because XMref sits near Vgs (~0.9 V) while XMtp sits at the tail node
+#: (~0.3 V) and Id drifts with that 0.6 V difference. Measured worst-case delivery error
+#: over i_tail in [0.05, 20] mA and VDD in {1.8, 1.71}:
+#:     L = 0.5 um -> 34.0%    L = 1 um -> 8.3%    L = 2 um -> 3.7%    L = 4 um -> 1.2%
+#: The guard requires 10% (TAIL_CURRENT_TOLERANCE), so 0.5 um could not meet it at any
+#: common-mode. 2 um clears it with margin at a quarter of the area of 4 um.
+MIRROR_L_UM = 2.0
+
+#: Total mirror width per ampere of leg current, at MIRROR_L_UM. Anchored to a measured
+#: point rather than a rule of thumb: at 1 mA/leg, 160 um total gave +160 mV of saturation
+#: headroom and 2.6% current error, while 80 um gave only +64 mV and 40 um went into
+#: triode at -68 mV. 1 mA / 160 um = 6.25 uA/um.
+MIRROR_DENSITY_A_PER_UM = 6.25e-6
+
+#: sky130_fd_pr__nfet_01v8 is binned to a finite per-device width. Measured against
+#: ngspice 41: W = 100 um solves, W = 101 um aborts with "could not find a valid
+#: modelname" — and on the resident-server path that abort carries no exit code, so it
+#: is the kind of failure that reads as a clean run producing no numbers. The previous
+#: clamp of 200 um was therefore silently unbuildable above ~10 mA. Real layout draws a
+#: wide device as parallel fingers, so that is what we do; 90 um leaves bin margin.
+MIRROR_W_MAX_UM = 90.0
+MIRROR_W_MIN_UM = 0.42               # sky130 nfet minimum drawn width
+
+
+def mirror_sizing(i_tail: float) -> tuple[float, int]:
+    """Mirror geometry for a requested tail current: (width per finger um, finger count).
+
+    Splitting into fingers rather than clamping matters: a clamp quietly starves the
+    mirror (the requested current is never delivered and the guard sees a bias error),
+    whereas exceeding the bin limit is not simulable at all.
+    """
+    total_um = max((i_tail / 2.0) / MIRROR_DENSITY_A_PER_UM, MIRROR_W_MIN_UM)
+    fingers = max(1, math.ceil(total_um / MIRROR_W_MAX_UM))
+    return total_um / fingers, fingers
 
 
 def dv_to_params(dv: DesignVars) -> dict[str, float]:
     """Design variables -> deck `.param` values (W/L clamped to sky130 minimums, um)."""
+    wb, mb = mirror_sizing(dv.i_tail)
     return {
         "w": max(dv.w_in * 1e6, 0.42),
         "l": max(dv.l_in * 1e6, 0.15),
@@ -186,8 +265,9 @@ def dv_to_params(dv: DesignVars) -> dict[str, float]:
         "rs": dv.rs,
         "cs": dv.cs,
         "rl": dv.r_load,
-        "wb": mirror_width_um(dv.i_tail),
-        "lb": 0.5,
+        "wb": wb,
+        "lb": MIRROR_L_UM,
+        "mb": mb,
     }
 
 
@@ -203,15 +283,15 @@ def _core_sky130(dv: DesignVars, vdd: float, corner: str, src: str) -> str:
     w_um = max(dv.w_in * 1e6, 0.42)     # sky130 nfet min width
     l_um = max(dv.l_in * 1e6, 0.15)     # sky130 nfet min length
     i_leg = dv.i_tail / 2.0
-    wb = mirror_width_um(dv.i_tail)
+    wb, mb = mirror_sizing(dv.i_tail)
     return (
         f"{lib_include(corner)}\n"
         f"XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L={l_um:.4f} W={w_um:.4f} nf=1 m=1\n"
         f"XM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L={l_um:.4f} W={w_um:.4f} nf=1 m=1\n"
         f"Iref vdd nbias {i_leg}\n"
-        f"XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L=0.5 W={wb:.4f} nf=1 m=1\n"
-        f"XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L=0.5 W={wb:.4f} nf=1 m=1\n"
-        f"XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L=0.5 W={wb:.4f} nf=1 m=1\n"
+        f"XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L={MIRROR_L_UM} W={wb:.4f} nf=1 m={mb}\n"
+        f"XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L={MIRROR_L_UM} W={wb:.4f} nf=1 m={mb}\n"
+        f"XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L={MIRROR_L_UM} W={wb:.4f} nf=1 m={mb}\n"
         f"Rs sp sn {dv.rs}\n"
         f"Cs sp sn {dv.cs}\n"
         f"Rlp vdd outp {dv.r_load}\n"

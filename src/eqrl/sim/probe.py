@@ -21,14 +21,19 @@ from __future__ import annotations
 import re
 from typing import Iterable, Mapping, Sequence
 
+import numpy as np
+
 from eqrl.guards import DeviceOP, OperatingPoint
 
 NFET = "sky130_fd_pr__nfet_01v8"
 
-#: Parameters pulled per device. vds/vdsat are required by check 5; the rest are
-#: reported in failure messages so a human can see *why* the bias collapsed.
+#: Parameters pulled per device. All four query forms verified against ngspice 41 with
+#: the SKY130 models loaded — `@m.xm1.msky130_fd_pr__nfet_01v8[vds]` and friends return
+#: real values; `print i(<current source>)` does NOT work and is not used.
+#: vds/vdsat gate the saturation check; id carries the delivered tail current, so it is
+#: required too — without it the bias cannot be confirmed.
 DEVICE_PARAMS: tuple[str, ...] = ("vds", "vdsat", "vgs", "vth", "id")
-REQUIRED_DEVICE_PARAMS: tuple[str, ...] = ("vds", "vdsat")
+REQUIRED_DEVICE_PARAMS: tuple[str, ...] = ("vds", "vdsat", "id")
 
 # ngspice prints scalars as `name = value`; values may be plain, exponential, or
 # carry an engineering suffix. Vectors print as `name = ( v )` in some builds.
@@ -51,14 +56,17 @@ def device_ref(instance: str, model: str = NFET) -> str:
 
 
 def op_commands(instances: Sequence[str], nodes: Sequence[str],
-                branches: Sequence[str], model: str = NFET) -> list[str]:
-    """The `.control` body that dumps everything Tier 2 needs from one `.op`."""
+                model: str = NFET) -> list[str]:
+    """The `.control` body that dumps everything Tier 2 needs from one `.op`.
+
+    No branch-current queries: ngspice rejects `print i(iref)` for a current source, and
+    the tail current is read from the mirror devices' drain current instead.
+    """
     cmds = ["op"]
     for inst in instances:
         ref = device_ref(inst, model)
         cmds += [f"print {ref}[{p}]" for p in DEVICE_PARAMS]
     cmds += [f"print v({n})" for n in nodes]
-    cmds += [f"print i({b})" for b in branches]
     return cmds
 
 
@@ -84,7 +92,7 @@ def parse_assignments(text: str) -> dict[str, float]:
 def build_operating_point(assignments: Mapping[str, float],
                           instances: Sequence[str],
                           nodes: Sequence[str],
-                          branches: Sequence[str],
+                          tail_devices: Sequence[str],
                           model: str = NFET) -> OperatingPoint:
     """Assemble an OperatingPoint, raising on anything missing.
 
@@ -115,42 +123,66 @@ def build_operating_point(assignments: Mapping[str, float],
             raise ProbeError(f"node voltage {key!r} was not returned by ngspice")
         node_v[n] = assignments[key]
 
-    branch_i: dict[str, float] = {}
-    for b in branches:
-        key = f"i({b.lower()})"
-        if key not in assignments:
-            raise ProbeError(f"branch current {key!r} was not returned by ngspice")
-        branch_i[b] = assignments[key]
+    # Tail current is the mirror devices' drain current. Reading it from the device
+    # rather than a branch is not a convenience: ngspice rejects `print i(iref)` for a
+    # current source, and the Itp/Itn branches were deleted when the mirror landed.
+    by_name = {d.name: d for d in devices}
+    tail_i: dict[str, float] = {}
+    for t in tail_devices:
+        d = by_name.get(t)
+        if d is None:
+            raise ProbeError(
+                f"tail device '{t}' was not among the probed instances {list(by_name)} — "
+                "the netlist and the probe disagree about what the circuit contains"
+            )
+        if not np.isfinite(d.id):
+            raise ProbeError(
+                f"tail device '{t}' returned no drain current, so the delivered bias "
+                "cannot be confirmed"
+            )
+        tail_i[t] = float(d.id)
 
     return OperatingPoint(devices=tuple(devices), node_voltages=node_v,
-                          tail_currents=branch_i)
+                          tail_currents=tail_i)
 
 
 # ---------------------------------------------------------------------------
 # Simulator drivers (need ngspice + SKY130)
 # ---------------------------------------------------------------------------
 
-#: The CTLE testbench's signal-path devices, probed nodes, and tail branches.
-CTLE_INSTANCES = ("XM1", "XM2")
-CTLE_NODES = ("outp", "outn", "sp", "sn")
-CTLE_TAIL_BRANCHES = ("Itp", "Itn")
+#: Every MOSFET in the testbench, not just the signal path.
+#:
+#: XMref/XMtp/XMtn are the current mirror that replaced the ideal tail sources. They are
+#: included deliberately: the mirror output devices are the ones that actually run out of
+#: headroom, and a saturation check blind to them would have reported a healthy circuit
+#: while the mirror sat in triode delivering a third of its requested current.
+CTLE_INSTANCES = ("XM1", "XM2", "XMref", "XMtp", "XMtn")
+
+#: nbias is the mirror's gate node — if it collapses, the whole bias is gone.
+CTLE_NODES = ("outp", "outn", "sp", "sn", "nbias")
+
+#: Tail current now flows through the mirror devices, so it is read from their drain
+#: current rather than a branch. `print i(iref)` is not accepted by ngspice for a
+#: current source (verified against the simulator), and Itp/Itn no longer exist.
+CTLE_TAIL_DEVICES = ("XMtp", "XMtn")
 
 
 def probe_operating_point(server, *, instances: Sequence[str] = CTLE_INSTANCES,
                           nodes: Sequence[str] = CTLE_NODES,
-                          branches: Sequence[str] = CTLE_TAIL_BRANCHES,
+                          tail_devices: Sequence[str] = CTLE_TAIL_DEVICES,
                           model: str = NFET) -> OperatingPoint:
     """Run `.op` on a resident NgspiceServer and return the parsed operating point.
 
-    `server` must expose `_ng.exec_command(str)` and capture stdout — the shape
+    `server` must expose `_ng.exec_command(str)` and return its output — the shape
     NgspiceServer already has. Kept duck-typed so tests can inject a fake.
     """
     try:
         captured: list[str] = []
-        for cmd in op_commands(instances, nodes, branches, model):
+        for cmd in op_commands(instances, nodes, model):
             result = server._ng.exec_command(cmd)
             if result:
-                captured.append(str(result))
+                captured.append("\n".join(result) if isinstance(result, (list, tuple))
+                                else str(result))
     except AttributeError as e:
         raise ProbeError(f"server does not expose an ngspice handle: {e}") from e
 
@@ -160,7 +192,8 @@ def probe_operating_point(server, *, instances: Sequence[str] = CTLE_INSTANCES,
             "ngspice returned no operating-point output. The .op did not solve, or this "
             "libngspice build does not echo `print` results — capture stdout explicitly."
         )
-    return build_operating_point(parse_assignments(text), instances, nodes, branches, model)
+    return build_operating_point(parse_assignments(text), instances, nodes,
+                                 tail_devices, model)
 
 
 def make_corner_probe(server_factory, *, instance: str = "XM1", param: str = "vth",

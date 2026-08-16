@@ -97,7 +97,40 @@ def bandwidth_ghz(freq: np.ndarray, mag_db: np.ndarray, ref: str = "peak") -> fl
     return float(freq[i + below[0]] / 1e9)
 
 
-def bias_valid_itail(r_load: float, vdd: float = 1.8, headroom_v: float = 0.4) -> float:
+def _headroom_v(vdd: float) -> float:
+    """Output voltage the stage needs to keep the input pair saturated, measured.
+
+    This was a hardcoded 0.4 V, and that number silently encoded a broken bias. While the
+    tail mirror sat in triode it behaved like a resistor rather than a current source, so
+    the output never really pinned and 0.4 V was generous enough. With the mirror actually
+    in saturation the stage behaves like a real differential pair: the input device needs
+    Vds >= Vdsat above the tail node, and the tail node sits at VCM - Vgs1, which moves
+    with the chosen common-mode. A fixed constant cannot track that, and tuning it by hand
+    until the sweep passes would just re-encode a new assumption.
+
+    So it is measured: probe the operating point at the nominal design and require the
+    output to stay above (tail node + Vdsat) with the same 50 mV margin the guard uses.
+    Falls back to the old constant only when the simulator is unavailable, so the
+    behavioural tests still have a bound.
+    """
+    from eqrl.circuits.ctle import DesignVars
+    try:
+        from eqrl.guards import SATURATION_HEADROOM_V
+        from eqrl.sim.probe import probe_operating_point
+        from eqrl.sim.server import NgspiceServer
+        srv = NgspiceServer("tt")
+        dv = DesignVars()
+        srv._prime(dv, vdd, 27.0)
+        op = probe_operating_point(srv)
+        m1 = next(d for d in op.devices if d.name == "XM1")
+        sp = op.node_voltages["sp"]
+        return float(sp + m1.vdsat + SATURATION_HEADROOM_V)
+    except Exception:
+        return 0.4
+
+
+def bias_valid_itail(r_load: float, vdd: float = 1.8,
+                     headroom_v: float | None = None) -> float:
     """Largest tail current the supply can sustain through a given load.
 
     MEASURED consequence of ignoring this: at i_tail=4 mA into the default 1 kohm load,
@@ -106,10 +139,12 @@ def bias_valid_itail(r_load: float, vdd: float = 1.8, headroom_v: float = 0.4) -
     -15.9 dB at 1 GHz to -9.5 dB at 10 THz. argmax then lands on the last sweep point
     and every derived metric is meaningless.
     """
-    return 2.0 * (vdd - headroom_v) / r_load
+    h = _headroom_v(vdd) if headroom_v is None else headroom_v
+    return 2.0 * (vdd - h) / r_load
 
 
-def bias_valid_rload(i_tail: float, vdd: float = 1.8, headroom_v: float = 0.4) -> float:
+def bias_valid_rload(i_tail: float, vdd: float = 1.8,
+                     headroom_v: float | None = None) -> float:
     """Largest load resistor that still leaves the output inside the rails.
 
     Each leg carries i_tail/2 through R_load, so the DC drop is (i_tail/2)*R_load. Once
@@ -117,7 +152,8 @@ def bias_valid_rload(i_tail: float, vdd: float = 1.8, headroom_v: float = 0.4) -
     device leaves saturation — the stage stops being an amplifier. Sweeps that ignore
     this are not testing the circuit, they are testing a collapsed bias point.
     """
-    return (vdd - headroom_v) / (i_tail / 2.0)
+    h = _headroom_v(vdd) if headroom_v is None else headroom_v
+    return (vdd - h) / (i_tail / 2.0)
 
 
 AC_WIDE = "ac dec 30 1e6 1e11\nlet vdb = db(v(outp)-v(outn))\nwrdata $OUT vdb"

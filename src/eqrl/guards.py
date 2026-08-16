@@ -105,8 +105,40 @@ _FAILURE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"can'?t\s+find\s+(model|subcircuit)", "missing model/subcircuit"),
     (r"unknown\s+subckt", "missing subcircuit"),
     (r"could\s+not\s+find\s+include\s+file", "missing include file"),
+    # Device geometry outside what the PDK model is binned for. sky130's nfet_01v8
+    # is characterised to W <= 100 um per device; W = 101 matches no bin and ngspice
+    # reports exactly this, on stderr, with no exit code at all on the resident path.
+    # Measured against ngspice 41 — without it a device the PDK refuses to model
+    # reads as a clean run that simply produced no numbers.
+    (r"could\s+not\s+find\s+a\s+valid\s+model", "device geometry outside PDK model bins"),
+    (r"simulation\s+interrupted", "simulation interrupted"),
 )
 _COMPILED_FAILURES = tuple((re.compile(p, re.I), label) for p, label in _FAILURE_PATTERNS)
+
+#: Exception types that mean "this candidate produced no measurement" rather than "the
+#: harness is broken". A candidate that fails to solve is a verdict, not a crash.
+#:
+#: PySpice raises NgSpiceCommandError, which derives from NameError and so is not covered
+#: by OSError/ValueError/RuntimeError. Measured over 33 designs at four PVT corners, 3-6
+#: designs per corner raise it, so leaving it uncaught ends a training run within minutes
+#: — and ends it with a traceback rather than a logged, attributable Invalid.
+#:
+#: Resolved lazily and cached: guards.py must import without a simulator installed, and
+#: eqrl.sim.probe imports this module, so a module-level import would be circular.
+_SIM_EXC_CACHE: tuple[type[BaseException], ...] | None = None
+
+
+def _simulator_exceptions() -> tuple[type[BaseException], ...]:
+    global _SIM_EXC_CACHE
+    if _SIM_EXC_CACHE is None:
+        types: list[type[BaseException]] = [OSError, ValueError, RuntimeError]
+        try:                                     # ProbeError is already a RuntimeError
+            from PySpice.Spice.NgSpice.Shared import NgSpiceCommandError
+            types.append(NgSpiceCommandError)
+        except ImportError:
+            pass
+        _SIM_EXC_CACHE = tuple(types)
+    return _SIM_EXC_CACHE
 
 
 # =============================================================================
@@ -563,16 +595,32 @@ def check_corner_integrity(probe: CornerProbe, corners: Sequence[str] = ("tt", "
 # TIER 4 — physical plausibility. These mean the MEASUREMENT broke.
 # =============================================================================
 
-def theoretical_eye_v_max_mv(dv: DesignVars) -> float:
+def theoretical_eye_v_max_mv(dv: DesignVars, vdd: float = 1.8) -> float:
     """Max differential output swing this topology can produce, in mV.
 
-    Full tail current steered into one load: Vdiff_pp = I_tail * R_load.
+    Steering the whole tail current into one load drops that side by I_tail * R_load
+    while the other side sits at VDD, so the differential output (outp - outn) travels
+    from -I_tail*R_load to +I_tail*R_load: a peak-to-peak of 2 * I_tail * R_load. The
+    eye height in `measures.eye` is differential (see sim/eye.py), so the ceiling must
+    be the differential figure. The earlier single-ended form was a factor of two too
+    tight and could reject a legitimately large eye.
+
+    The drop is also capped by the supply: a load node cannot be pulled below ground,
+    so I_tail * R_load can never exceed VDD however large the product is asked to be.
+    Without that cap the ceiling for a 20 mA / 5 kohm request evaluates to 100 V, which
+    no measurement could ever exceed -- the check had no teeth exactly where a broken
+    eye measurement is most likely.
+
+    Note this uses the *requested* tail current. The mirror delivers slightly less than
+    requested, so this stays a true upper bound; the deviation itself is Tier 2.6's job,
+    not this one's.
     """
-    return abs(dv.i_tail * dv.r_load) * 1e3
+    return 2.0 * min(abs(dv.i_tail * dv.r_load), abs(vdd)) * 1e3
 
 
 def check_physical_plausibility(m: Any, dv: DesignVars, art: RunArtifacts,
-                                *, topology_has_gain: bool = True) -> Invalid | None:
+                                *, topology_has_gain: bool = True,
+                                vdd: float = 1.8) -> Invalid | None:
     """Checks 10–15. Returns Invalid on the first failure, else None."""
     # Any NaN/inf anywhere is a broken parse, full stop.
     for fname, val in m.as_dict().items():
@@ -626,7 +674,7 @@ def check_physical_plausibility(m: Any, dv: DesignVars, art: RunArtifacts,
     if m.eye_h_ui > EYE_H_UI_MAX:
         return _invalid(Check.T4_EYE,
                         f"eye width {m.eye_h_ui:.3f} UI exceeds one unit interval", art)
-    v_max = theoretical_eye_v_max_mv(dv)
+    v_max = theoretical_eye_v_max_mv(dv, vdd)
     if v_max <= 0:
         # Skipping the ceiling because the ceiling is zero would let ANY eye height
         # through on a design that cannot produce signal at all.
@@ -638,7 +686,9 @@ def check_physical_plausibility(m: Any, dv: DesignVars, art: RunArtifacts,
     if m.eye_v_mv > v_max:
         return _invalid(Check.T4_EYE,
                         f"eye height {m.eye_v_mv:.1f} mV exceeds the theoretical maximum "
-                        f"{v_max:.1f} mV (I_tail x R_load)", art)
+                        f"{v_max:.1f} mV (2 x min(I_tail x R_load, VDD), "
+                        f"I_tail={dv.i_tail:g} A, R_load={dv.r_load:g} ohm, "
+                        f"VDD={vdd:g} V)", art)
     return None
 
 
@@ -908,7 +958,7 @@ class GuardedEvaluator:
                 m, art_out, op = self.raw_eval(dv, artifacts=art, vdd=vdd, **kw)
                 if art_out is not None:
                     art = art_out
-            except (OSError, ValueError, RuntimeError) as e:
+            except _simulator_exceptions() as e:
                 # Specific, anticipated failures only. Everything else propagates
                 # untouched — but the artifacts are still written by the finally below,
                 # because an unlogged run is a run we cannot investigate.
@@ -940,7 +990,7 @@ class GuardedEvaluator:
             if failure is not None:
                 return failure
         failure = check_physical_plausibility(
-            m, dv, art, topology_has_gain=self.topology_has_gain)
+            m, dv, art, topology_has_gain=self.topology_has_gain, vdd=vdd)
         if failure is not None:
             return failure
         return Valid(metrics=m, run_id=art.run_id, artifact_dir=art.directory)
