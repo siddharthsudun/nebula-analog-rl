@@ -1,0 +1,22 @@
+* CTLE  corner=tt vdd=1.8 temp=27.0C analysis=op models=sky130
+.temp 27.0
+.param vdd=1.8
+Vdd vdd 0 {vdd}
+Vcm cm 0 1.296
+Vinp inp cm AC 0.5 SIN(0 0.05 100e6)
+Vinn inn cm AC -0.5 SIN(0 -0.05 100e6)
+.lib "C:\Users\talk2.000\pdk\sky130A\libs.tech\ngspice\sky130.lib.spice" tt
+XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L=0.3930 W=2.5671 nf=1 m=1
+XM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L=0.3930 W=2.5671 nf=1 m=1
+Iref vdd nbias 0.007046272289560188
+XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=86.7234 nf=1 m=13
+XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=86.7234 nf=1 m=13
+XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=86.7234 nf=1 m=13
+Rs sp sn 1148.3942493796349
+Cs sp sn 1.0640972002235255e-13
+Rlp vdd outp 2950.019669532776
+Rln vdd outn 2950.019669532776
+Clp outp 0 3e-14
+Cln outn 0 3e-14
+.op
+.end

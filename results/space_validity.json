@@ -1,0 +1,14 @@
+{
+  "samples": 250,
+  "valid": 1,
+  "valid_fraction": 0.004,
+  "by_check": {
+    "T2.5_mosfet_not_in_saturation": 146,
+    "T2.6_tail_current_wrong_or_zero": 81,
+    "T1.2_solver_failure_text_in_output": 22,
+    "__valid__": 1
+  },
+  "median_load_drop_v": 1.1334008348091893,
+  "fraction_drop_over_vdd": 0.416,
+  "analytic_headroom_fraction": 0.100285
+}

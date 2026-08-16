@@ -1,0 +1,2 @@
+
+[guarded] ValueError: could not convert string '-nan(ind)' to float64 at row 0, column 1.

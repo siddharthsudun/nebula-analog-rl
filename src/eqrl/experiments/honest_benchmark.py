@@ -112,8 +112,12 @@ def solve_rl(model, env, target, channel, seed):
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="results/seq_agent_honest.zip")
-    p.add_argument("--train-cost", type=int, default=14000, help="RL training sims (debt)")
+    p.add_argument("--model", default="results/seq_agent.zip",
+                   help="trained policy; must be a path train_sequential actually wrote")
+    p.add_argument("--train-cost", type=int, default=None,
+                   help="RL training sims (debt). Read from the model's _train.json "
+                        "sidecar when omitted — this number sets the break-even point, "
+                        "so it has to come from the run that produced the model.")
     p.add_argument("--rl-specs", type=int, default=24)
     p.add_argument("--search-specs", type=int, default=6)
     p.add_argument("--seeds", type=int, default=3)
@@ -122,13 +126,34 @@ def main() -> None:
     args = p.parse_args()
     Path(args.outdir).mkdir(exist_ok=True)
 
+    model_path = Path(args.model)
+    if not model_path.exists():
+        raise SystemExit(
+            f"no model at {model_path}. Train one first:\n"
+            f"  python -m eqrl.agents.train_sequential --guarded --no-fast "
+            f"--out {model_path}")
+    train_cost = args.train_cost
+    if train_cost is None:
+        sidecar = model_path.with_name(model_path.stem + "_train.json")
+        if not sidecar.exists():
+            raise SystemExit(
+                f"no training record at {sidecar}, so the RL training debt is unknown. "
+                "That number decides where RL breaks even against the search baselines, "
+                "and guessing it would make the amortization plot fiction. Retrain (the "
+                "sidecar is written automatically) or pass --train-cost explicitly.")
+        rec = json.loads(sidecar.read_text())
+        train_cost = int(rec["n_sims"])
+        print(f"training debt: {train_cost} sims (from {sidecar.name}, "
+              f"{rec.get('timesteps')} timesteps, guarded={rec.get('guarded')}, "
+              f"fast={rec.get('fast')})")
+
     rng = np.random.default_rng(0)
     specs = [(float(rng.uniform(5, 11)), float(rng.uniform(8, 16)))
              for _ in range(args.rl_specs)]
 
     from stable_baselines3 import PPO
     from eqrl.envs.sequential_env import SequentialEqualizerEnv
-    model = PPO.load(args.model)
+    model = PPO.load(str(model_path))
     env = SequentialEqualizerEnv(fast=False, seed=123)
 
     # RL on all specs (cheap)
@@ -157,7 +182,7 @@ def main() -> None:
     out = {
         "rl": {"solved": len(rl_solved), "specs": len(specs),
                "median": float(np.median(rl_solved)) if rl_solved else None,
-               "train_cost": args.train_cost},
+               "train_cost": train_cost},
         "random": summ(rand, ns), "cmaes": summ(cmaes, ns), "tpe": summ(tpe, ns),
     }
     Path(f"{args.outdir}/benchmark.json").write_text(json.dumps(out, indent=2))

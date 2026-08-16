@@ -135,13 +135,19 @@ def eye(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float,
 
 def measure_all(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
                 corner: str = "tt", fast: bool = False, channel_loss_db: float = 12.0,
-                srv: NgspiceServer | None = None) -> Measures:
+                srv: NgspiceServer | None = None, _via_guards: bool = False) -> Measures:
     """Measure one candidate at one PVT corner via the resident server.
 
     Boost, peak frequency, real supply power, area and the channel+DFE eye are ALWAYS
     simulated (no hardcoded specs). `fast=True` additionally skips only the two slowest
     analyses — the transient-HD3 and the `.noise` sweep — for baseline sweeps that don't
     need them; `fast=False` (the training/characterization default) measures all eight.
+
+    `_via_guards` is accepted and ignored. `guards.seal_direct_access()` replaces this
+    function with a wrapper that requires the flag, so that no measurement can reach a
+    reward without passing Tiers 1-4; the evaluator therefore always passes it. Accepting
+    it here is what lets the guarded path work whether or not the seal is installed —
+    without it, every guarded evaluation raised TypeError before reaching the simulator.
     """
     from eqrl.sim.eye import compute_eye
 
