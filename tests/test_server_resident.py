@@ -79,6 +79,14 @@ class TestAgreesWithSubprocess:
             f"peak frequency mismatch beyond grid resolution: {fpk_s:.3f} vs {fpk_p:.3f} GHz"
         )
 
+    @pytest.mark.xfail(strict=True, reason=(
+        "results/final_report.json IS STALE. It was measured with ideal tail current "
+        "sources; the circuit now has a real current mirror, which costs 3-4 dB of boost "
+        "on this design (tt 10.22 -> 6.58, ss 9.90 -> 5.74, ff 10.43 -> 7.30) and pushes "
+        "the ss peak to 1.15 GHz, BELOW the 1.25 GHz spec floor. The committed "
+        "'45/45 corners pass' result therefore no longer holds for this design. "
+        "strict=True so this turns red the moment the report is regenerated — at which "
+        "point update the expected value and delete this marker."))
     def test_reproduces_the_committed_pvt_row(self, srv):
         """tt / 1.8 V / 27 C in results/final_report.json reports boost 10.22 dB."""
         r = srv.ac(DESIGN)

@@ -20,3 +20,7 @@ anthropic
 # Verified with PySpice 1.5 against ngspice 41 (it logs "Unsupported Ngspice version 41"
 # and works — PySpice 1.5 predates 41, the warning is not an error).
 PySpice
+
+# CMA-ES baseline. The comparison that decides whether the RL result is real: for a
+# handful of continuous parameters this is the method an expert would actually reach for.
+cma

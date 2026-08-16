@@ -302,22 +302,38 @@ class TestPipelineSky130:
         assert_increasing(it, [r["bandwidth_ghz"] for r in res],
                           what="bandwidth_ghz", knob="i_tail")
 
-    def test_itail_beyond_the_supply_collapses_the_stage(self):
-        """The same cliff as the r_load case, reached from the other axis.
+    def test_current_mirror_prevents_the_overcurrent_collapse(self):
+        """The current mirror removes an entire class of degenerate designs.
 
-        At 4 mA into 1 kohm the response has no peak at all: it climbs monotonically
-        with frequency (pure Cgd feedthrough), so argmax lands on the last sweep sample
-        and 'peak frequency' becomes an artifact of where the sweep happened to stop.
-        Tier 2 checks 5 and 7 are what stop this reaching the reward.
+        HISTORY: with ideal tail sources this test asserted the OPPOSITE. Requesting
+        4 mA into a 1 kohm load meant forcing 2 V across a 1.8 V supply; an ideal source
+        obliged, the output pinned at the rail, the input devices left saturation, and
+        the response degenerated into pure gate-drain feedthrough that climbed
+        monotonically to the end of the sweep. 'Peak frequency' became an artifact of
+        where the sweep stopped.
+
+        A real mirror cannot do that. When the drain voltage falls, the mirror device
+        leaves saturation and delivers less current — the circuit self-limits instead of
+        collapsing. Measured after the fix: DC gain +9.43 dB with a clean roll-off,
+        where the same request previously produced a dead stage.
+
+        This is a second, unadvertised benefit of the bias fix: it shrinks the invalid
+        region of the search space rather than merely making PVT more honest.
         """
         r_load = DesignVars().r_load
-        dead_it = bias_valid_itail(r_load) * 1.6
-        res = _sweep_pipeline("i_tail", [dead_it], "sky130", wide=True, raw=True)
-        freq, mag = res[0]
-        assert peak_at_edge(freq, mag), (
-            "expected a collapsed stage whose 'peak' is the last sweep point"
+        hard_it = bias_valid_itail(r_load) * 1.6
+        assert (hard_it / 2) * r_load > 1.8, "sanity: an ideal source would exceed VDD here"
+
+        freq, mag = _sweep_pipeline("i_tail", [hard_it], "sky130", wide=True, raw=True)[0]
+        assert not peak_at_edge(freq, mag), (
+            "response still peaks at the last sweep sample — the stage is behaving like "
+            "feedthrough, so the mirror is not limiting as expected"
         )
-        assert (dead_it / 2) * r_load > 1.8, "sanity: the leg drop must exceed VDD"
+        i = int(np.argmax(mag))
+        assert mag[i] > mag[-1] + 3.0, (
+            f"expected a real peak above the high-frequency floor, got peak {mag[i]:.2f} dB "
+            f"vs {mag[-1]:.2f} dB at the sweep end"
+        )
 
     def test_rload_increases_dc_gain_while_the_bias_survives(self):
         """Swept only over loads the supply can actually sustain.
@@ -336,25 +352,26 @@ class TestPipelineSky130:
         assert_increasing(rl, [r["dc_gain_db"] for r in res],
                           what="dc_gain_db", knob="r_load")
 
-    def test_rload_beyond_the_supply_collapses_the_stage(self):
-        """The region the guards exist to reject.
+    def test_current_mirror_softens_the_large_load_cliff(self):
+        """Same fix, reached from the load axis.
 
-        A load big enough to drop more than VDD is not a low-gain design, it is a dead
-        one. The simulator still returns a number, which is exactly the failure mode
-        guards.py Tier 2 (checks 5 and 7: saturation and node-within-rails) is for.
-        Without those checks the optimizer sees '-39 dB' as an ordinary bad reward and
-        keeps the region in play.
+        HISTORY: with ideal tail sources, DC gain rose to +2.8 dB at 1133 ohm, turned
+        over by 1600, and fell off a cliff to -39.7 dB by 3000 — the bias had collapsed,
+        but the simulator still returned a plausible-looking number that the optimizer
+        read as an ordinary bad reward.
+
+        With the mirror the degradation is graceful: the mirror device runs out of
+        headroom and reduces its current rather than pinning the output. The stage gets
+        worse, which is correct, instead of dying while still reporting a number.
         """
         i_tail = DesignVars().i_tail
         rl_max = bias_valid_rload(i_tail)
         ok = _sweep_pipeline("r_load", [rl_max * 0.8], "sky130")[0]
-        dead = _sweep_pipeline("r_load", [rl_max * 2.5], "sky130")[0]
-        assert dead["dc_gain_db"] < ok["dc_gain_db"] - 10.0, (
-            f"expected a collapsed bias past the supply limit, but DC gain only moved "
-            f"{ok['dc_gain_db']:.2f} -> {dead['dc_gain_db']:.2f} dB"
+        far = _sweep_pipeline("r_load", [rl_max * 2.5], "sky130")[0]
+        assert far["dc_gain_db"] > ok["dc_gain_db"] - 30.0, (
+            f"gain fell off a cliff ({ok['dc_gain_db']:.2f} -> {far['dc_gain_db']:.2f} dB) — "
+            "that is the collapse signature the mirror was supposed to remove"
         )
-        drop_v = (i_tail / 2) * rl_max * 2.5
-        assert drop_v > 1.8, f"sanity: {drop_v:.2f} V across the load exceeds VDD"
 
 
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")

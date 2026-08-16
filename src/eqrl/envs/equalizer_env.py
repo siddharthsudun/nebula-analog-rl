@@ -22,11 +22,11 @@ from eqrl.specs import DEFAULT_SPEC, Spec
 
 
 def _margins(m: Measures, spec: Spec) -> dict[str, float]:
-    """Normalized signed margins per spec. Positive = meets, magnitude ~ how comfortably.
-
-    Each is scaled so ~1.0 means 'comfortably met' and negative means 'violated'.
+    """Normalized signed margins for the 8 HARD specs — one per pass/fail check in
+    specs.hard_pass, so the training reward optimizes exactly what is scored. Each is >=0
+    iff that spec is met; magnitude ~ how comfortably. Boost is the tunable 3-12 dB range
+    (the agent picks the peaking the channel needs), not a per-target tolerance.
     """
-    boost_err = (spec.boost_tol_db - abs(m.boost_db - spec.target_boost_db)) / spec.boost_tol_db  # >=0 within tol
     lo, hi, f = spec.peak_freq_lo_ghz, spec.peak_freq_hi_ghz, m.peak_freq_ghz
     if lo <= f <= hi:
         fpk = 1.0
@@ -34,7 +34,8 @@ def _margins(m: Measures, spec: Spec) -> dict[str, float]:
         edge = lo if f < lo else hi
         fpk = -min(abs(f - edge) / edge, 2.0)
     return {
-        "boost":  boost_err,
+        "boost_lo": (m.boost_db - spec.boost_db_min) / 3.0,             # >= 3 dB peaking
+        "boost_hi": (spec.boost_db_max - m.boost_db) / 3.0,             # <= 12 dB
         "fpeak":  fpk,
         "hd3":    (spec.hd3_db_max - m.hd3_db) / 10.0,                   # lower is better
         "noise":  (spec.noise_vrms_max - m.noise_vrms) / spec.noise_vrms_max,

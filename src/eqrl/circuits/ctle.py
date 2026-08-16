@@ -30,14 +30,17 @@ class DesignVars:
 
 
 # Order of the action vector <-> DesignVars fields. Ranges are (lo, hi) in SI.
+# i_tail spans up to 20 mA so the 15 mW power budget is genuinely reachable (and can be
+# violated); the agent must trade power against gain/boost. w_dfe is NOT here: the 1-tap
+# DFE is a receiver-DSP block applied at the slicer and adapted to the post-cursor in the
+# eye engine, not an analog knob — a phantom parameter would be dishonest.
 ACTION_SPACE = {
     "w_in":   (1e-6, 100e-6),
     "l_in":   (0.15e-6, 1e-6),
-    "i_tail": (0.1e-3, 5e-3),
+    "i_tail": (0.05e-3, 20e-3),
     "rs":     (100.0, 5e3),
     "cs":     (10e-15, 2e-12),
     "r_load": (100.0, 5e3),
-    "w_dfe":  (0.0, 0.5),
 }
 
 
@@ -137,7 +140,7 @@ def param_deck(corner: str = "tt") -> str:
         # in ~ms (agent learns to avoid them) instead of grinding for seconds.
         ".options gminsteps=0 srcsteps=0 itl1=100\n"
         # temperature via an alterparam'd option (shared-mode `set temp` is ignored).
-        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8 tempc=27\n"
+        ".param w=20 l=0.15 itail=2m rs=1k cs=1p rl=800 vddp=1.8 tempc=27 wb=10 lb=0.5\n"
         ".options temp={tempc}\n"
         "Vdd vdd 0 {vddp}\n"
         "Vcm cm 0 'vddp/2'\n"
@@ -145,9 +148,8 @@ def param_deck(corner: str = "tt") -> str:
         f"Vinn inn cm AC -{AC_AMP} SIN(0 -{TRAN_AMP} 100e6)\n"
         "XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L={l} W={w} nf=1 m=1\n"
         "XM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L={l} W={w} nf=1 m=1\n"
-        "Itp sp 0 'itail/2'\n"
-        "Itn sn 0 'itail/2'\n"
-        "Rs sp sn {rs}\n"
+        + _MIRROR
+        + "Rs sp sn {rs}\n"
         "Cs sp sn {cs}\n"
         "Rlp vdd outp {rl}\n"
         "Rln vdd outn {rl}\n"
@@ -155,6 +157,24 @@ def param_deck(corner: str = "tt") -> str:
         f"Cln outn 0 {C_LOAD}\n"
         ".end\n"
     )
+
+
+# NMOS current-mirror tail bias: a trimmed reference (itail/2) sets Vgs on a
+# diode-connected device; two matched mirrors sink the leg currents. Unlike an ideal
+# source, the delivered current drifts with process, VDD and temperature (Vds mismatch +
+# channel-length modulation), so PVT can fail the way real analog does.
+_MIRROR = (
+    "Iref vdd nbias 'itail/2'\n"
+    "XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m=1\n"
+    "XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m=1\n"
+    "XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L={lb} W={wb} nf=1 m=1\n"
+)
+
+
+def mirror_width_um(i_tail: float) -> float:
+    """Mirror device width, scaled with the leg current so it stays in saturation
+    (~100 uA/um current density at L=0.5 um). Clamped to sky130 limits."""
+    return float(min(max((i_tail / 2.0) / 100e-6, 0.5), 200.0))
 
 
 def dv_to_params(dv: DesignVars) -> dict[str, float]:
@@ -166,6 +186,8 @@ def dv_to_params(dv: DesignVars) -> dict[str, float]:
         "rs": dv.rs,
         "cs": dv.cs,
         "rl": dv.r_load,
+        "wb": mirror_width_um(dv.i_tail),
+        "lb": 0.5,
     }
 
 
@@ -181,12 +203,15 @@ def _core_sky130(dv: DesignVars, vdd: float, corner: str, src: str) -> str:
     w_um = max(dv.w_in * 1e6, 0.42)     # sky130 nfet min width
     l_um = max(dv.l_in * 1e6, 0.15)     # sky130 nfet min length
     i_leg = dv.i_tail / 2.0
+    wb = mirror_width_um(dv.i_tail)
     return (
         f"{lib_include(corner)}\n"
         f"XM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L={l_um:.4f} W={w_um:.4f} nf=1 m=1\n"
         f"XM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L={l_um:.4f} W={w_um:.4f} nf=1 m=1\n"
-        f"Itp sp 0 {i_leg}\n"
-        f"Itn sn 0 {i_leg}\n"
+        f"Iref vdd nbias {i_leg}\n"
+        f"XMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L=0.5 W={wb:.4f} nf=1 m=1\n"
+        f"XMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L=0.5 W={wb:.4f} nf=1 m=1\n"
+        f"XMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L=0.5 W={wb:.4f} nf=1 m=1\n"
         f"Rs sp sn {dv.rs}\n"
         f"Cs sp sn {dv.cs}\n"
         f"Rlp vdd outp {dv.r_load}\n"

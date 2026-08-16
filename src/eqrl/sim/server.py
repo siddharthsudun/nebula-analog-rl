@@ -140,7 +140,7 @@ class NgspiceServer:
         return {"freq": arr[:, 0], "mag_db": arr[:, 1]}
 
     def ac_complex(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0,
-                   fstop: float = 40e9) -> dict:
+                   fstop: float = 24e9) -> dict:
         """Complex differential transfer function H(f) = v(outp)-v(outn) for AC=1 input.
 
         Wider band than ac() because the eye needs the response out to several harmonics.
@@ -155,6 +155,17 @@ class NgspiceServer:
         arr = self._read("acx.data")
         return {"freq": arr[:, 0], "H": arr[:, 1] + 1j * arr[:, 2]}
 
+    def supply_current(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0) -> float:
+        """Actual total current drawn from VDD at the operating point (A)."""
+        self._prime(dv, vdd, temp_c)
+        out = self._dir / "isup.data"
+        out.unlink(missing_ok=True)
+        self._analysis("op")
+        self._ng.exec_command("let isup = abs(i(vdd))")
+        self._ng.exec_command(f"wrdata {out} isup")
+        arr = self._read("isup.data")
+        return float(abs(arr[-1, -1]))
+
     def noise_total(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0) -> float:
         self._prime(dv, vdd, temp_c)
         out = self._dir / "noise.data"
@@ -167,7 +178,7 @@ class NgspiceServer:
         return float(arr[-1, -1])
 
     def transient(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0,
-                  tstep: float = 20e-12, tstop: float = 100e-9) -> dict:
+                  tstep: float = 20e-12, tstop: float = 60e-9) -> dict:
         self._prime(dv, vdd, temp_c)
         out = self._dir / "tr.data"
         out.unlink(missing_ok=True)
