@@ -80,7 +80,8 @@ def input_noise(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -
     return srv.noise_total(dv, vdd=vdd, temp_c=temp_c)
 
 
-def eye(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -> tuple[float, float]:
+def eye(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float,
+        channel_loss_db: float = 12.0) -> tuple[float, float]:
     """Eye height (UI) and vertical opening (mV) through channel + CTLE + 1-tap DFE.
 
     Uses the SPICE-measured complex CTLE response, a PCIe-Gen2 channel, and a real DFE.
@@ -88,12 +89,12 @@ def eye(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -> tuple[
     from eqrl.sim.eye import compute_eye
 
     r = srv.ac_complex(dv, vdd=vdd, temp_c=temp_c)
-    res = compute_eye(r["freq"], r["H"])
+    res = compute_eye(r["freq"], r["H"], channel_loss_db=channel_loss_db)
     return res.width_ui, res.height_v * 1e3    # (UI, mV)
 
 
 def measure_all(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
-                corner: str = "tt", fast: bool = False,
+                corner: str = "tt", fast: bool = False, channel_loss_db: float = 12.0,
                 srv: NgspiceServer | None = None) -> Measures:
     """Measure one candidate at one PVT corner via the resident server.
 
@@ -124,7 +125,7 @@ def measure_all(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
         m.power_w = power(srv, dv, vdd, temp_c)                 # real supply current
     except NgspiceError:
         return Measures(ok=False)
-    e = compute_eye(f, H)                                        # real channel+CTLE+DFE eye
+    e = compute_eye(f, H, channel_loss_db=channel_loss_db)       # real channel+CTLE+DFE eye
     m.eye_h_ui, m.eye_v_mv = e.width_ui, e.height_v * 1e3
 
     if fast:

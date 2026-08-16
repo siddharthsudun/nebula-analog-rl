@@ -25,7 +25,7 @@ def main() -> None:
     from stable_baselines3.common.callbacks import CheckpointCallback
 
     env = SequentialEqualizerEnv(spec=DEFAULT_SPEC, horizon=args.horizon,
-                                 fast=True, seed=args.seed, pvt=args.pvt)
+                                 fast=False, seed=args.seed, pvt=args.pvt)
     model = PPO("MlpPolicy", env, seed=args.seed, verbose=1,
                 n_steps=1024, batch_size=128, gamma=0.95, gae_lambda=0.95,
                 ent_coef=0.005, learning_rate=3e-4)

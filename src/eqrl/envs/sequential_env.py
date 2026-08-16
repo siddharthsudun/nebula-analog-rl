@@ -49,7 +49,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 20,
                  corner: str = "tt", fast: bool = False, step_size: float = 0.18,
                  target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
-                 pvt: bool = False):
+                 pvt: bool = False, channel_range: tuple[float, float] = (6.0, 18.0)):
         super().__init__()
         self.base_spec = spec
         self.horizon = horizon
@@ -57,6 +57,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         self.fast = fast
         self.step_size = step_size
         self.target_range = target_range
+        self.channel_range = channel_range      # randomized link loss per episode
         self.pvt = pvt
         # voltage x temperature stress points on the current process corner (no reload;
         # V and T are alterparam'd). Nominal + hot/low-V is the binding pair for this
@@ -65,27 +66,29 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         vlo, vnom, vhi = spec.vdd_corners()
         self._vt = [(vnom, 27.0), (vlo, 125.0)]
         self.action_space = spaces.Box(-1.0, 1.0, shape=(N_PARAM,), dtype=np.float32)
-        # obs = params(N) + 8 normalized measures + target(1) + boost_gap(1) + fpk_gap(1)
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(N_PARAM + 11,),
+        # obs = params(N) + 8 measures + target(1) + channel(1) + boost_gap(1) + fpk_gap(1)
+        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(N_PARAM + 12,),
                                             dtype=np.float32)
         self._rng = np.random.default_rng(seed)
         self.n_sims = 0
 
     # -- helpers -----------------------------------------------------------
     def _spec(self) -> Spec:
-        return dataclasses.replace(self.base_spec, target_boost_db=self._target)
+        return dataclasses.replace(self.base_spec, target_boost_db=self._target,
+                                   channel_loss_db=self._channel)
 
     def _measure(self, x: np.ndarray) -> Measures:
         dv = decode_action(x)                       # x in [0,1]; decode accepts it
         if not self.pvt:
             self.n_sims += 1
             return measure_all(dv, corner=self.corner, vdd=self.base_spec.vdd_nominal,
-                               fast=self.fast)
+                               fast=self.fast, channel_loss_db=self._channel)
         # PVT-aware: return the worst (lowest-reward) V x T corner on this process corner
         worst_m, worst_r = None, 1e18
         for vdd, temp in self._vt:
             self.n_sims += 1
-            m = measure_all(dv, corner=self.corner, vdd=vdd, temp_c=temp, fast=self.fast)
+            m = measure_all(dv, corner=self.corner, vdd=vdd, temp_c=temp, fast=self.fast,
+                            channel_loss_db=self._channel)
             if not m.ok:
                 return m
             r, _, _ = compute_reward(m, self._spec())
@@ -109,8 +112,8 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
                 fpk_gap = (fc - edge) / edge
         else:
             norm, boost_gap, fpk_gap = [0] * 8, 0.0, 0.0
-        return np.array([*self._x, *norm, self._target / 12.0, boost_gap, fpk_gap],
-                        dtype=np.float32)
+        return np.array([*self._x, *norm, self._target / 12.0, self._channel / 18.0,
+                         boost_gap, fpk_gap], dtype=np.float32)
 
     # -- gym API -----------------------------------------------------------
     def reset(self, *, seed=None, options=None):
@@ -118,6 +121,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         if seed is not None:
             self._rng = np.random.default_rng(seed)
         self._target = float(self._rng.uniform(*self.target_range))
+        self._channel = float(self._rng.uniform(*self.channel_range))
         self._x = self._rng.uniform(0.0, 1.0, size=N_PARAM).astype(np.float32)
         self._t = 0
         m = self._measure(self._x)

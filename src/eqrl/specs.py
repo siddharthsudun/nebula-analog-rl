@@ -32,6 +32,9 @@ class Spec:
     eye_h_ui_min: float = 0.4
     eye_v_mv_min: float = 100.0
 
+    # the channel the equalizer must open (insertion loss at Nyquist, dB)
+    channel_loss_db: float = 12.0
+
     # the specific boost we are targeting this run (within [min, max]) and its tolerance
     target_boost_db: float = 9.0
     boost_tol_db: float = 1.5
