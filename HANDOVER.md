@@ -203,3 +203,31 @@ also defaulted to a filename training never writes.
 
 The four decisions waiting on you: the **action space** (§1), **T2.8's action-space
 edges** (§4), the **area budget** (§4), and whether to accept **VCM = 0.72** (§5).
+
+---
+
+## 8. Found while de-risking the morning pipeline
+
+I smoke-tested `honest_benchmark` rather than waiting to run it for real. Three things
+would have failed in the morning:
+
+**Every existing checkpoint is incompatible with the current environment.** The Aug-15
+models expect a 14-dimensional observation; the current env emits 18. So every number in
+`results/` — `final_report.json`, `generalization.json`, `rl_design.json`, and whatever
+the site quotes — came from a different observation space *and* a different circuit
+(ideal-ish tail, `fast=True`, old area model). They cannot be compared to anything
+produced from here without retraining. The run in progress is the first model that
+matches the current env.
+
+**`cma` was not installed.** CMA-ES is one of the three baselines the headline comparison
+rests on; the run would have died partway. Installed `cma` 4.4.4 and `optuna` 4.9.0.
+
+**A single degenerate candidate could kill a whole sweep.** ngspice does not always write
+an empty file when a design fails to solve — it can write its non-finite state out, which
+on Windows is spelled `-nan(ind)`, and `np.loadtxt` raises `ValueError` from inside the
+parser. `server._read` now treats unparseable *and* non-finite output the same way it
+already treats an empty file: no trustworthy measurement, raise `NgspiceError`, which
+callers already handle.
+
+Baselines and the amortization plot are now verified working end to end. Only the RL leg
+is unverified, and it is unverifiable until the training run produces a compatible model.

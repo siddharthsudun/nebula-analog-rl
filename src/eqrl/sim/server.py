@@ -172,10 +172,35 @@ class NgspiceServer:
         self._ng.exec_command("reset")
 
     def _read(self, name: str, ncol: int = 2) -> np.ndarray:
+        """Load a `wrdata` file, treating unparseable or non-finite output as no data.
+
+        A design that fails to solve does not always produce an empty file. ngspice can
+        write the solver's non-finite state out verbatim, and on Windows that is spelled
+        `-nan(ind)` / `1.#INF`, which numpy cannot parse — `np.loadtxt` then raises
+        ValueError from inside the parser rather than returning anything. Left alone that
+        crashes any caller that does not already expect a parse error, which is how a
+        single degenerate candidate could end a whole benchmark sweep.
+
+        Both cases mean the same thing — there is no trustworthy measurement here — so
+        both raise NgspiceError, which callers already handle as a failed evaluation.
+        """
         f = self._dir / name
         if not f.exists() or f.stat().st_size == 0:
             raise NgspiceError("ngspice produced no data (non-convergent design)")
-        return np.atleast_2d(np.loadtxt(f))
+        try:
+            data = np.loadtxt(f)
+        except ValueError as e:
+            raise NgspiceError(
+                f"ngspice wrote unparseable data to {name} ({e}); the analysis did not "
+                "produce a usable solution"
+            ) from e
+        data = np.atleast_2d(data)
+        if not np.all(np.isfinite(data)):
+            raise NgspiceError(
+                f"ngspice wrote non-finite values to {name}; the analysis did not "
+                "converge to a usable solution"
+            )
+        return data
 
     def _analysis(self, cmd: str) -> None:
         """Run an analysis command, translating a non-convergence into NgspiceError."""
