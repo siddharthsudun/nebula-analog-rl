@@ -42,7 +42,7 @@ def _interp_H(freq_grid: np.ndarray, freq_ac: np.ndarray, H_ac: np.ndarray) -> n
 
 
 def compute_eye(freq_ac: np.ndarray, H_ctle: np.ndarray, *,
-                bit_rate: float = 5e9, samples_per_ui: int = 16, n_bits: int = 4096,
+                bit_rate: float = 5e9, samples_per_ui: int = 16, n_bits: int = 2048,
                 swing_v: float = 1.0, channel_loss_db: float = 12.0,
                 nyquist_hz: float = 2.5e9, dfe_taps: int = 1,
                 seed: int = 0) -> EyeResult:

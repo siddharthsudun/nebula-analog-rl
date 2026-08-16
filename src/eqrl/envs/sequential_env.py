@@ -47,7 +47,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
     metadata = {"render_modes": []}
 
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 20,
-                 corner: str = "tt", fast: bool = True, step_size: float = 0.18,
+                 corner: str = "tt", fast: bool = False, step_size: float = 0.18,
                  target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
                  pvt: bool = False):
         super().__init__()
@@ -65,8 +65,8 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         vlo, vnom, vhi = spec.vdd_corners()
         self._vt = [(vnom, 27.0), (vlo, 125.0)]
         self.action_space = spaces.Box(-1.0, 1.0, shape=(N_PARAM,), dtype=np.float32)
-        # obs = params(7) + norm measures(4) + target(1) + boost_gap(1) + fpk_gap(1)
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(N_PARAM + 7,),
+        # obs = params(N) + 8 normalized measures + target(1) + boost_gap(1) + fpk_gap(1)
+        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(N_PARAM + 11,),
                                             dtype=np.float32)
         self._rng = np.random.default_rng(seed)
         self.n_sims = 0
@@ -97,7 +97,9 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         spec = self._spec()
         if m.ok:
             norm = [m.boost_db / 12.0, m.peak_freq_ghz / 5.0,
-                    m.power_w / spec.power_w_max, m.area_mm2 / spec.area_mm2_max]
+                    m.power_w / spec.power_w_max, m.area_mm2 / spec.area_mm2_max,
+                    m.hd3_db / spec.hd3_db_max, m.noise_vrms / spec.noise_vrms_max,
+                    m.eye_h_ui / spec.eye_h_ui_min, m.eye_v_mv / spec.eye_v_mv_min]
             boost_gap = (m.boost_db - self._target) / spec.boost_tol_db
             fc = m.peak_freq_ghz
             if spec.peak_freq_lo_ghz <= fc <= spec.peak_freq_hi_ghz:
@@ -106,7 +108,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
                 edge = spec.peak_freq_lo_ghz if fc < spec.peak_freq_lo_ghz else spec.peak_freq_hi_ghz
                 fpk_gap = (fc - edge) / edge
         else:
-            norm, boost_gap, fpk_gap = [0, 0, 0, 0], 0.0, 0.0
+            norm, boost_gap, fpk_gap = [0] * 8, 0.0, 0.0
         return np.array([*self._x, *norm, self._target / 12.0, boost_gap, fpk_gap],
                         dtype=np.float32)
 

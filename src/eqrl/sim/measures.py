@@ -43,9 +43,9 @@ def peaking(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float
     return dc, float(mag[i] - dc), float(freq[i] / 1e9)
 
 
-def power(dv: DesignVars, vdd: float = 1.8) -> float:
-    """DC power = VDD * total supply current (tail currents through the loads)."""
-    return vdd * dv.i_tail
+def power(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -> float:
+    """Real DC power = VDD * measured supply current at the operating point (W)."""
+    return vdd * srv.supply_current(dv, vdd=vdd, temp_c=temp_c)
 
 
 def hd3_db(srv: NgspiceServer, dv: DesignVars, vdd: float, temp_c: float) -> float:
@@ -97,29 +97,42 @@ def measure_all(dv: DesignVars, *, vdd: float = 1.8, temp_c: float = 27.0,
                 srv: NgspiceServer | None = None) -> Measures:
     """Measure one candidate at one PVT corner via the resident server.
 
-    fast=True skips the slow transient-HD3 and `.noise` analyses (~40 ms vs ~1 s), giving
-    the agent AC/power/area feedback during training; full spec is verified with
-    fast=False. HD3/noise carry huge margins for this topology, so training on the fast
-    subset is safe and the final pass confirms them.
+    Boost, peak frequency, real supply power, area and the channel+DFE eye are ALWAYS
+    simulated (no hardcoded specs). `fast=True` additionally skips only the two slowest
+    analyses — the transient-HD3 and the `.noise` sweep — for baseline sweeps that don't
+    need them; `fast=False` (the training/characterization default) measures all eight.
     """
+    from eqrl.sim.eye import compute_eye
+
     srv = srv or get_server(corner)
     srv.set_corner(corner)
+    # one wideband complex sweep -> boost, peak frequency AND the eye
     try:
-        dc, boost, fpk = peaking(srv, dv, vdd, temp_c)
+        acx = srv.ac_complex(dv, vdd=vdd, temp_c=temp_c)
     except NgspiceError:
         return Measures(ok=False)
+    f, H = acx["freq"], acx["H"]
+    magdb = 20.0 * np.log10(np.maximum(np.abs(H), 1e-12))
+    band = f <= 10e9
+    dc = float(magdb[0])
+    i = int(np.argmax(magdb[band]))
+    boost, fpk = float(magdb[i] - dc), float(f[i] / 1e9)
 
-    m = Measures(
-        dc_gain_db=dc, peak_gain_db=dc + boost, boost_db=boost, peak_freq_ghz=fpk,
-        power_w=power(dv, vdd=vdd), area_mm2=dv.area_mm2(),
-    )
+    m = Measures(dc_gain_db=dc, peak_gain_db=dc + boost, boost_db=boost,
+                 peak_freq_ghz=fpk, area_mm2=dv.area_mm2())
+    try:
+        m.power_w = power(srv, dv, vdd, temp_c)                 # real supply current
+    except NgspiceError:
+        return Measures(ok=False)
+    e = compute_eye(f, H)                                        # real channel+CTLE+DFE eye
+    m.eye_h_ui, m.eye_v_mv = e.width_ui, e.height_v * 1e3
+
     if fast:
-        m.hd3_db, m.noise_vrms, m.eye_h_ui, m.eye_v_mv = -40.0, 1.0e-3, 0.5, 120.0
+        m.hd3_db, m.noise_vrms = -40.0, 1.0e-3                   # skip only HD3 + noise sweeps
         return m
     try:
         m.hd3_db = hd3_db(srv, dv, vdd, temp_c)
         m.noise_vrms = input_noise(srv, dv, vdd, temp_c)
-        m.eye_h_ui, m.eye_v_mv = eye(srv, dv, vdd, temp_c)
     except NgspiceError:
         return Measures(ok=False)
     return m
