@@ -49,7 +49,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 20,
                  corner: str = "tt", fast: bool = False, step_size: float = 0.18,
                  target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
-                 pvt: bool = False, channel_range: tuple[float, float] = (6.0, 18.0)):
+                 pvt: bool = False, channel_range: tuple[float, float] = (6.0, 12.0)):
         super().__init__()
         self.base_spec = spec
         self.horizon = horizon

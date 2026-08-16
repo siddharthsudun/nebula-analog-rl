@@ -83,7 +83,7 @@ class NgspiceServer:
         return {"freq": arr[:, 0], "mag_db": arr[:, 1]}
 
     def ac_complex(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0,
-                   fstop: float = 40e9) -> dict:
+                   fstop: float = 24e9) -> dict:
         """Complex differential transfer function H(f) = v(outp)-v(outn) for AC=1 input.
 
         Wider band than ac() because the eye needs the response out to several harmonics.
