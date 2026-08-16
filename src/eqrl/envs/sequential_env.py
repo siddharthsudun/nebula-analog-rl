@@ -33,12 +33,16 @@ _MEAS_KEYS = ["boost_db", "peak_freq_ghz", "power_w", "area_mm2"]
 
 
 def _shaped(m: Measures, spec: Spec) -> tuple[float, bool]:
-    """Dense score (sum of clipped margins) + all-pass flag, without the terminal bonus."""
+    """Dense score + all-pass flag. `passed` == the 8 HARD specs (specs.hard_pass), which
+    is feasible. A small soft term pulls boost toward the requested target (for the demo /
+    generalization-across-target story) without gating success on it."""
     if not m.ok:
         return -5.0, False
     mg = _margins(m, spec)
     passed = all(v >= 0 for v in mg.values())
-    return float(sum(np.clip(v, -2.0, 1.0) for v in mg.values())), passed
+    base = float(sum(np.clip(v, -2.0, 1.0) for v in mg.values()))
+    soft = 0.5 * (1.0 - min(abs(m.boost_db - spec.target_boost_db) / 3.0, 1.0))
+    return base + soft, passed
 
 
 class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
