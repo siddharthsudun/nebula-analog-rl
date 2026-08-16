@@ -1,0 +1,36 @@
+{
+  "run_id": "20260817T023938_000036_c45c52f0",
+  "exit_code": 0,
+  "requested_tstop": null,
+  "reached_tstop": null,
+  "data_files": {
+    "acx.data": "results\\raw\\20260817T023938_000036_c45c52f0\\acx.data",
+    "isup.data": "results\\raw\\20260817T023938_000036_c45c52f0\\isup.data",
+    "noise.data": "results\\raw\\20260817T023938_000036_c45c52f0\\noise.data",
+    "tr.data": "results\\raw\\20260817T023938_000036_c45c52f0\\tr.data"
+  },
+  "design": {
+    "w_in": 9.06583296235844e-05,
+    "l_in": 1.5e-07,
+    "i_tail": 0.018495024685577604,
+    "rs": 4007.234287261963,
+    "cs": 1.728716400090409e-12,
+    "r_load": 876.417376101017,
+    "w_dfe": 0.0
+  },
+  "vdd": 1.8,
+  "corner": "tt",
+  "temp_c": 27.0,
+  "fast": false,
+  "params": {
+    "w": 90.6583296235844,
+    "l": 0.15,
+    "itail": 0.018495024685577604,
+    "rs": 4007.234287261963,
+    "cs": 1.728716400090409e-12,
+    "rl": 876.417376101017,
+    "wb": 87.03541028507108,
+    "lb": 2.0,
+    "mb": 17
+  }
+}

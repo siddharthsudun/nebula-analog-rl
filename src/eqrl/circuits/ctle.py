@@ -24,10 +24,41 @@ class DesignVars:
     w_dfe: float = 0.0      # 1-tap DFE weight  [fraction of UI]
 
     def area_mm2(self) -> float:
-        """Crude analytic area: transistors + a fixed passive/routing budget."""
-        tx = 2 * self.w_in * self.l_in            # two input devices [m^2]
-        passive = 2e-9                            # ~2000 um^2 for Rs/Cs/load/bias
-        return (tx + passive) * 1e6               # m^2 -> mm^2
+        """Analytic silicon area: every device the netlist actually instantiates.
+
+        The previous model counted the two input devices and then a flat 2000 um^2 for
+        everything else, which made area very nearly a constant -- the input pair spans
+        6 um^2 at the default sizing, so essentially the whole number was the constant.
+        It was also blind to the current mirror, which is by far the largest structure
+        here: at 20 mA the three mirror devices draw 1600 um of width at 2 um length,
+        9600 um^2, roughly five times that entire fixed budget.
+
+        Now each contribution is computed from the design variables:
+
+          input pair   2 * W_in * L_in
+          mirror       3 * W_total * MIRROR_L_UM      (reference + two outputs)
+          Cs           cs / MIM_DENSITY               sky130 MIM, ~2 fF/um^2
+          Rs, R_load   (rs + 2*r_load) squares of poly at RES_SHEET_OHM_SQ,
+                       drawn RES_WIDTH_UM wide for matching
+          overhead     ROUTING_UM2                    routing, guard rings, taps
+
+        HONEST LIMIT: this makes area design-dependent rather than constant, but it does
+        not make the area spec reachable. Worst case over the whole action space is about
+        0.012 mm^2 against a 0.05 mm^2 budget, so `area` still cannot fail. Whether that
+        budget is the right one is a spec question, not a modelling one.
+        """
+        MIM_DENSITY_F_PER_M2 = 2e-15 / 1e-12       # 2 fF/um^2 -> F/m^2
+        RES_SHEET_OHM_SQ = 320.0                   # sky130 p+ poly precision resistor
+        RES_WIDTH_UM = 1.0                         # drawn width, for matching
+        ROUTING_M2 = 500e-12                       # ~500 um^2 routing/guard ring/taps
+
+        tx = 2 * self.w_in * self.l_in
+        wb_um, fingers = mirror_sizing(self.i_tail)
+        mirror = 3 * (wb_um * fingers * 1e-6) * (MIRROR_L_UM * 1e-6)
+        cap = self.cs / MIM_DENSITY_F_PER_M2
+        squares = (self.rs + 2 * self.r_load) / RES_SHEET_OHM_SQ
+        res = squares * (RES_WIDTH_UM * 1e-6) ** 2
+        return (tx + mirror + cap + res + ROUTING_M2) * 1e6    # m^2 -> mm^2
 
 
 # Order of the action vector <-> DesignVars fields. Ranges are (lo, hi) in SI.
