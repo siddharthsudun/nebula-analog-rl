@@ -63,14 +63,38 @@ class DesignVars:
 
 
 # Order of the action vector <-> DesignVars fields. Ranges are (lo, hi) in SI.
-# i_tail spans up to 20 mA so the 15 mW power budget is genuinely reachable (and can be
-# violated); the agent must trade power against gain/boost. w_dfe is NOT here: the 1-tap
-# DFE is a receiver-DSP block applied at the slicer and adapted to the post-cursor in the
-# eye engine, not an analog knob — a phantom parameter would be dishonest.
+#
+# w_dfe is NOT here: the 1-tap DFE is a receiver-DSP block applied at the slicer and
+# adapted to the post-cursor in the eye engine, not an analog knob — a phantom parameter
+# would be dishonest.
+#
+# i_tail's upper bound was 20 mA, on the reasoning that the 15 mW power budget should be
+# reachable and violable so the agent has to trade power against boost. That reasoning was
+# wrong, because the bias collapses long before the power budget binds. Conditional
+# validity, measured with 30 random designs at each fixed tail current
+# (experiments/itail_profile.py, results/itail_profile.json):
+#
+#     0.05 mA  16.7%     0.35 mA  30.0%     0.75 mA   6.7%     1.5 mA  0.0%
+#     0.10 mA  23.3%     0.50 mA  23.3%     1.00 mA  13.3%     2.0 mA  0.0%
+#     0.20 mA  20.0%                                           4.0 mA  0.0%
+#
+# Zero valid designs in 90 samples above 1 mA, every one rejected for the same reason:
+# T2.5, the input pair or the mirror out of saturation. The mechanism is the one documented
+# at VCM_VDD_RATIO -- more tail current means more Vgs on the input pair, which pulls the
+# tail node down, which is exactly the headroom the mirror needs. Above ~1 mA there is no
+# combination of the other five parameters that recovers it.
+#
+# So the old range spent roughly 60% of its log-measure on a region where nothing can
+# succeed. 1 mA is the measured edge, kept rather than trimmed further because 0.05-1 mA is
+# a broad workable band (7-30%) and narrowing to the 0.35 mA peak would be fitting the
+# search space to a single sample.
+#
+# For the record, docs/PROBLEM.md's own first-cut table said 0.1-5 mA; the code said
+# 0.05-20 mA. Neither was measured. This is.
 ACTION_SPACE = {
     "w_in":   (1e-6, 100e-6),
     "l_in":   (0.15e-6, 1e-6),
-    "i_tail": (0.05e-3, 20e-3),
+    "i_tail": (0.05e-3, 1.0e-3),
     "rs":     (100.0, 5e3),
     "cs":     (10e-15, 2e-12),
     "r_load": (100.0, 5e3),
