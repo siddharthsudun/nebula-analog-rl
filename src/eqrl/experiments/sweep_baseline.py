@@ -57,6 +57,18 @@ VDD = 1.8
 
 spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=TARGET_BOOST,
                            channel_loss_db=CHANNEL_LOSS)
+#: Two-stage evaluation. A first attempt at this ran every grid point at fast=False and
+#: HUNG: four hours in it had not reached its first 250-point checkpoint. The resident
+#: server has no per-analysis timeout (the subprocess path does), so a single pathological
+#: grid point -- the all-minimum corner is 1 um wide at 0.05 mA -- blocks indefinitely
+#: inside libngspice. A sweep baseline that cannot finish is itself a finding, but it is
+#: not a measurement.
+#:
+#: So: screen every point with fast=True, which skips the two slow analyses (the transient
+#: HD3 FFT and the .noise sweep), then re-verify only the survivors at fast=False. That is
+#: multi-fidelity evaluation, it is what a competent sweep would do anyway, and it makes
+#: the baseline stronger rather than weaker.
+screen = build_evaluator(spec, corner="tt", fast=True)
 ev = build_evaluator(spec, corner="tt", fast=False)
 
 
@@ -82,12 +94,21 @@ t0 = time.time()
 for i, combo in enumerate(itertools.product(*grid)):
     dv = DesignVars(**dict(zip(KEYS, combo)))
     try:
-        v = ev.evaluate(dv, vdd=VDD)
+        v = screen.evaluate(dv, vdd=VDD)          # cheap screen
     except Exception as e:
         counts[f"EXC:{type(e).__name__}"] += 1
         continue
     if not v.is_valid:
         counts[v.check.value] += 1
+        continue
+    counts["__screened_valid__"] += 1
+    try:
+        v = ev.evaluate(dv, vdd=VDD)              # full verification of survivors only
+    except Exception as e:
+        counts[f"EXC_full:{type(e).__name__}"] += 1
+        continue
+    if not v.is_valid:
+        counts["full:" + v.check.value] += 1
         continue
     counts["__valid__"] += 1
     ok, _ = hard_pass(v.unwrap(), spec)

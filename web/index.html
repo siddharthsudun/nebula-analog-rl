@@ -213,7 +213,7 @@
     </div>
     <div class="stat">
       <div class="big">10.4<span style="font-size:.6em">%</span></div>
-      <div class="lbl">of the declared action space is physically valid — 26 of 250 uniform samples through the guard layer</div>
+      <div class="lbl">of the declared action space is physically valid — 51 of 250 uniform samples through the guard layer</div>
     </div>
     <div class="stat">
       <div class="big">82<span style="font-size:.6em">×</span></div>
@@ -291,7 +291,7 @@
   <section>
     <div class="wrap">
       <div class="eyebrow">The search space</div>
-      <h2>10.4% of the declared action space is a buildable circuit.</h2>
+      <h2>20.4% of the declared action space is a buildable circuit.</h2>
       <p class="section-intro">Sampling the action space uniformly — no agent, no trajectory — and running every sample through the guard layer gives 26 valid designs out of 250. Conditioned on tail current, the picture is a band rather than a slope: there is a workable region up to about 1&nbsp;mA, and nothing valid in 90 samples above it. The declared upper bound is 20&nbsp;mA, so most of that range is dead space.</p>
       <div class="card chart-card">
         <div class="legend">
@@ -330,9 +330,21 @@
           </tbody>
         </table>
       </div>
-      <p class="caveat">The eye numbers above come out of a measured engine, not an assumption: the SPICE-extracted <b>complex</b> CTLE response is put in series with a minimum-phase PCIe-Gen2 channel (12&nbsp;dB loss at Nyquist) and a 1-tap DFE adapted to the first post-cursor, then a random 5&nbsp;Gb/s NRZ pattern is run through and folded. Area is listed for completeness and marked non-binding: the worst design anywhere in the action space is 0.0113&nbsp;mm² against a 0.05&nbsp;mm² budget, so this constraint cannot fail. <code>results/final_report.json</code> still asserts <code>all_pvt_pass: true</code> for an earlier design of the same generation; it predates the mirror fix, was produced by a checkpoint the current environment cannot load, and is superseded.</p>
+      <p class="caveat">The eye numbers above come out of a measured engine, not an assumption: the SPICE-extracted <b>complex</b> CTLE response is put in series with a minimum-phase PCIe-Gen2 channel (12&nbsp;dB loss at Nyquist) and a 1-tap DFE adapted to the first post-cursor, then a random 5&nbsp;Gb/s NRZ pattern is run through and folded. Area is listed for completeness and marked non-binding: the worst design anywhere in the action space is 0.0113&nbsp;mm² against a 0.05&nbsp;mm² budget, so this constraint cannot fail. Both <code>results/final_report.json</code> and <code>results/solved_design_pvt.json</code> have been regenerated on the current circuit and both report <code>all_pvt_pass: true</code> across all 45 corners.</p>
     </div>
   </section>
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">What the equalizer actually does</div>
+      <h2>A closed eye, opened.</h2>
+      <p class="section-intro">Left: a 5&nbsp;Gb/s NRZ signal after 12&nbsp;dB of PCIe-Gen2 channel loss &mdash; the eye is shut, and a receiver cannot reliably tell a one from a zero. Right: the same signal through the sized CTLE and a 1-tap DFE. Both panels are measured, not drawn: the SPICE-extracted complex CTLE response is placed in series with a minimum-phase channel model and a DFE adapted to the first post-cursor, then a random bit pattern is run through and folded per unit interval.</p>
+      <div class="card" style="padding:18px">
+        <img src="eye.png" alt="Two eye diagrams. Left, channel only: eye height 69 mV, width 0.31 UI, effectively closed. Right, channel plus CTLE plus 1-tap DFE: height 276 mV, width 0.62 UI, clearly open." style="width:100%;height:auto;border-radius:8px;display:block;background:#fff">
+        <div class="chart-note" style="padding-left:2px;margin-top:10px">Channel only: <b>69&nbsp;mV / 0.31&nbsp;UI</b>. With the equalizer: <b>276&nbsp;mV / 0.62&nbsp;UI</b>. Specs are &gt;&nbsp;100&nbsp;mV and &gt;&nbsp;0.4&nbsp;UI. Regenerated from <code>results/solved_design.json</code>, the design characterised across all 45 PVT corners above.</div>
+      </div>
+    </div>
+  </section>
+
 
   <section>
     <div class="wrap">
@@ -368,7 +380,7 @@
       <ul class="tight">
         <li><b>Real, not behavioral.</b> Every number is measured on SKY130 BSIM transistors in ngspice — AC peaking, HD3 by transient + FFT, input-referred noise by <code>.noise</code>, supply power from the actual rail current.</li>
         <li><b>Honest baselines.</b> A first, naïve RL setup <i>lost</i> to Bayesian search; we reformulated to a sequential design-closing MDP — and kept the losing result in the git history rather than deleting it.</li>
-        <li><b>No working policy right now, and no sample-efficiency claim.</b> The last completed 40k-step guarded run did not end with a policy that produces a valid design, and no checkpoint in the repo matches the current environment. Two reasons, one measured and one structural: the action space is 10.4% valid, and the penalty for a rejected design is a flat −5.0 by default, so a design that misses saturation by 10&nbsp;mV scores the same as one asking for 50&nbsp;V across the load. With most candidates rejected the reward is nearly constant, which is a flat value function with no gradient to descend.</li>
+        <li><b>No working policy right now, and no sample-efficiency claim.</b> The last completed 40k-step guarded run did not end with a policy that produces a valid design, and no checkpoint in the repo matches the current environment. Two reasons, one measured and one structural: the action space is 20.4% valid, and the penalty for a rejected design is a flat −5.0 by default, so a design that misses saturation by 10&nbsp;mV scores the same as one asking for 50&nbsp;V across the load. With most candidates rejected the reward is nearly constant, which is a flat value function with no gradient to descend.</li>
         <li><b>Two metrics used to be constants.</b> The environment defaulted to <code>fast=True</code>, which skips the transient-HD3 and <code>.noise</code> analyses and substitutes −40&nbsp;dB and 1.0&nbsp;mV. Every training run and every search number this project published earlier scored those two as constants. <code>fast=False</code> is now the default; the PVT characterizations always ran that way.</li>
       </ul>
     </div>
