@@ -172,12 +172,48 @@ disappeared; instead it is now measured from the operating point (0.504 V, `r_lo
 
 ## 6. Training status
 
-Running now: 40k steps, guarded, `fast=False`, seed 0, Tier-5 halting off, checkpoints
-every 2048 into `results/checkpoints/`.
+**It finished, and it failed. This is the result you need to look at first.**
 
-Measured throughput is **~1.3 s/step**, so the full 40k is ~14 h — it will not be finished
-when you read this. Checkpoints are usable on their own (constant learning rate, so a
-truncated run is just a shorter run). Expect roughly 14k steps by 08:00.
+40k steps, guarded, `fast=False`, seed 0, Tier-5 halting off. 43,009 simulations in
+**5.1 hours** (0.43 s/step — faster than I estimated, because most candidates fail fast).
+
+    invalid rate at step 500 : 97.4%
+    invalid rate at step 40k : 99.90%   (42,964 of 43,009)
+    valid designs, total     : 45
+
+It got *worse*, and it ended worse than uniform random sampling (99.6%). A deterministic
+rollout of the finished policy is **100% invalid** over 160 steps, 8 episodes, none of
+which terminated early.
+
+`experiments/diagnose_policy.py` shows why. The policy collapsed onto the corners of the
+box: **43.5% of all visited coordinates sit within 2% of a range edge.**
+
+    param     mean normalised    physical
+    w_in           0.786         78.8 um
+    l_in           0.803         0.83 um
+    cs             0.810         1.62 pF
+    rs             0.250         1327 ohm
+
+The mechanism is that `invalid_reward` is a flat **-5.0** for every rejected design. Every
+invalid candidate therefore looks identical to the agent — a design that misses saturation
+by 10 mV scores exactly the same as one that asks for 50 V across the load. With 97%+ of
+candidates invalid from the first step, the reward is very nearly constant everywhere, the
+value function is flat, there is no gradient to descend, and the entropy bonus walks the
+Gaussian mean outward until the actions clip at the box edges.
+
+And the edges are where T2.8 lives: `l_in` min and `w_in` max *are* the PDK bounds (§4),
+so once the policy pinned, T2.8 became its second most common rejection (49 of 160). The
+two findings compound.
+
+**This is a real negative result, not a bug**, and it is worth reporting as one: with a
+search space that is 0.4% valid and a penalty that carries no direction, PPO cannot learn.
+Two things would have to change, and both are yours to decide — constrain the space so
+most designs are buildable (§1), and shape the invalid penalty so "nearly valid" scores
+better than "impossible" instead of both scoring -5.
+
+Running `honest_benchmark` against this policy would report RL solving 0 of 24 specs. I
+have not spent the hours to produce that number, because it measures the collapse above
+rather than anything about amortization.
 
 `fast` was hardcoded to `True` before tonight, which stubs HD3 and noise — two of the
 eight metrics were not measurements. It now defaults to `False`.

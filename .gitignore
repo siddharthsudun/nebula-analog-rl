@@ -29,3 +29,7 @@ results/*.zip
 # training logs: ngspice writes thousands of "Note: Transient op" lines to stderr
 results/train.log*
 results/*.err
+
+# Guard-layer raw artifact store: one directory per simulation. The 40k training
+# run alone produced 44,280 of them, 5.0 GB. It is an on-disk audit trail, not history.
+results/raw/

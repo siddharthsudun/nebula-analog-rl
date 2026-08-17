@@ -1,15 +1,15 @@
 {
-  "timesteps": 500,
-  "elapsed_s": 648.3,
-  "n_sims": 526,
-  "n_invalid": 513,
-  "invalid_rate": 0.974,
+  "timesteps": 40960,
+  "elapsed_s": 18392.9,
+  "n_sims": 43009,
+  "n_invalid": 42964,
+  "invalid_rate": 0.9989,
   "by_check": {
-    "T2.5_mosfet_not_in_saturation": 342,
-    "T2.6_tail_current_wrong_or_zero": 103,
-    "T1.2_solver_failure_text_in_output": 20,
-    "__valid__": 13,
-    "T2.8_device_parameter_at_pdk_bound": 11,
-    "T4.10_dc_gain_implausible": 11
+    "T1.2_solver_failure_text_in_output": 38621,
+    "T2.5_mosfet_not_in_saturation": 1605,
+    "T2.6_tail_current_wrong_or_zero": 585,
+    "T4.10_dc_gain_implausible": 70,
+    "__valid__": 45,
+    "T2.8_device_parameter_at_pdk_bound": 34
   }
 }

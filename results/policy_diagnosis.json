@@ -1,0 +1,23 @@
+{
+  "episodes": 8,
+  "steps": 160,
+  "invalid_rate": 1.0,
+  "by_check": {
+    "T2.5_mosfet_not_in_saturation": 91,
+    "T2.8_device_parameter_at_pdk_bound": 49,
+    "T2.6_tail_current_wrong_or_zero": 11,
+    "T4.10_dc_gain_implausible": 8,
+    "T1.2_solver_failure_text_in_output": 1
+  },
+  "mean_normalised": {
+    "w_in": 0.7856,
+    "l_in": 0.8027,
+    "i_tail": 0.5272,
+    "rs": 0.2505,
+    "cs": 0.8096,
+    "r_load": 0.3842
+  },
+  "fraction_at_edge": 0.4354,
+  "median_load_drop_v": 0.606344392654995,
+  "fraction_drop_over_vdd": 0.31875
+}

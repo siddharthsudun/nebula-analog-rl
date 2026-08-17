@@ -1,0 +1,12 @@
+{
+  "model": "results\\seq_agent_guarded.zip",
+  "timesteps": 40000,
+  "n_sims": 43009,
+  "n_invalid": 42964,
+  "wall_minutes": 306.5,
+  "seed": 0,
+  "fast": false,
+  "guarded": true,
+  "pvt": false,
+  "horizon": 20
+}
