@@ -1,0 +1,151 @@
+{
+  "episodes": 40,
+  "step_size": 0.18,
+  "horizon": 20,
+  "rows": [
+    {
+      "step": 0,
+      "n": 40,
+      "valid": 10,
+      "fraction": 0.25,
+      "edge_fraction": 0.1333
+    },
+    {
+      "step": 1,
+      "n": 39,
+      "valid": 8,
+      "fraction": 0.2051,
+      "edge_fraction": 0.1239
+    },
+    {
+      "step": 2,
+      "n": 39,
+      "valid": 5,
+      "fraction": 0.1282,
+      "edge_fraction": 0.1154
+    },
+    {
+      "step": 3,
+      "n": 39,
+      "valid": 9,
+      "fraction": 0.2308,
+      "edge_fraction": 0.1453
+    },
+    {
+      "step": 4,
+      "n": 39,
+      "valid": 6,
+      "fraction": 0.1538,
+      "edge_fraction": 0.1239
+    },
+    {
+      "step": 5,
+      "n": 39,
+      "valid": 4,
+      "fraction": 0.1026,
+      "edge_fraction": 0.1496
+    },
+    {
+      "step": 6,
+      "n": 39,
+      "valid": 7,
+      "fraction": 0.1795,
+      "edge_fraction": 0.1111
+    },
+    {
+      "step": 7,
+      "n": 38,
+      "valid": 6,
+      "fraction": 0.1579,
+      "edge_fraction": 0.1184
+    },
+    {
+      "step": 8,
+      "n": 38,
+      "valid": 6,
+      "fraction": 0.1579,
+      "edge_fraction": 0.1316
+    },
+    {
+      "step": 9,
+      "n": 37,
+      "valid": 5,
+      "fraction": 0.1351,
+      "edge_fraction": 0.1306
+    },
+    {
+      "step": 10,
+      "n": 37,
+      "valid": 3,
+      "fraction": 0.0811,
+      "edge_fraction": 0.1441
+    },
+    {
+      "step": 11,
+      "n": 37,
+      "valid": 4,
+      "fraction": 0.1081,
+      "edge_fraction": 0.1441
+    },
+    {
+      "step": 12,
+      "n": 36,
+      "valid": 4,
+      "fraction": 0.1111,
+      "edge_fraction": 0.1389
+    },
+    {
+      "step": 13,
+      "n": 36,
+      "valid": 4,
+      "fraction": 0.1111,
+      "edge_fraction": 0.1343
+    },
+    {
+      "step": 14,
+      "n": 36,
+      "valid": 4,
+      "fraction": 0.1111,
+      "edge_fraction": 0.1713
+    },
+    {
+      "step": 15,
+      "n": 36,
+      "valid": 4,
+      "fraction": 0.1111,
+      "edge_fraction": 0.1667
+    },
+    {
+      "step": 16,
+      "n": 36,
+      "valid": 3,
+      "fraction": 0.0833,
+      "edge_fraction": 0.1574
+    },
+    {
+      "step": 17,
+      "n": 36,
+      "valid": 4,
+      "fraction": 0.1111,
+      "edge_fraction": 0.1574
+    },
+    {
+      "step": 18,
+      "n": 36,
+      "valid": 5,
+      "fraction": 0.1389,
+      "edge_fraction": 0.1713
+    },
+    {
+      "step": 19,
+      "n": 36,
+      "valid": 2,
+      "fraction": 0.0556,
+      "edge_fraction": 0.1574
+    }
+  ],
+  "first5_valid": 0.1939,
+  "last5_valid": 0.1,
+  "first5_edge": 0.1284,
+  "last5_edge": 0.162
+}
