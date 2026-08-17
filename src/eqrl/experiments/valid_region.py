@@ -28,7 +28,7 @@ if hasattr(os, "add_dll_directory"):
 
 import numpy as np
 
-from eqrl.circuits.ctle import ACTION_SPACE, decode_action
+from eqrl.circuits.ctle import ACTION_SPACE, DesignVars, decode_action
 from eqrl.evaluator import build_evaluator
 from eqrl.specs import DEFAULT_SPEC, hard_pass
 
@@ -47,10 +47,32 @@ valid_rows, invalid_rows = [], []
 checks = collections.Counter()
 spec_passing = 0
 
+#: Restricted ranges are SAMPLED IN, not clamped to.
+#:
+#: The first version of this script used `min(i_tail, I_MAX)`. i_tail is log-scaled over
+#: 0.05-20 mA, so ~62% of uniform draws exceed 0.5 mA and collapsed onto exactly that
+#: value -- an atom holding most of the probability mass. The resulting marginal said the
+#: valid i_tail range was 0.4693-0.5 mA, "0.2% of the declared span", which was a
+#: measurement of the clamp rather than of the circuit. Clamping a log-scaled variable to
+#: study its marginal cannot work; the restriction has to move into the sampler.
+RESTRICTED = dict(ACTION_SPACE)
+RESTRICTED["i_tail"] = (ACTION_SPACE["i_tail"][0], I_MAX)
+RESTRICTED["l_in"] = (L_MIN, ACTION_SPACE["l_in"][1])
+
+
+def sample_restricted(u):
+    """Map [0,1]^N into the restricted box using decode_action's own log/linear rule."""
+    vals = {}
+    for i, k in enumerate(KEYS):
+        lo, hi = RESTRICTED[k]
+        x = float(min(max(u[i], 0.0), 1.0))
+        vals[k] = lo * (hi / lo) ** x if (lo > 0 and hi / lo > 50) else lo + (hi - lo) * x
+    return DesignVars(**vals)
+
+
 for i in range(SAMPLES):
     x = rng.uniform(0.0, 1.0, N)
-    dv = decode_action(x)
-    dv = dataclasses.replace(dv, i_tail=min(dv.i_tail, I_MAX), l_in=max(dv.l_in, L_MIN))
+    dv = sample_restricted(x)
     try:
         v = ev.evaluate(dv, vdd=VDD)
     except Exception as e:
@@ -89,7 +111,7 @@ print(f"\nWhere the {len(valid_rows)} VALID designs live, per variable:")
 print(f"   {'param':8s} {'declared range':>26}   {'valid p5..p95':>26}  {'shrink':>7}")
 proposal = {}
 for k in KEYS:
-    lo, hi = ACTION_SPACE[k]
+    lo, hi = RESTRICTED[k]
     v = col(valid_rows, k)
     p5, p95 = float(np.percentile(v, 5)), float(np.percentile(v, 95))
     declared_span = hi - lo
@@ -112,5 +134,6 @@ Path("results/valid_region.json").write_text(json.dumps({
     "by_check": dict(checks.most_common()),
     "valid_p5_p95": {k: [round(a, 12), round(b, 12)] for k, (a, b) in proposal.items()},
     "declared": {k: list(v) for k, v in ACTION_SPACE.items()},
+    "sampled_from": {k: list(v) for k, v in RESTRICTED.items()},
 }, indent=2))
 print("\nwrote results/valid_region.json")
