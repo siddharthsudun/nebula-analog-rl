@@ -22,6 +22,30 @@ class Spec:
     peak_freq_lo_ghz: float = 1.25
     peak_freq_hi_ghz: float = 2.5
 
+    #: OPT-IN floor on the DC gain, in dB. `None` (the default) means `hard_pass` does
+    #: not look at DC gain at all, which is the behaviour every published number in this
+    #: repo was produced under.
+    #:
+    #: WHY IT EXISTS. `boost_db` is a RATIO — peak gain minus DC gain — so a design that
+    #: ATTENUATES at DC inflates its boost for free, without the peak ever getting
+    #: higher. Nothing in the eight hard checks notices: `boost_range` and `peak_in_band`
+    #: are both computed from that difference, and the remaining six (HD3, noise, power,
+    #: area, eye) are all satisfied more easily by a stage that passes less signal.
+    #:
+    #: MEASURED (results/pass_vs_valid.json, CMA-ES over 4 specs x 60 evaluations): of
+    #: the 28 designs that passed all eight hard specs, 24 (86%) were rejected by the
+    #: guard layer, and 14 of those 24 were rejected specifically as
+    #: T4.10_dc_gain_implausible — DC gain below guards.DC_GAIN_DB_MIN. The remaining
+    #: 10 were T2.5_mosfet_not_in_saturation. So the attenuate-at-DC trick is the single
+    #: largest source of designs that pass the spec while not being an amplifier.
+    #:
+    #: The guard already catches this, but the guard is not what the competition scores
+    #: against — the spec is. Setting this field closes the hole in the spec itself.
+    #: Setting it to 0.0 matches guards.DC_GAIN_DB_MIN (do not read that constant from
+    #: here: guard thresholds are the project owners' to set, and a spec that silently
+    #: tracked them would move whenever they did).
+    dc_gain_db_min: float | None = None
+
     # constraints (hard limits)
     hd3_db_max: float = -30.0          # linearity: HD3 must be below this
     noise_vrms_max: float = 1.5e-3     # input-referred, 10 MHz - 5 GHz
@@ -55,6 +79,11 @@ def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
     tolerance. Boost is the tunable 3-12 dB *range*, not a per-corner target tolerance.
 
     Returns (all_pass, per-check dict).
+
+    Eight checks, always. A ninth, `dc_gain`, appears ONLY when `spec.dc_gain_db_min` is
+    set — see the field's docstring for why it is off by default and what it closes. The
+    key is absent, not False, when the field is None, so callers that count the dict
+    (honest_benchmark's dense score does) see exactly the same eight entries as before.
     """
     if not getattr(m, "ok", False):
         return False, {"sim_ok": False}
@@ -68,6 +97,8 @@ def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
         "eye_h": m.eye_h_ui >= spec.eye_h_ui_min,
         "eye_v": m.eye_v_mv >= spec.eye_v_mv_min,
     }
+    if spec.dc_gain_db_min is not None:
+        checks["dc_gain"] = m.dc_gain_db >= spec.dc_gain_db_min
     return all(checks.values()), checks
 
 

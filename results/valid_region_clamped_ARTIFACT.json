@@ -1,0 +1,67 @@
+{
+  "samples": 700,
+  "valid": 45,
+  "valid_fraction": 0.0643,
+  "spec_passing_among_valid": 0,
+  "i_tail_cap": 0.0005,
+  "l_in_floor": 1.6e-07,
+  "by_check": {
+    "T1.2_solver_failure_text_in_output": 258,
+    "T2.5_mosfet_not_in_saturation": 193,
+    "T2.6_tail_current_wrong_or_zero": 163,
+    "__valid__": 45,
+    "T4.10_dc_gain_implausible": 41
+  },
+  "valid_p5_p95": {
+    "w_in": [
+      3.079561e-06,
+      6.7439942e-05
+    ],
+    "l_in": [
+      1.87574e-07,
+      9.6607e-07
+    ],
+    "i_tail": [
+      0.000469344304,
+      0.0005
+    ],
+    "rs": [
+      235.308812292531,
+      4537.139635293788
+    ],
+    "cs": [
+      0.0,
+      2e-12
+    ],
+    "r_load": [
+      1637.574085813918,
+      4850.254431366427
+    ]
+  },
+  "declared": {
+    "w_in": [
+      1e-06,
+      0.0001
+    ],
+    "l_in": [
+      1.5e-07,
+      1e-06
+    ],
+    "i_tail": [
+      5e-05,
+      0.02
+    ],
+    "rs": [
+      100.0,
+      5000.0
+    ],
+    "cs": [
+      1e-14,
+      2e-12
+    ],
+    "r_load": [
+      100.0,
+      5000.0
+    ]
+  }
+}

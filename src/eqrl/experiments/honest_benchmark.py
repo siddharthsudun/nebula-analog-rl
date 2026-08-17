@@ -13,6 +13,37 @@ Fairness rules:
 
 Outputs: results/benchmark.json and two figures — per-spec cost and the cumulative-cost
 amortization curve (where RL overtakes search).
+
+THE KNOWN ASYMMETRY, AND THE OPT-IN FIX
+---------------------------------------
+As written and as published, `evaluate()` scores with `hard_pass` on a direct
+`measure_all` call and never consults the guard layer (eqrl.guards). The RL policy,
+however, is trained with the guard ON. So the default comparison is:
+
+    baselines solve   "meet the 8 specs"
+    RL solves         "meet the 8 specs AND be a physically valid circuit"
+
+`experiments/pass_vs_valid.py` measured how much that is worth: of 28 CMA-ES designs
+that passed all eight specs, 4 (14%) were guard-valid and 24 (86%) were not — 14
+T4.10_dc_gain_implausible, 10 T2.5_mosfet_not_in_saturation. The baselines are being
+scored on the easier of the two problems.
+
+`--require-valid` makes a solve require BOTH `hard_pass` and a guard-valid verdict. It
+is applied inside `evaluate()`, which is the single function all four solvers call, so
+no method can be held to a different standard by accident. It is OFF by default: the
+published numbers were produced without it and must stay reproducible.
+
+Two consequences of turning it on, stated rather than hidden:
+  * the guard costs one extra simulation per candidate, but ONLY for candidates that
+    already passed all eight specs (the check is skipped otherwise). Those are rare —
+    a handful per run — and the surcharge falls identically on every method, so the
+    reported sims-to-solve stays comparable across methods but is not comparable to a
+    default-mode run.
+  * the guard measures the circuit on the nominal channel, not the per-spec
+    `channel_loss_db`. Guard validity is a property of the circuit (saturation, bias,
+    DC gain, plausibility), not of the channel it drives, and `make_raw_eval` has no
+    channel argument to thread one through. This matches how pass_vs_valid.py measured
+    the 86% above.
 """
 from __future__ import annotations
 
@@ -29,17 +60,67 @@ from eqrl.specs import DEFAULT_SPEC, hard_pass
 
 N = len(ACTION_SPACE)
 
+#: The guarded evaluator used by `evaluate()`, or None for the default (unguarded)
+#: success criterion. Module-level on purpose: `evaluate()` is the one function every
+#: solver calls, and a per-solver argument is exactly the thing that would let one
+#: method drift onto a different success test. Set it once, via `set_validity_guard`,
+#: before any solver runs.
+_VALIDITY_GUARD = None
+
+#: Value for `Spec.dc_gain_db_min` on the spec `evaluate()` scores against, or None to
+#: leave `hard_pass` at its published eight checks. Same rationale for being global as
+#: `_VALIDITY_GUARD`: one place, one criterion, all four solvers.
+_DC_GAIN_DB_MIN: float | None = None
+
+
+def set_validity_guard(guard) -> None:
+    """Install (or clear, with None) the guard consulted by `evaluate()`."""
+    global _VALIDITY_GUARD
+    _VALIDITY_GUARD = guard
+
+
+def set_dc_gain_floor(db: float | None) -> None:
+    """Install (or clear, with None) the spec-side DC-gain floor `evaluate()` applies."""
+    global _DC_GAIN_DB_MIN
+    _DC_GAIN_DB_MIN = db
+
+
+def build_validity_guard(store_root):
+    """A GuardedEvaluator matched to what `evaluate()` measures: corner tt, fast=False.
+
+    No SearchMonitor is attached. Tier 5 is a statement about a whole search run — it
+    would raise SearchHalted out of the middle of one solver's budget and kill the
+    benchmark — and here the guard is being used to judge single candidates, which is
+    Tiers 1-4's job.
+    """
+    from eqrl.evaluator import build_evaluator
+    from eqrl.guards import ArtifactStore
+    return build_evaluator(DEFAULT_SPEC, corner="tt", fast=False,
+                           store=ArtifactStore(store_root))
+
 
 def evaluate(x, target, channel):
-    """One candidate -> (passed_all_8, shaped_score). Full spec (fast=False)."""
-    spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target, channel_loss_db=channel)
-    m = measure_all(decode_action(np.asarray(x)), corner="tt", vdd=spec.vdd_nominal,
+    """One candidate -> (solved, shaped_score). Full spec (fast=False).
+
+    `solved` is all 8 hard specs by default; with a validity guard installed it is all 8
+    hard specs AND a guard-valid verdict. Every solver in this module routes through
+    here, so the criterion is identical for random, CMA-ES, TPE and RL.
+    """
+    spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target, channel_loss_db=channel,
+                               dc_gain_db_min=_DC_GAIN_DB_MIN)
+    dv = decode_action(np.asarray(x))
+    m = measure_all(dv, corner="tt", vdd=spec.vdd_nominal,
                     fast=False, channel_loss_db=channel)
     ok, checks = hard_pass(m, spec)
     if not m.ok:
         return False, -10.0
     # dense score: how many checks pass + soft boost closeness
     score = sum(1.0 for v in checks.values() if v) - abs(m.boost_db - target) / 3.0
+    # Guard only the candidates that already cleared the specs. A candidate that failed
+    # hard_pass is not a solve either way, so simulating it a second time would buy
+    # nothing and would inflate every method's cost by ~2x.
+    if ok and _VALIDITY_GUARD is not None:
+        ok = bool(_VALIDITY_GUARD.evaluate(dv, vdd=spec.vdd_nominal).is_valid)
     return ok, score
 
 
@@ -123,8 +204,33 @@ def main() -> None:
     p.add_argument("--seeds", type=int, default=3)
     p.add_argument("--budget", type=int, default=150)
     p.add_argument("--outdir", default="results")
+    p.add_argument("--require-valid", action="store_true",
+                   help="a solve must ALSO be guard-valid (eqrl.guards Tiers 1-4), "
+                        "applied identically to random, CMA-ES, TPE and RL. OFF by "
+                        "default because the published numbers were produced without "
+                        "it. See the module docstring for what it costs and what it "
+                        "fixes.")
+    p.add_argument("--dc-gain-db-min", type=float, default=None,
+                   help="OPT-IN ninth hard check: DC gain must be at least this many "
+                        "dB. Closes the attenuate-at-DC route to a cheap boost figure "
+                        "(boost is peak minus DC, so attenuating inflates it). Unset by "
+                        "default. 0.0 is the value guards.DC_GAIN_DB_MIN uses.")
     args = p.parse_args()
     Path(args.outdir).mkdir(exist_ok=True)
+
+    # Install the success criterion BEFORE any solver runs. Both are no-ops unless
+    # asked for, and both live in evaluate(), which is what all four solvers call.
+    set_dc_gain_floor(args.dc_gain_db_min)
+    if args.dc_gain_db_min is not None:
+        print(f"spec: extra hard check dc_gain >= {args.dc_gain_db_min:g} dB (9 checks)")
+    if args.require_valid:
+        set_validity_guard(build_validity_guard(Path(args.outdir) / "raw_require_valid"))
+        print("success criterion: all hard specs AND a guard-valid verdict "
+              "(same test for every method)")
+    # Either opt-in changes what "solved" means, so neither may land on the filenames
+    # the published result occupies. A default run still writes benchmark.json.
+    tag = ("_require_valid" if args.require_valid else "") + \
+          ("_dcfloor" if args.dc_gain_db_min is not None else "")
 
     model_path = Path(args.model)
     if not model_path.exists():
@@ -180,14 +286,19 @@ def main() -> None:
 
     ns = args.search_specs * args.seeds
     out = {
+        # What "solved" meant in this run, recorded next to the numbers it produced.
+        # A cost of 3 sims under one criterion and 3 sims under the other are not the
+        # same measurement, and a bare file gives the reader no way to tell.
+        "criterion": {"require_valid": bool(args.require_valid),
+                      "dc_gain_db_min": args.dc_gain_db_min},
         "rl": {"solved": len(rl_solved), "specs": len(specs),
                "median": float(np.median(rl_solved)) if rl_solved else None,
                "train_cost": train_cost},
         "random": summ(rand, ns), "cmaes": summ(cmaes, ns), "tpe": summ(tpe, ns),
     }
-    Path(f"{args.outdir}/benchmark.json").write_text(json.dumps(out, indent=2))
+    Path(f"{args.outdir}/benchmark{tag}.json").write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
-    _plot(out, rl_solved, f"{args.outdir}/amortization.png")
+    _plot(out, rl_solved, f"{args.outdir}/amortization{tag}.png")
 
 
 def _plot(out, rl_sims, path):
