@@ -1,5 +1,27 @@
 # Handover — night of 16–17 Aug
 
+> ## CORRECTION, added 17 Aug after the guard wiring was fixed
+>
+> **Sections 1, 6 and 9 below rest on a defect and their headline numbers are wrong.**
+>
+> `raw_eval` probed the operating point without priming the server with the candidate, so
+> every Tier 2 verdict described a different circuit — the deck defaults on a fresh server,
+> the previous candidate on a warm one. Fixed in `76bd9f4f4`; see §10.
+>
+> | claim | as written below | re-measured after the fix |
+> |---|---|---|
+> | valid fraction of the action space | 0.4% | **10.4%** (26/250) |
+> | dominant rejection | `T2.6` tail current | `T2.5` saturation (62%); `T2.6` gone |
+> | usable `i_tail` range | "~0.5 mA, 1/40th of declared" | **up to ~1 mA**; 0% valid above |
+> | training invalid rate 99.90% | policy collapse | measured through the defect; unusable |
+>
+> The search space is **not** mostly unbuildable. 10.4% is a workable density, so the
+> range decision §1 presents as gating everything is much smaller than described: cap
+> `i_tail` near 1 mA, where validity is 0% across 90 samples, and leave the rest alone.
+>
+> Read §1, §6 and §9 as a record of what was believed, not as findings.
+
+
 Branch: `guards/validation-layer`, pushed. Four commits on top of the merge (`4fe8d37`):
 
 | commit | what |
@@ -248,6 +270,42 @@ which is exactly the question that mattered tonight.
 decides where RL breaks even against the search baselines, so it now reads the real figure
 from the training record and errors out rather than falling back to a guess. Its `--model`
 also defaulted to a filename training never writes.
+
+---
+
+## 10. The defect that invalidated sections 1, 6 and 9
+
+`probe_operating_point()` runs `.op` against whatever parameters the resident server
+currently holds — it takes no design argument. `raw_eval` never primed the server with the
+candidate, so Tier 2 compared one design's operating point against another design's
+requested values.
+
+Found by chasing a tenfold disagreement between two experiments over the same design
+space. Feeding both samplers identical designs gave 0/50 differing designs and 0% vs 20%
+validity, which is only possible if the evaluator is nondeterministic:
+
+    same design, twice in a row, one server    verdict changed on 9 of 14
+    same design, unrelated design in between   verdict changed on 5 of 14
+    same design, fresh server each time        verdict changed on 0 of 6
+
+The fresh-server case was stable but uniformly wrong — `T2.6` fired on nearly everything,
+comparing the deck default's ~1.87 mA delivered tail current against candidates asking for
+~0.2 mA. It was not a reset problem; the `.op` path reproduces itself 8/8 under every reset
+sequence tried, including the baseline.
+
+**Invalidated:** the 0.4% figure, the 97.4% and 99.90% training invalid rates and the
+policy-collapse diagnosis built on them, `valid_region`, `what_binds`, the first
+`itail_profile`, and the `T2.5` share of pass-vs-valid.
+
+**Survives** (subprocess path or explicitly primed): the mirror-length sweep, the
+W=100/101 PDK bin limit, the 82× speedup, the VCM 0.72-vs-0.84 comparison, the 10-of-45
+PVT recheck, and the 14 `T4.10` DC-gain findings — Tier 4 reads `measure_all`, which always
+measured the right design.
+
+**Why nothing caught it:** the guard layer checks that simulations are sound. Nothing
+asserted that the same input twice gives the same answer, which is the property that makes
+every other check mean anything. `tests/test_evaluator_determinism.py` now asserts it five
+ways.
 
 ---
 

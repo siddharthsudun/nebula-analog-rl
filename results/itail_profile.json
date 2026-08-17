@@ -1,133 +1,127 @@
 {
-  "per_point": 40,
+  "per_point": 30,
   "l_in_floor": 1.6e-07,
   "rows": [
     {
       "i_tail": 5e-05,
-      "n": 40,
+      "n": 30,
       "valid": 5,
-      "fraction": 0.125,
+      "fraction": 0.1667,
       "spec_passing": 0,
       "by_check": {
-        "T4.10_dc_gain_implausible": 27,
-        "T1.2_solver_failure_text_in_output": 6,
+        "T4.10_dc_gain_implausible": 20,
         "__valid__": 5,
-        "T2.6_tail_current_wrong_or_zero": 1,
-        "T2.5_mosfet_not_in_saturation": 1
+        "T1.2_solver_failure_text_in_output": 5
       }
     },
     {
       "i_tail": 0.0001,
-      "n": 40,
-      "valid": 9,
-      "fraction": 0.225,
+      "n": 30,
+      "valid": 7,
+      "fraction": 0.2333,
       "spec_passing": 0,
       "by_check": {
-        "T4.10_dc_gain_implausible": 17,
-        "T1.2_solver_failure_text_in_output": 11,
-        "__valid__": 9,
-        "T2.5_mosfet_not_in_saturation": 3
+        "T4.10_dc_gain_implausible": 13,
+        "T1.2_solver_failure_text_in_output": 8,
+        "__valid__": 7,
+        "T2.5_mosfet_not_in_saturation": 2
       }
     },
     {
       "i_tail": 0.0002,
-      "n": 40,
-      "valid": 8,
+      "n": 30,
+      "valid": 6,
       "fraction": 0.2,
-      "spec_passing": 0,
+      "spec_passing": 1,
       "by_check": {
-        "T4.10_dc_gain_implausible": 15,
-        "T1.2_solver_failure_text_in_output": 11,
-        "__valid__": 8,
-        "T2.5_mosfet_not_in_saturation": 6
+        "T1.2_solver_failure_text_in_output": 10,
+        "T4.10_dc_gain_implausible": 7,
+        "T2.5_mosfet_not_in_saturation": 7,
+        "__valid__": 6
       }
     },
     {
       "i_tail": 0.00035,
-      "n": 40,
-      "valid": 5,
-      "fraction": 0.125,
+      "n": 30,
+      "valid": 9,
+      "fraction": 0.3,
       "spec_passing": 0,
       "by_check": {
-        "T2.5_mosfet_not_in_saturation": 16,
-        "T1.2_solver_failure_text_in_output": 9,
-        "T4.10_dc_gain_implausible": 9,
-        "__valid__": 5,
-        "T2.6_tail_current_wrong_or_zero": 1
+        "__valid__": 9,
+        "T1.2_solver_failure_text_in_output": 8,
+        "T2.5_mosfet_not_in_saturation": 7,
+        "T4.10_dc_gain_implausible": 6
       }
     },
     {
       "i_tail": 0.0005,
-      "n": 40,
-      "valid": 10,
-      "fraction": 0.25,
-      "spec_passing": 0,
+      "n": 30,
+      "valid": 7,
+      "fraction": 0.2333,
+      "spec_passing": 1,
       "by_check": {
-        "T2.5_mosfet_not_in_saturation": 13,
-        "__valid__": 10,
-        "T1.2_solver_failure_text_in_output": 9,
-        "T4.10_dc_gain_implausible": 8
+        "T2.5_mosfet_not_in_saturation": 17,
+        "__valid__": 7,
+        "T4.10_dc_gain_implausible": 4,
+        "T1.2_solver_failure_text_in_output": 2
       }
     },
     {
       "i_tail": 0.00075,
-      "n": 40,
+      "n": 30,
       "valid": 2,
-      "fraction": 0.05,
+      "fraction": 0.0667,
       "spec_passing": 0,
       "by_check": {
-        "T2.5_mosfet_not_in_saturation": 30,
+        "T2.5_mosfet_not_in_saturation": 21,
         "T1.2_solver_failure_text_in_output": 5,
         "T4.10_dc_gain_implausible": 2,
-        "__valid__": 2,
-        "T2.6_tail_current_wrong_or_zero": 1
-      }
-    },
-    {
-      "i_tail": 0.001,
-      "n": 40,
-      "valid": 2,
-      "fraction": 0.05,
-      "spec_passing": 1,
-      "by_check": {
-        "T2.5_mosfet_not_in_saturation": 29,
-        "T1.2_solver_failure_text_in_output": 5,
-        "T4.10_dc_gain_implausible": 4,
         "__valid__": 2
       }
     },
     {
-      "i_tail": 0.0015,
-      "n": 40,
-      "valid": 0,
-      "fraction": 0.0,
+      "i_tail": 0.001,
+      "n": 30,
+      "valid": 4,
+      "fraction": 0.1333,
       "spec_passing": 0,
       "by_check": {
-        "T2.5_mosfet_not_in_saturation": 36,
+        "T2.5_mosfet_not_in_saturation": 22,
+        "__valid__": 4,
         "T4.10_dc_gain_implausible": 3,
         "T1.2_solver_failure_text_in_output": 1
       }
     },
     {
-      "i_tail": 0.002,
-      "n": 40,
-      "valid": 1,
-      "fraction": 0.025,
-      "spec_passing": 0,
-      "by_check": {
-        "T2.5_mosfet_not_in_saturation": 38,
-        "T1.2_solver_failure_text_in_output": 1,
-        "__valid__": 1
-      }
-    },
-    {
-      "i_tail": 0.004,
-      "n": 40,
+      "i_tail": 0.0015,
+      "n": 30,
       "valid": 0,
       "fraction": 0.0,
       "spec_passing": 0,
       "by_check": {
-        "T2.5_mosfet_not_in_saturation": 40
+        "T2.5_mosfet_not_in_saturation": 29,
+        "T4.10_dc_gain_implausible": 1
+      }
+    },
+    {
+      "i_tail": 0.002,
+      "n": 30,
+      "valid": 0,
+      "fraction": 0.0,
+      "spec_passing": 0,
+      "by_check": {
+        "T2.5_mosfet_not_in_saturation": 28,
+        "T4.10_dc_gain_implausible": 2
+      }
+    },
+    {
+      "i_tail": 0.004,
+      "n": 30,
+      "valid": 0,
+      "fraction": 0.0,
+      "spec_passing": 0,
+      "by_check": {
+        "T2.5_mosfet_not_in_saturation": 30
       }
     }
   ]
