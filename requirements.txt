@@ -1,26 +1,49 @@
+# Versions are the ones installed in the .venv every number in RESULTS.md was measured
+# with (Python 3.12 on Windows, Python 3.14 on macOS). Pins are exact so a clone that
+# reproduces a measurement is running the same code, not a later release of it.
+# Only direct dependencies are listed; pip resolves the rest. Pinning the transitive
+# set as well would pin Windows-only wheels and break a Linux install.
+# `python scripts/smoke_test.py` checks that this file plus ngspice plus the PDK
+# actually produce a working evaluation.
+
 # core
-numpy
-scipy
-matplotlib
-pyyaml
+numpy==2.5.2
+scipy==1.18.0          # pulled in by PySpice; pinned because the FFT path feeds HD3
+matplotlib==3.11.1     # experiments/*.py plots into results/
+PyYAML==6.0.3          # configs/*.yaml
 
 # RL
-gymnasium
-stable-baselines3[extra]
+gymnasium==1.3.0
+stable-baselines3==2.9.0
+# torch arrives with stable-baselines3. Pinned anyway: it decides the numerics of every
+# policy in results/, so "whatever torch pip picks today" is not a reproducible statement.
+torch==2.13.0
+# Note: this used to read stable-baselines3[extra]. The extras (tensorboard, opencv,
+# pygame, ale-py, tqdm, rich) are several hundred MB and nothing in src/ imports them --
+# there is no tensorboard_log anywhere and train_sequential.py passes progress_bar=False.
+# Add [extra] back if you start logging to tensorboard.
 
 # baselines
-optuna
-
-# LLM wrapper (bonus)
-anthropic
-
-# SPICE. PySpice drives libngspice in-process for the resident server, which is what
-# makes RL training on real SPICE practical (~60 ms/eval here vs ~5.4 s subprocess).
-# measure_all() -> get_server() needs it; only the ngspice_runner subprocess path does not.
-# Verified with PySpice 1.5 against ngspice 41 (it logs "Unsupported Ngspice version 41"
-# and works — PySpice 1.5 predates 41, the warning is not an error).
-PySpice
-
+optuna==4.9.0
 # CMA-ES baseline. The comparison that decides whether the RL result is real: for a
 # handful of continuous parameters this is the method an expert would actually reach for.
-cma
+cma==4.4.4
+
+# SPICE. PySpice drives libngspice in-process for the resident server, which is what
+# makes RL training on real SPICE practical (~78 ms/eval here vs ~6.4 s subprocess).
+# measure_all() -> get_server() needs it; only the ngspice_runner subprocess path does not.
+# Required, not optional -- it was commented out here while src/eqrl/sim/server.py imported
+# it, so a fresh install could not run the main path at all.
+# Verified with PySpice 1.5 against ngspice 41 (it logs "Unsupported Ngspice version 41"
+# and works -- PySpice 1.5 predates 41, the warning is not an error) and ngspice 47.
+PySpice==1.5
+
+# tests
+pytest==9.1.1
+
+# ---------------------------------------------------------------------------
+# Optional. Nothing above depends on these; the repo runs without them.
+# ---------------------------------------------------------------------------
+# LLM wrapper (bonus). src/eqrl/llm/spec_parser.py falls back to a keyword heuristic when
+# the package or ANTHROPIC_API_KEY is missing, so a fresh install does not need it.
+#   pip install anthropic==0.122.0
