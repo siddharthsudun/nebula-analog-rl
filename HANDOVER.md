@@ -21,9 +21,16 @@ This is the most important thing found tonight, and it needs a decision from you
 `experiments/space_validity.py` samples `ACTION_SPACE` uniformly — no agent, no
 trajectory — and runs each sample through the guard layer:
 
+**Precision caveat (added after review):** the figure below rests on a *single* valid
+draw out of 250. The 95% interval on 1/250 runs roughly 0.01%-2.2%, so the honest
+statement is "well under 1%", not "0.4%". It is corroborated at large sample size from a
+different angle: the 40k training run found 45 valid designs in 43,009 evaluations
+(0.10%), along agent trajectories rather than uniform samples. The direction is not in
+doubt; the second significant figure is.
+
 ```
 250 uniform samples of ACTION_SPACE
-VALID: 1  (0.4%)
+VALID: 1  (0.4%, 95% CI roughly 0.01%-2.2%)
 
   146  (58.4%)  T2.5_mosfet_not_in_saturation
    81  (32.4%)  T2.6_tail_current_wrong_or_zero
@@ -248,6 +255,17 @@ also defaulted to a filename training never writes.
 
 - **Phase C** (`honest_benchmark`, cumulative-cost curve) — blocked on training.
 - **Phase D** (`final_report.json`, eye plot, solved design) — blocked on training.
+
+**`results/final_report.json` currently asserts `all_pvt_pass: true` and is false.** The
+recheck of that same design on the corrected circuit is committed as
+`results/legacy_design_recheck.json`: 45 corners, **10 failing**, `all_pvt_pass: false`.
+I left the original in place rather than delete it, but it is the most concrete
+falsifiable object in the repo and should not survive to submission.
+
+**`web/` and `site/` are a correctness liability, not merely untouched.** They still
+assert 45/45, 7x, 350x and "nothing in the scoring is a placeholder", and the PVT grid is
+hardcoded in JS to render all-green regardless of the underlying data. This is the only
+item on this list that does not need a retrain to fix.
 - **Phase E** (`RESULTS.md` from measured numbers) — blocked on training.
 - `web/` and `site/` untouched, as agreed.
 
