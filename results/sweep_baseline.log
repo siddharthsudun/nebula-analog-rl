@@ -1,0 +1,4 @@
+Grid sweep: 4 points on each of 6 axes = 4096 evaluations
+Target: boost 8.0 dB, channel 12.0 dB
+Success = all 8 specs at fast=False AND guard-valid
+

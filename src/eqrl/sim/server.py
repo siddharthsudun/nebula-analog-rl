@@ -247,16 +247,58 @@ class NgspiceServer:
         arr = self._read("isup.data")
         return float(abs(arr[-1, -1]))
 
-    def noise_total(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0) -> float:
-        self._prime(dv, vdd, temp_c)
+    #: How many times noise_total fell back to the single-ended measurement. Counted, not
+    #: hidden: the fallback is an approximation and a caller reporting noise figures should
+    #: be able to say how many of them used it.
+    noise_fallbacks: int = 0
+
+    def _noise_once(self, output: str) -> float:
+        """One `.noise` run, returning ngspice's integrated input-referred noise."""
         out = self._dir / "noise.data"
         out.unlink(missing_ok=True)
-        # write integrated input-referred noise via a 1-point vector
-        self._analysis("noise v(outp,outn) vinp dec 20 10e6 5e9")
+        self._analysis(f"noise {output} vinp dec 20 10e6 5e9")
         self._ng.exec_command("let n = inoise_total")
         self._ng.exec_command(f"wrdata {out} n")
-        arr = self._read("noise.data")
-        return float(arr[-1, -1])
+        return float(self._read("noise.data")[-1, -1])
+
+    def noise_total(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0) -> float:
+        """Integrated input-referred noise, 10 MHz-5 GHz, in Vrms.
+
+        The differential form `noise v(outp,outn)` is the correct measurement and is tried
+        first. It returns `-nan(ind)` at some corners: measured over the full 45-corner grid
+        for the design in results/final_report_design.json, it solved at 42 and produced NaN
+        at 3 (tt/1.89V/27C, sf/1.89V/27C, ss/1.80V/125C). AC and supply-current analyses run
+        fine at those same corners, so the design is biased correctly and it is the noise
+        analysis alone that diverges. Adding an `op` before it changes nothing.
+
+        Losing those corners was not free: it cost three PVT passes on a design that is
+        otherwise healthy, including one at the nominal corner, which is the most misleading
+        possible place to record a failure.
+
+        So on a non-finite result it falls back to the single-ended output and converts. For
+        a balanced differential pair the two half-circuits contribute uncorrelated noise, so
+        differential output noise power is 2x single-ended while differential gain is 2x,
+        which puts the input-referred differential figure at 1/sqrt(2) of the single-ended
+        one. That relation was validated against the 42 corners where the exact form works:
+
+            mean ratio 1.0184, range 0.9883 - 1.0732
+
+        i.e. the approximation is within ~2% typically and 7.3% worst case, the outliers all
+        at 125 C where perfect balance is least true. It is an approximation, it is only
+        used where the exact measurement is unavailable, and every use is counted in
+        `noise_fallbacks`.
+        """
+        self._prime(dv, vdd, temp_c)
+        try:
+            value = self._noise_once("v(outp,outn)")
+            if np.isfinite(value):
+                return value
+        except NgspiceError:
+            pass                      # _read rejects non-finite output; fall through
+        self._prime(dv, vdd, temp_c)  # the failed analysis leaves the plot dirty
+        single = self._noise_once("v(outp)")
+        type(self).noise_fallbacks += 1
+        return single / np.sqrt(2.0)
 
     def transient(self, dv: DesignVars, vdd: float = 1.8, temp_c: float = 27.0,
                   tstep: float = 20e-12, tstop: float = 60e-9) -> dict:

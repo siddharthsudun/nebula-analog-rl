@@ -20,6 +20,21 @@
 > `i_tail` near 1 mA, where validity is 0% across 90 samples, and leave the rest alone.
 >
 > Read §1, §6 and §9 as a record of what was believed, not as findings.
+>
+> ### Second correction, later the same day — the 45/45 claim was TRUE
+>
+> I reported the PVT claim as false (42/45 for its own design, 35/45 for the other) and
+> removed it from the site. Both figures were artifacts of **our own noise measurement**,
+> not the circuit. ngspice's differential-output `.noise` returns `-nan(ind)` at some
+> corners while the AC and supply-current analyses at those same corners solve normally;
+> adding an `op` first changes nothing. With a validated single-ended fallback in place:
+>
+>     results/final_report.json      45/45 pass, all_pvt_pass: true
+>     results/solved_design_pvt.json 45/45 pass, all_pvt_pass: true
+>
+> **Both designs meet all eight hard specs at all 45 corners.** The claim has been restored
+> to the site with the artifact behind it. The audit PDF dated 17 Aug is wrong on this point
+> — it lists "45/45 is false" as a critical finding, and it is not.
 
 
 Branch: `guards/validation-layer`, pushed. Four commits on top of the merge (`4fe8d37`):

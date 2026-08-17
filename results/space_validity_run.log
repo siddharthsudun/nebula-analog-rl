@@ -1,6 +1,3 @@
-Using cpu device
-Wrapping the env with a `Monitor` wrapper
-Wrapping the env in a DummyVecEnv.
 Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
@@ -21,6 +18,7 @@ Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
 Note: Transient op finished successfully
+  50/250 ...
 Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
@@ -41,6 +39,7 @@ Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
 Note: Transient op finished successfully
+  100/250 ...
 Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
@@ -99,6 +98,7 @@ Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
 Note: Transient op finished successfully
+  150/250 ...
 Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
@@ -139,6 +139,7 @@ Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
 Note: Transient op finished successfully
+  200/250 ...
 Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
@@ -159,5 +160,20 @@ Note: Transient op started
 Note: Transient op finished successfully
 Note: Transient op started
 Note: Transient op finished successfully
-Note: Transient op started
-Note: Transient op finished successfully
+  250/250 ...
+
+Uniform samples of ACTION_SPACE: 250
+VALID: 51  (20.4%)
+
+   107  ( 42.8%)  T2.5_mosfet_not_in_saturation
+    54  ( 21.6%)  T4.10_dc_gain_implausible
+    38  ( 15.2%)  T1.2_solver_failure_text_in_output
+
+DC load drop (I_leg x R_load) demanded, against a 1.8 V rail:
+  median over the whole box :     0.53 V
+  fraction needing > VDD    :   2.8%
+  median among VALID        :     0.51 V
+
+Analytic (200k points, i_tail x r_load only): 85.0% of the box leaves >= 0.5 V of output headroom.
+
+wrote results/space_validity.json
