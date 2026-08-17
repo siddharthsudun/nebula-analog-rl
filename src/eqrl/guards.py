@@ -11,7 +11,7 @@ CONTRACT
 --------
 Every evaluation returns exactly one of:
     Valid(metrics=..., run_id=..., artifact_dir=...)
-    Invalid(check=..., reason=..., run_id=..., artifact_dir=...)   # has NO .metrics
+    Invalid(check=..., reason=..., run_id=..., artifact_dir=..., violation=...)  # NO .metrics
 
 `Invalid` deliberately has no `metrics` attribute. A caller that forgets to branch gets
 an AttributeError, not a plausible zero. There is no third state and no default.
@@ -31,6 +31,13 @@ THRESHOLDS ARE NOT TUNABLE FROM HERE
 ------------------------------------
 Every bound below is a named module constant. They are set by the project owners.
 If a check fires, that is a finding to report — not a number to widen.
+
+VIOLATION MAGNITUDE IS NOT A THRESHOLD
+--------------------------------------
+`Invalid.violation` reports HOW FAR outside the bound a rejected design sits. It is
+reported, never consulted: no check reads it, and no verdict changes because of it. It
+exists so a caller that has to *score* a rejection can tell a device missing saturation
+by 10 mV from one demanding 50 V across a 1.8 V supply. See the field's own docstring.
 """
 from __future__ import annotations
 
@@ -341,6 +348,24 @@ class Invalid(Verdict):
     run_id: str
     artifact_dir: Path
 
+    #: How far past the failing bound this design sits, made dimensionless by dividing
+    #: the overshoot by that bound's own scale. 0.0 means "exactly on the bound"; 1.0
+    #: means "past it by the width of the bound itself"; 9.0 for a tail current that
+    #: delivers nothing against a 10% tolerance. None means NO distance exists for this
+    #: failure — the solver never returned, the .op probe produced nothing, the corner
+    #: include did not take effect. A consumer must treat None as the worst case, not
+    #: as zero: it is missing information, not a small violation.
+    #:
+    #: Reported, never consulted. Adding it changes no verdict; the same designs are
+    #: rejected for the same reasons. It exists because a FLAT rejection penalty gives a
+    #: search no gradient out of the infeasible region, and that is not a hypothetical:
+    #: over a 43,009-simulation PPO run, 99.90% of candidates were rejected and the
+    #: invalid rate got WORSE with training (97.4% at step 500 -> 99.90% at step 40k),
+    #: ending below uniform random sampling of the same box (99.6% invalid). With every
+    #: rejection scored identically the value function is flat and the entropy bonus
+    #: walks the policy mean out to the corners of the action box.
+    violation: float | None = None
+
     @property
     def tier(self) -> int:
         return TIER_OF[self.check]
@@ -353,8 +378,25 @@ class Invalid(Verdict):
                 f"| run={self.run_id} | raw={self.artifact_dir}")
 
 
-def _invalid(check: Check, reason: str, art: RunArtifacts) -> Invalid:
-    return Invalid(check=check, reason=reason, run_id=art.run_id, artifact_dir=art.directory)
+def _invalid(check: Check, reason: str, art: RunArtifacts,
+             violation: float | None = None) -> Invalid:
+    return Invalid(check=check, reason=reason, run_id=art.run_id,
+                   artifact_dir=art.directory, violation=violation)
+
+
+def _violation(excess: float, scale: float) -> float | None:
+    """Overshoot past a bound, in units of that bound's scale. See `Invalid.violation`.
+
+    Returns None — "no distance" — rather than a number whenever the quantity is not
+    computable: a non-finite input (the solve produced NaN, so the design's distance from
+    the bound is unknown, not zero) or a non-positive scale (dividing by a bound of zero
+    does not produce a relative distance). Clamped at 0 because a caller reaching this
+    function has already decided the check failed; a tiny negative from floating-point
+    rounding at the bound must read as "on the bound", not as a valid design.
+    """
+    if not (np.isfinite(excess) and np.isfinite(scale)) or scale <= 0:
+        return None
+    return max(float(excess) / float(scale), 0.0)
 
 
 # =============================================================================
@@ -467,8 +509,16 @@ def check_circuit_sanity(op: OperatingPoint, dv: DesignVars, art: RunArtifacts,
             f"headroom={d.headroom * 1e3:+.1f}mV (need >= {SATURATION_HEADROOM_V * 1e3:.0f}mV)"
             for d in unsaturated
         )
+        # Distance is set by the device that misses saturation by the MOST: fixing any
+        # lesser one still leaves this design invalid, so the worst offender is what the
+        # design has to travel to become buildable. A non-finite Vds/Vdsat lands here
+        # too (nan >= 0.05 is False), and its distance is unknown, not large — _violation
+        # turns that into None.
+        shortfalls = [SATURATION_HEADROOM_V - d.headroom for d in unsaturated]
+        worst = max(shortfalls) if all(np.isfinite(s) for s in shortfalls) else float("nan")
         return _invalid(Check.T2_NOT_SATURATED,
-                        f"{len(unsaturated)} device(s) not in saturation — {detail}", art)
+                        f"{len(unsaturated)} device(s) not in saturation — {detail}", art,
+                        violation=_violation(worst, SATURATION_HEADROOM_V))
 
     # 6. tail current nonzero and within tolerance of request
     requested = dv.i_tail if requested_tail_a is None else requested_tail_a
@@ -477,9 +527,13 @@ def check_circuit_sanity(op: OperatingPoint, dv: DesignVars, art: RunArtifacts,
                         "no tail-current branches were probed; cannot confirm bias", art)
     total = float(sum(abs(v) for v in op.tail_currents.values()))
     if total == 0.0:
+        # Delivering nothing is a 100% deviation from any positive request. Against a
+        # non-positive request there is no fraction to take, so no distance exists.
+        zero_err = _violation(1.0 - TAIL_CURRENT_TOLERANCE, TAIL_CURRENT_TOLERANCE)
         return _invalid(Check.T2_TAIL_CURRENT,
                         f"tail current is exactly zero (requested {requested:g} A) — "
-                        f"branches {dict(op.tail_currents)}", art)
+                        f"branches {dict(op.tail_currents)}", art,
+                        violation=zero_err if requested > 0 else None)
     if requested > 0:
         err = abs(total - requested) / requested
         if err > TAIL_CURRENT_TOLERANCE:
@@ -487,7 +541,8 @@ def check_circuit_sanity(op: OperatingPoint, dv: DesignVars, art: RunArtifacts,
                 Check.T2_TAIL_CURRENT,
                 f"tail current {total:g} A deviates {err * 100:.1f}% from requested "
                 f"{requested:g} A (limit {TAIL_CURRENT_TOLERANCE * 100:.0f}%) — "
-                f"branches {dict(op.tail_currents)}", art)
+                f"branches {dict(op.tail_currents)}", art,
+                violation=_violation(err - TAIL_CURRENT_TOLERANCE, TAIL_CURRENT_TOLERANCE))
 
     # 7. node voltages inside the rails
     if not op.node_voltages:
@@ -500,9 +555,13 @@ def check_circuit_sanity(op: OperatingPoint, dv: DesignVars, art: RunArtifacts,
             return _invalid(Check.T2_NODE_OUT_OF_RAILS,
                             f"node '{node}' voltage is {v} — the .op did not solve", art)
         if not (lo <= v <= hi):
+            # Scale is the rail span itself. A node 50 mV outside a 1.8 V supply is a
+            # bias that is nearly right; the corner of this action space asks for 50 V
+            # across the load, which is not a circuit. Those must not score alike.
             return _invalid(Check.T2_NODE_OUT_OF_RAILS,
                             f"node '{node}' at {v:.4f}V is outside rails "
-                            f"[{lo:.3f}, {hi:.3f}]V", art)
+                            f"[{lo:.3f}, {hi:.3f}]V", art,
+                            violation=_violation(max(lo - v, v - hi), hi - lo))
 
     # 8. no device parameter sitting exactly on — or outside — a PDK bound.
     #    'Outside' is included deliberately: a zero-width device is not "exactly at"
@@ -512,18 +571,23 @@ def check_circuit_sanity(op: OperatingPoint, dv: DesignVars, art: RunArtifacts,
         if val is None:
             continue
         if val < pmin or val > pmax:
+            excess, scale = (pmin - val, pmin) if val < pmin else (val - pmax, pmax)
             return _invalid(
                 Check.T2_AT_PDK_BOUND,
                 f"design parameter '{pname}' = {val:g} is outside the SKY130 legal range "
                 f"[{pmin:g}, {pmax:g}]; the device does not physically exist and any "
-                "model output for it is extrapolation", art)
+                "model output for it is extrapolation", art,
+                violation=_violation(excess, scale))
         for bound, which in ((pmin, "min"), (pmax, "max")):
             if bound != 0 and abs(val - bound) <= abs(bound) * PDK_BOUND_RELTOL:
+                # ON the bound, not past it: distance zero, the smallest violation there
+                # is. Still invalid — the model is extrapolating — but a design one part
+                # in 1e9 from legal is as close to buildable as an invalid design gets.
                 return _invalid(
                     Check.T2_AT_PDK_BOUND,
                     f"design parameter '{pname}' = {val:g} sits exactly on the SKY130 "
                     f"{which} bound ({bound:g}); the optimizer is against the process "
-                    "limit and the model may be extrapolating", art)
+                    "limit and the model may be extrapolating", art, violation=0.0)
     return None
 
 
@@ -633,39 +697,49 @@ def check_physical_plausibility(m: Any, dv: DesignVars, art: RunArtifacts,
     if m.dc_gain_db > DC_GAIN_DB_MAX:
         return _invalid(Check.T4_DC_GAIN,
                         f"DC gain {m.dc_gain_db:.2f} dB exceeds {DC_GAIN_DB_MAX:.0f} dB — "
-                        "a single degenerated pair cannot do this", art)
+                        "a single degenerated pair cannot do this", art,
+                        violation=_violation(m.dc_gain_db - DC_GAIN_DB_MAX, DC_GAIN_DB_MAX))
     if topology_has_gain and m.dc_gain_db < DC_GAIN_DB_MIN:
+        # DC_GAIN_DB_MIN is 0 dB, so there is no relative distance to *it*; the scale
+        # that does exist is the width of the plausible band, 0 to 60 dB.
         return _invalid(Check.T4_DC_GAIN,
                         f"DC gain {m.dc_gain_db:.2f} dB is below {DC_GAIN_DB_MIN:.0f} dB "
-                        "for a topology that should have gain", art)
+                        "for a topology that should have gain", art,
+                        violation=_violation(DC_GAIN_DB_MIN - m.dc_gain_db,
+                                             DC_GAIN_DB_MAX - DC_GAIN_DB_MIN))
 
     # 11. peaking
     if m.boost_db > PEAKING_DB_MAX:
         return _invalid(Check.T4_PEAKING,
-                        f"peaking {m.boost_db:.2f} dB exceeds {PEAKING_DB_MAX:.0f} dB", art)
+                        f"peaking {m.boost_db:.2f} dB exceeds {PEAKING_DB_MAX:.0f} dB", art,
+                        violation=_violation(m.boost_db - PEAKING_DB_MAX, PEAKING_DB_MAX))
 
     # 12. power
     if m.power_w < POWER_W_MIN:
         return _invalid(Check.T4_POWER,
                         f"power {m.power_w * 1e3:.4f} mW is below "
-                        f"{POWER_W_MIN * 1e3:.2f} mW — the bias is not being applied", art)
+                        f"{POWER_W_MIN * 1e3:.2f} mW — the bias is not being applied", art,
+                        violation=_violation(POWER_W_MIN - m.power_w, POWER_W_MIN))
     if m.power_w > POWER_W_MAX:
         return _invalid(Check.T4_POWER,
                         f"power {m.power_w * 1e3:.2f} mW exceeds "
-                        f"{POWER_W_MAX * 1e3:.0f} mW", art)
+                        f"{POWER_W_MAX * 1e3:.0f} mW", art,
+                        violation=_violation(m.power_w - POWER_W_MAX, POWER_W_MAX))
 
     # 13. input-referred noise
     if m.noise_vrms < NOISE_VRMS_MIN:
         return _invalid(Check.T4_NOISE,
                         f"input-referred noise {m.noise_vrms * 1e3:.5f} mVrms is below "
                         f"{NOISE_VRMS_MIN * 1e3:.2f} mVrms — the .noise integration "
-                        "returned nothing", art)
+                        "returned nothing", art,
+                        violation=_violation(NOISE_VRMS_MIN - m.noise_vrms, NOISE_VRMS_MIN))
 
     # 14. HD3 too good
     if m.hd3_db < HD3_DB_FLOOR:
         return _invalid(Check.T4_HD3,
                         f"HD3 {m.hd3_db:.2f} dB is better than {HD3_DB_FLOOR:.0f} dB — "
-                        "the FFT found no third harmonic, which means no signal", art)
+                        "the FFT found no third harmonic, which means no signal", art,
+                        violation=_violation(HD3_DB_FLOOR - m.hd3_db, abs(HD3_DB_FLOOR)))
 
     # 15. eye
     if m.eye_h_ui == 0.0 or m.eye_v_mv == 0.0:
@@ -673,7 +747,8 @@ def check_physical_plausibility(m: Any, dv: DesignVars, art: RunArtifacts,
                         f"eye is exactly zero (h={m.eye_h_ui} UI, v={m.eye_v_mv} mV)", art)
     if m.eye_h_ui > EYE_H_UI_MAX:
         return _invalid(Check.T4_EYE,
-                        f"eye width {m.eye_h_ui:.3f} UI exceeds one unit interval", art)
+                        f"eye width {m.eye_h_ui:.3f} UI exceeds one unit interval", art,
+                        violation=_violation(m.eye_h_ui - EYE_H_UI_MAX, EYE_H_UI_MAX))
     v_max = theoretical_eye_v_max_mv(dv, vdd)
     if v_max <= 0:
         # Skipping the ceiling because the ceiling is zero would let ANY eye height
@@ -688,7 +763,8 @@ def check_physical_plausibility(m: Any, dv: DesignVars, art: RunArtifacts,
                         f"eye height {m.eye_v_mv:.1f} mV exceeds the theoretical maximum "
                         f"{v_max:.1f} mV (2 x min(I_tail x R_load, VDD), "
                         f"I_tail={dv.i_tail:g} A, R_load={dv.r_load:g} ohm, "
-                        f"VDD={vdd:g} V)", art)
+                        f"VDD={vdd:g} V)", art,
+                        violation=_violation(m.eye_v_mv - v_max, v_max))
     return None
 
 

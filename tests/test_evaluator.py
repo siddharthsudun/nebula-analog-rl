@@ -45,12 +45,20 @@ class FakeServer:
         self._ng = ng if ng is not None else FakeNg()
         self.corner = corner
         self._dir = scratch
+        #: Every _prime call, in order. raw_eval MUST prime before probing the operating
+        #: point: probe_operating_point() runs `.op` on whatever parameters the server
+        #: currently holds, so without a prime Tier 2 describes the previous candidate
+        #: (or the deck defaults). Recorded rather than ignored so a test can assert it.
+        self.primed: list[tuple] = []
         if scratch is not None:
             scratch.mkdir(parents=True, exist_ok=True)
             (scratch / "ac.data").write_text("1.0 2.0\n2.0 3.0\n")
 
     def set_corner(self, corner):
         self.corner = corner
+
+    def _prime(self, dv, vdd, temp_c):
+        self.primed.append((dv, vdd, temp_c))
 
 
 def sane_op():
@@ -165,6 +173,38 @@ class TestComposition:
         v = wired().evaluate(DV, vdd=1.8)
         assert isinstance(v, Invalid)
         assert "ok=False" in v.reason
+
+    def test_the_server_is_primed_with_the_candidate_before_the_op_is_probed(
+            self, tmp_path, monkeypatch):
+        """The defect this pins cost every Tier 2 verdict in the project.
+
+        probe_operating_point() issues `.op` against whatever parameters the server
+        already holds — it takes no design. raw_eval must therefore prime the server with
+        `dv` first. It did not, so Tier 2 read the deck defaults on a fresh server and the
+        PREVIOUS candidate on a warm one, then compared that operating point against this
+        candidate's requested values. Measured: the same design evaluated twice in a row
+        changed verdict on 9 of 14 designs.
+        """
+        from eqrl import evaluator as ev_mod
+        from eqrl.evaluator import make_raw_eval
+        from eqrl.guards import ArtifactStore
+        from eqrl.sim import measures as m_mod
+
+        # Same stand-ins the `wired` fixture uses; this test owns its server so it can
+        # inspect what was primed.
+        monkeypatch.setattr(ev_mod, "probe_operating_point", lambda srv, **kw: sane_op())
+        monkeypatch.setattr(m_mod, "measure_all", lambda dv, **kw: marginal())
+        monkeypatch.setattr(ev_mod, "netlist", lambda dv, **kw: "* fake deck\n.end\n")
+
+        srv = FakeServer(scratch=tmp_path / "srv")
+        raw = make_raw_eval(corner="tt", fast=True, server_factory=lambda c: srv)
+        store = ArtifactStore(tmp_path / "raw")
+        raw(DV, artifacts=store.new_run(), vdd=1.8)
+
+        assert srv.primed, "raw_eval probed the operating point without priming the server"
+        dv_primed, vdd_primed, _ = srv.primed[0]
+        assert dv_primed == DV, "primed with a different design than the one evaluated"
+        assert vdd_primed == 1.8
 
     def test_tier2_still_fires_through_the_wiring(self, wired, monkeypatch):
         from eqrl import evaluator as ev_mod

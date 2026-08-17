@@ -13,6 +13,7 @@ random/Bayesian search must restart a full search for every new spec.
 from __future__ import annotations
 
 import dataclasses
+import math
 
 import numpy as np
 
@@ -43,6 +44,75 @@ _MEAS_KEYS = ["boost_db", "peak_freq_ghz", "power_w", "area_mm2"]
 #: `SequentialEqualizerEnv(invalid_reward=...)` once you have evidence either way.
 INVALID_REWARD = -5.0
 
+#: How far BELOW `invalid_reward` the shaped penalty is allowed to reach.
+#:
+#: OPT-IN, via `SequentialEqualizerEnv(invalid_shaping=True)`. Off, every rejection scores
+#: exactly `invalid_reward` and nothing here runs.
+#:
+#: WHY THE BAND HANGS DOWNWARD FROM `invalid_reward` RATHER THAN AROUND IT: shaping must
+#: not make any rejected design *more* attractive than it is today, or turning it on could
+#: create a preference for invalidity that the flat penalty did not have. So the ceiling
+#: of the shaped band IS the flat constant — reached only by a design sitting exactly on
+#: a bound — and everything worse hangs below it. Every ordering between a valid step and
+#: an invalid one that holds under the flat penalty still holds under this one.
+#:
+#: 5.0 puts the floor at -10.0 with the default -5.0 ceiling, which is the penalty
+#: `equalizer_env.compute_reward` already gives a non-convergent simulation. It also makes
+#: the shaping gradient comparable in scale to the valid-step rewards it competes with:
+#: a valid step scores `delta(score) - 0.05`, order 0.1-2 in practice.
+INVALID_SHAPING_SPAN = 5.0
+
+#: The violation magnitude at which the penalty saturates at the floor.
+#:
+#: Violations span decades — a device 10 mV short of saturation is violation 1.2 against
+#: the 50 mV headroom bound, while the corner of the action space asks 20 mA through
+#: 5 kohm and puts a node ~27 rail-widths outside the supply. A linear squash would spend
+#: essentially all its resolution above 10 and none near the bound, so the mapping is
+#: logarithmic, for the same reason `ctle.decode_action` log-scales its wide ranges.
+#: 100 says: past a hundred times the bound, one impossible design is as impossible as
+#: another and there is nothing left to rank.
+INVALID_SHAPING_SCALE = 100.0
+
+
+def shaped_invalid_reward(verdict, base: float = INVALID_REWARD,
+                          span: float = INVALID_SHAPING_SPAN,
+                          scale: float = INVALID_SHAPING_SCALE) -> float:
+    """Score a rejected candidate by HOW invalid it is. Returns a value in [base-span, base].
+
+    `verdict` is a `guards.Invalid`. Its `.violation` is the dimensionless overshoot past
+    the bound the check enforces (see `guards.Invalid.violation`); None means the guard
+    could not measure a distance — a Tier 1 solver failure, a probe that returned nothing,
+    a corner include that did not take effect.
+
+        severity = min(log1p(violation) / log1p(scale), 1)     in [0, 1]
+        reward   = base - span * severity
+
+    so violation 0 (a design sitting exactly on a bound) scores `base`, and severity 1
+    scores `base - span`. No distance means the WORST penalty, not the best: a solver that
+    never returned tells us nothing about how close the design was, and guessing "close"
+    would reward the agent for breaking the simulator.
+
+    BOUNDEDNESS IS THE POINT, and it is enforced below rather than assumed: severity is
+    clamped into [0, 1] and `span` into [0, inf), so the returned value can never exceed
+    `base`. That is what keeps a rejected design from ever outscoring a design that was
+    actually measured — the shaped penalty is at best equal to the flat one it replaces.
+
+    Worked examples at the defaults (base=-5, span=5, scale=100):
+
+        violation   0.02   device 1 mV short of the 50 mV headroom bound   ->  -5.02
+        violation   1.2    device 10 mV the wrong side of it              ->  -5.85
+        violation   9.0    device 400 mV out, or a mirror delivering 0 A  ->  -7.49
+        violation  26.8    50 V across the load on a 1.8 V supply         ->  -8.61
+        violation  None    Tier 1: the solver never returned              -> -10.00
+    """
+    v = getattr(verdict, "violation", None)
+    if v is None or not np.isfinite(v):
+        severity = 1.0
+    else:
+        severity = math.log1p(max(float(v), 0.0)) / math.log1p(max(scale, 1e-12))
+    severity = min(max(severity, 0.0), 1.0)
+    return float(base - max(span, 0.0) * severity)
+
 
 def _shaped(m: Measures, spec: Spec) -> tuple[float, bool]:
     """Dense score + all-pass flag. `passed` == the 8 HARD specs (specs.hard_pass), which
@@ -67,13 +137,18 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
                  target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
                  pvt: bool = False, channel_range: tuple[float, float] = (6.0, 12.0),
                  guarded: bool = False, invalid_reward: float = INVALID_REWARD,
-                 feasible_decode: bool = False):
+                 feasible_decode: bool = False, invalid_shaping: bool = False):
         super().__init__()
         # OPT-IN. Projects R_load onto what the supply can drive; see
         # ctle.project_feasible. Changes what the search space means, so default off.
         self.feasible_decode = feasible_decode
         self.guarded = guarded
         self.invalid_reward = invalid_reward
+        # OPT-IN. Grades rejections by how far outside the constraint they are instead of
+        # scoring every one at `invalid_reward`; see `shaped_invalid_reward`. Off, the
+        # reward path is unchanged. Only has any effect on the guarded path — nothing else
+        # produces an Invalid to grade.
+        self.invalid_shaping = invalid_shaping
         self._guard = None
         self._last_invalid = None
         self.n_invalid = 0
@@ -192,6 +267,11 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
             # Absolute penalty, not a delta: an INVALID carries no measurement, so
             # "improvement since the last score" is not a meaningful quantity here.
             reward = self.invalid_reward
+            if self.invalid_shaping:
+                # Bounded above by `invalid_reward`, so this can only ever make a
+                # rejection score worse, never better. See `shaped_invalid_reward`.
+                reward = shaped_invalid_reward(self._last_invalid, self.invalid_reward)
+                info["invalid_violation"] = getattr(self._last_invalid, "violation", None)
             info["invalid_check"] = self._last_invalid.check.value
             info["invalid_reason"] = self._last_invalid.reason
             info["artifact_dir"] = str(self._last_invalid.artifact_dir)

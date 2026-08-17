@@ -66,6 +66,12 @@ def main() -> None:
     p.add_argument("--guarded", action="store_true",
                    help="validate every candidate through the guard layer (Tiers 1-4); "
                         "rejected designs score --invalid-reward instead of a measurement")
+    p.add_argument("--shaped-invalid", action="store_true",
+                   help="grade rejected designs by how far outside the constraint they "
+                        "are instead of giving every one the same flat penalty. Requires "
+                        "--guarded. The shaped penalty is bounded above by the flat "
+                        "penalty it replaces, so no rejection scores better than it does "
+                        "today; only worse ones move.")
     p.add_argument("--fast", dest="fast", action="store_true",
                    help="stub HD3 and noise instead of simulating them (much faster, "
                         "and four metrics stop being measurements)")
@@ -77,6 +83,11 @@ def main() -> None:
                         "flat penalty. Changes what the search space means.")
     p.add_argument("--out", default="results/seq_agent.zip")
     args = p.parse_args()
+    if args.shaped_invalid and not args.guarded:
+        # Only the guarded path produces an Invalid to grade. Accepting the flag here
+        # would run a training job that silently ignores it and report it as enabled.
+        p.error("--shaped-invalid requires --guarded: without the guard layer nothing "
+                "is ever rejected, so there is no rejection to shape.")
 
     from stable_baselines3 import PPO
     from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
@@ -84,7 +95,8 @@ def main() -> None:
     env = SequentialEqualizerEnv(spec=DEFAULT_SPEC, horizon=args.horizon,
                                  fast=args.fast, seed=args.seed, pvt=args.pvt,
                                  guarded=args.guarded,
-                                 feasible_decode=args.feasible_decode)
+                                 feasible_decode=args.feasible_decode,
+                                 invalid_shaping=args.shaped_invalid)
     model = PPO("MlpPolicy", env, seed=args.seed, verbose=1,
                 n_steps=1024, batch_size=128, gamma=0.95, gae_lambda=0.95,
                 ent_coef=0.005, learning_rate=3e-4)
@@ -112,6 +124,7 @@ def main() -> None:
         "seed": args.seed,
         "fast": args.fast,
         "guarded": args.guarded,
+        "shaped_invalid": args.shaped_invalid,
         "pvt": args.pvt,
         "horizon": args.horizon,
         "feasible_decode": args.feasible_decode,

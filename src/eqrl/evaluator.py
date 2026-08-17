@@ -122,6 +122,25 @@ def make_raw_eval(*, corner: str = "tt", fast: bool = True,
         op: OperatingPoint | None = None
         try:
             if with_operating_point:
+                # PRIME FIRST. probe_operating_point() runs `.op` on whatever parameters
+                # the server currently holds; it does not know about `dv`. Without this
+                # line Tier 2 read the wrong circuit entirely:
+                #
+                #   fresh server -> the deck's own .param defaults (i_tail = 2 mA, ...)
+                #   warm server  -> the PREVIOUS candidate, primed by its measure_all
+                #
+                # and then compared that operating point against THIS candidate's
+                # requested values. Measured consequence: the same design evaluated twice
+                # in a row changed verdict 9 times in 14, because the second evaluation
+                # probed the parameters the first one left behind. On a fresh server it
+                # was stable but uniformly wrong -- T2.6 fired on almost everything,
+                # comparing the default deck's ~1.87 mA delivered tail current against a
+                # candidate asking for ~0.2 mA.
+                #
+                # Every Tier 2 verdict (saturation, tail current, rails) recorded before
+                # this fix was a statement about a different design. T2.8 was unaffected;
+                # it reads `dv` directly rather than the operating point.
+                srv._prime(dv, vdd, temp_c)
                 op = probe_operating_point(srv)
             from eqrl.sim import measures as _m
             m = _m.measure_all(dv, vdd=vdd, temp_c=temp_c, corner=corner, fast=fast,
