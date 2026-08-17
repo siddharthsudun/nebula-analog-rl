@@ -66,8 +66,12 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
                  corner: str = "tt", fast: bool = False, step_size: float = 0.18,
                  target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
                  pvt: bool = False, channel_range: tuple[float, float] = (6.0, 12.0),
-                 guarded: bool = False, invalid_reward: float = INVALID_REWARD):
+                 guarded: bool = False, invalid_reward: float = INVALID_REWARD,
+                 feasible_decode: bool = False):
         super().__init__()
+        # OPT-IN. Projects R_load onto what the supply can drive; see
+        # ctle.project_feasible. Changes what the search space means, so default off.
+        self.feasible_decode = feasible_decode
         self.guarded = guarded
         self.invalid_reward = invalid_reward
         self._guard = None
@@ -104,6 +108,9 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def _measure(self, x: np.ndarray) -> Measures:
         dv = decode_action(x)                       # x in [0,1]; decode accepts it
+        if self.feasible_decode:
+            from eqrl.circuits.ctle import project_feasible
+            dv = project_feasible(dv, vdd=self.base_spec.vdd_nominal)
         if self._guard is not None:
             # Guarded path: nothing reaches the reward without passing Tiers 1-4.
             # A rejected candidate is returned as Measures(ok=False), which is exactly

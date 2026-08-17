@@ -8,6 +8,7 @@ The Rs*Cs zero produces the HF peaking that boosts the Nyquist band.
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 from dataclasses import dataclass
 
@@ -284,6 +285,35 @@ def mirror_sizing(i_tail: float) -> tuple[float, int]:
     total_um = max((i_tail / 2.0) / MIRROR_DENSITY_A_PER_UM, MIRROR_W_MIN_UM)
     fingers = max(1, math.ceil(total_um / MIRROR_W_MAX_UM))
     return total_um / fingers, fingers
+
+
+def project_feasible(dv: DesignVars, vdd: float = 1.8,
+                     out_headroom_v: float = 0.55) -> DesignVars:
+    """Clamp R_load so the DC load drop cannot exceed what the supply can provide.
+
+    OPT-IN. Nothing calls this by default, because it changes what the search space means
+    and therefore what every published RL number measures.
+
+    Each leg carries i_tail/2 through R_load, so the output sits at VDD - (i_tail/2)*R_load.
+    Most of the declared action space asks for more than the whole supply across the load
+    -- at the corner of the box, 20 mA through 5 kohm is 50 V on a 1.8 V rail -- and
+    `space_validity.py` measures only 0.4% of the box as a buildable circuit. An agent
+    given a mostly-impossible space, and a flat penalty for every impossible design, has
+    no gradient to follow; the measured consequence is in HANDOVER, section 6.
+
+    This projects rather than rejects: the action keeps its full range and is mapped onto
+    the largest load the chosen tail current can actually drive. The agent is not told
+    "no", it is handed the nearest buildable design, so every step still returns a real
+    measurement to learn from.
+
+    `out_headroom_v` is the output voltage reserved for the input pair (its Vds must clear
+    the tail node plus Vdsat); 0.55 V is just above the 0.504 V measured in
+    tests/test_monotonicity._headroom_v at the nominal bias.
+    """
+    max_r = max((vdd - out_headroom_v) / max(dv.i_tail / 2.0, 1e-12), ACTION_SPACE["r_load"][0])
+    if dv.r_load <= max_r:
+        return dv
+    return dataclasses.replace(dv, r_load=float(max_r))
 
 
 def dv_to_params(dv: DesignVars) -> dict[str, float]:

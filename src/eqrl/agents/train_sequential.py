@@ -71,6 +71,10 @@ def main() -> None:
                         "and four metrics stop being measurements)")
     p.add_argument("--no-fast", dest="fast", action="store_false")
     p.set_defaults(fast=False)
+    p.add_argument("--feasible-decode", action="store_true",
+                   help="EXPERIMENT: project R_load onto what the supply can drive, so "
+                        "the agent is handed the nearest buildable design instead of a "
+                        "flat penalty. Changes what the search space means.")
     p.add_argument("--out", default="results/seq_agent.zip")
     args = p.parse_args()
 
@@ -79,7 +83,8 @@ def main() -> None:
 
     env = SequentialEqualizerEnv(spec=DEFAULT_SPEC, horizon=args.horizon,
                                  fast=args.fast, seed=args.seed, pvt=args.pvt,
-                                 guarded=args.guarded)
+                                 guarded=args.guarded,
+                                 feasible_decode=args.feasible_decode)
     model = PPO("MlpPolicy", env, seed=args.seed, verbose=1,
                 n_steps=1024, batch_size=128, gamma=0.95, gae_lambda=0.95,
                 ent_coef=0.005, learning_rate=3e-4)
@@ -109,6 +114,7 @@ def main() -> None:
         "guarded": args.guarded,
         "pvt": args.pvt,
         "horizon": args.horizon,
+        "feasible_decode": args.feasible_decode,
     }, indent=2))
     print(f"saved -> {args.out}  (total sims: {env.n_sims}, "
           f"invalid: {env.n_invalid}, wall: {mins:.1f} min)")

@@ -1,0 +1,72 @@
+{
+  "baseline (declared space)": {
+    "valid": 1,
+    "n": 150,
+    "fraction": 0.0067,
+    "by_check": {
+      "T2.5_mosfet_not_in_saturation": 92,
+      "T2.6_tail_current_wrong_or_zero": 45,
+      "T1.2_solver_failure_text_in_output": 12,
+      "__valid__": 1
+    }
+  },
+  "R_load projected onto supply": {
+    "valid": 1,
+    "n": 150,
+    "fraction": 0.0067,
+    "by_check": {
+      "T2.5_mosfet_not_in_saturation": 88,
+      "T2.6_tail_current_wrong_or_zero": 47,
+      "T1.2_solver_failure_text_in_output": 14,
+      "__valid__": 1
+    }
+  },
+  "i_tail <= 2 mA": {
+    "valid": 1,
+    "n": 150,
+    "fraction": 0.0067,
+    "by_check": {
+      "T2.5_mosfet_not_in_saturation": 90,
+      "T2.6_tail_current_wrong_or_zero": 46,
+      "T1.2_solver_failure_text_in_output": 12,
+      "T4.10_dc_gain_implausible": 1,
+      "__valid__": 1
+    }
+  },
+  "i_tail <= 2 mA + projection": {
+    "valid": 1,
+    "n": 150,
+    "fraction": 0.0067,
+    "by_check": {
+      "T2.5_mosfet_not_in_saturation": 86,
+      "T2.6_tail_current_wrong_or_zero": 48,
+      "T1.2_solver_failure_text_in_output": 14,
+      "T4.10_dc_gain_implausible": 1,
+      "__valid__": 1
+    }
+  },
+  "i_tail <= 2 mA + l_in >= 0.16 um": {
+    "valid": 1,
+    "n": 150,
+    "fraction": 0.0067,
+    "by_check": {
+      "T2.5_mosfet_not_in_saturation": 90,
+      "T2.6_tail_current_wrong_or_zero": 46,
+      "T1.2_solver_failure_text_in_output": 12,
+      "T4.10_dc_gain_implausible": 1,
+      "__valid__": 1
+    }
+  },
+  "i_tail <= 0.5 mA + l_in >= 0.16 um": {
+    "valid": 16,
+    "n": 150,
+    "fraction": 0.1067,
+    "by_check": {
+      "T2.5_mosfet_not_in_saturation": 49,
+      "T2.6_tail_current_wrong_or_zero": 39,
+      "T1.2_solver_failure_text_in_output": 29,
+      "T4.10_dc_gain_implausible": 17,
+      "__valid__": 16
+    }
+  }
+}

@@ -58,7 +58,21 @@ so I did not touch them. The options:
   agent still finds designs" is a legitimate and unusually honest result. It also makes
   the RL-vs-search comparison more favourable, since search suffers the same space.
 
-My recommendation is the second, and to state the 0.4% number in the writeup either way.
+**I tested my own recommendation, and it was wrong.** I implemented the second option as
+an opt-in projection (`ctle.project_feasible`, `--feasible-decode`; default off, nothing
+existing changed) and measured the space again:
+
+    declared space                       0.4% valid
+    R_load projected onto the supply     0.5% valid
+
+So the load-drop arithmetic, despite being the most visible absurdity in the box, is *not*
+the binding constraint. The rejections stay where they were — 56.5% not saturated, 33.0%
+tail current out of tolerance. Constraining `i_tail x R_load` would make the space look
+more sensible without making it more learnable.
+
+That means the honest recommendation is: **do not narrow anything until we know which
+range is responsible.** `results/what_binds.json` tests one restriction at a time against
+the same guard; see §9. Stating the 0.4% number in the writeup stands either way.
 
 ---
 
@@ -267,3 +281,47 @@ callers already handle.
 
 Baselines and the amortization plot are now verified working end to end. Only the RL leg
 is unverified, and it is unverifiable until the training run produces a compatible model.
+
+---
+
+## 9. Which range is actually responsible
+
+`experiments/what_binds.py` applies one restriction at a time to the same uniform sample
+stream and runs each through the same guard, so the comparison is like-for-like:
+
+| restriction | valid | dominant rejections |
+|---|---|---|
+| baseline (declared space) | 1/150 — **0.7%** | 92× T2.5, 45× T2.6 |
+| `R_load` projected onto the supply | 1/150 — 0.7% | 88× T2.5, 47× T2.6 |
+| `i_tail` ≤ 2 mA | 1/150 — 0.7% | 90× T2.5, 46× T2.6 |
+| `i_tail` ≤ 2 mA + projection | 1/150 — 0.7% | 86× T2.5, 48× T2.6 |
+| `i_tail` ≤ 2 mA + `l_in` ≥ 0.16 µm | 1/150 — 0.7% | 90× T2.5, 46× T2.6 |
+| **`i_tail` ≤ 0.5 mA + `l_in` ≥ 0.16 µm** | 16/150 — **10.7%** | 49× T2.5, 39× T2.6 |
+
+Two things follow, and neither is what I assumed.
+
+**It is `i_tail`, but the threshold is far lower than it looks.** Capping at 2 mA changes
+nothing at all — 0.7%, identical to baseline. Only at 0.5 mA does the space open up, and
+then by 15×. The declared upper bound is 20 mA, so the usable range is roughly **1/40th of
+what is declared**. The mechanism is the one already documented in `ctle.py`: more tail
+current means more Vgs on the input pair, which pulls the tail node *down*, which is
+exactly the headroom the mirror needs. Current and mirror headroom trade against each
+other, and past a few hundred µA the mirror loses.
+
+**No restriction tested makes the space mostly valid.** The best is 10.7% — better than
+0.4% by a wide margin, and probably enough for PPO to get a gradient, but still a space
+where nine in ten designs are rejected. `rs`, `cs` and `r_load` were not varied here; if
+you want a genuinely learnable space, that is the next sweep to run.
+
+I have not applied any of this. `--feasible-decode` exists and is off; no range in
+`ACTION_SPACE` has been touched.
+
+### What I would do next, given the evidence
+
+1. Re-run `what_binds.py` extending the restrictions to `rs`/`cs`/`r_load`, to find a
+   region that is majority-valid rather than 10% valid.
+2. Shape `invalid_reward` so "nearly saturated" outscores "impossible". A flat penalty is
+   what turned a hard exploration problem into a flat one (§6), and it is a smaller,
+   more defensible change than redrawing the search space.
+3. Only then retrain. A 5-hour run on a 0.4%-valid space with a flat penalty was always
+   going to produce what it produced.
