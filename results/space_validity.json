@@ -1,14 +1,14 @@
 {
   "samples": 250,
-  "valid": 26,
-  "valid_fraction": 0.104,
+  "valid": 51,
+  "valid_fraction": 0.204,
   "by_check": {
-    "T2.5_mosfet_not_in_saturation": 156,
-    "T4.10_dc_gain_implausible": 46,
-    "__valid__": 26,
-    "T1.2_solver_failure_text_in_output": 22
+    "T2.5_mosfet_not_in_saturation": 107,
+    "T4.10_dc_gain_implausible": 54,
+    "__valid__": 51,
+    "T1.2_solver_failure_text_in_output": 38
   },
-  "median_load_drop_v": 1.1334008348091893,
-  "fraction_drop_over_vdd": 0.416,
-  "analytic_headroom_fraction": 0.100285
+  "median_load_drop_v": 0.5306744776516903,
+  "fraction_drop_over_vdd": 0.028,
+  "analytic_headroom_fraction": 0.849595
 }
