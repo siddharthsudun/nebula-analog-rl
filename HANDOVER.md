@@ -323,8 +323,17 @@ correcting an error of mine.** I rechecked `results/solved_design.json` and repo
 
 So `results/legacy_design_recheck.json` (45 corners, **10 failing**, `all_pvt_pass: false`)
 is a real measurement of `solved_design.json` on the corrected circuit, but it does not
-refute the 45/45 claim, which belongs to the other design. That claim is being measured
-separately; until it is, "45/45 is false" is not established.
+refute the 45/45 claim, which belongs to the other design.
+
+That claim has now been measured on its own design (`results/final_report_design_recheck.json`):
+
+    final_report.json design   42/45 pass, 3 fail (tt, ss, sf)   all_pvt_pass: false
+    solved_design.json         35/45 pass, 10 fail               all_pvt_pass: false
+
+So "45/45" is false, but by three corners rather than ten, and the design's behaviour is
+otherwise close to what was published (boost 8.60-10.62 dB measured against 8.9-10.9 dB
+claimed). One of the three failures is at tt, the nominal corner. All three return no
+measurement at all rather than a metric out of limit.
 I left the original in place rather than delete it, but it is the most concrete
 falsifiable object in the repo and should not survive to submission.
 
