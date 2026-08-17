@@ -43,9 +43,19 @@ def design_for(spec, model_path: str, starts: int = 12):
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("request", nargs="+", help="natural-language spec")
-    p.add_argument("--model", default="results/seq_agent_nominal.zip")
+    # No default: there is no policy this can sensibly assume. The old default pointed at
+    # results/seq_agent_nominal.zip, which the training script has never written, so the
+    # demo failed with a stack trace from deep inside stable-baselines3 rather than saying
+    # what was missing. Requiring the path means the caller states which policy they mean.
+    p.add_argument("--model", required=True,
+                   help="trained policy (.zip) written by eqrl.agents.train_sequential")
     p.add_argument("--out", default="results/solved_design.json")
     args = p.parse_args()
+    if not Path(args.model).exists():
+        raise SystemExit(
+            f"no policy at {args.model}. Train one first:\n"
+            "  python -m eqrl.agents.train_sequential --guarded --no-fast "
+            "--out results/seq_agent.zip")
     text = " ".join(args.request)
 
     print(f'  request : "{text}"')

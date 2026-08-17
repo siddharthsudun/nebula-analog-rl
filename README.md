@@ -3,9 +3,9 @@
 **Nebula @ BITS Goa 2026 · Analog Track · Astera Labs**
 *AI/ML for Analog Circuit Design*
 
-A reinforcement-learning framework that takes an equalizer spec sheet as input, talks
-to a SPICE simulator in a closed loop, and sizes the devices to hit the target with
-**zero human intervention** — in far fewer simulations than sweeping the parameter space.
+A reinforcement-learning framework that takes an equalizer spec sheet as input, talks to
+a SPICE simulator in a closed loop, sizes the devices, and checks the operating point of
+every candidate before the measurement is allowed to count toward a reward.
 
 Target circuit: **1-stage CTLE with source degeneration (variable Rs, Cs) + 1-tap DFE**,
 for a **PCIe Gen 2 (5.0 Gbps)** receiver front-end.
@@ -20,8 +20,9 @@ combinatorially, so brute-force sweeps are hopeless. This project replaces the h
 that loop with an RL agent: the **environment** is a SPICE testbench of the equalizer,
 the **action** is a set of device sizes, the **observation** is the measured performance
 (peaking, HD3, noise, power, area, eye), and the **reward** is how close we are to the
-target spec. The agent learns a *policy* — a strategy for reaching spec quickly — not
-just one answer, so it retargets to new specs without starting over.
+target spec. The aim of learning a *policy* rather than solving one instance is that a
+policy can be pointed at a new spec without starting the search over. Whether this policy
+does that is a measurement, and it is not one we currently have.
 
 ## Target specification (from the problem statement)
 
@@ -40,20 +41,26 @@ just one answer, so it retargets to new specs without starting over.
 
 Full spec + interpretation in [`docs/PROBLEM.md`](docs/PROBLEM.md).
 
-## Why we can win this
+## What is distinctive about this entry
 
 The judges (Astera Labs) are not asking us to invent RL-for-analog — that lineage exists
-(AutoCkt, GCN-RL Circuit Designer, DNN-Opt). They're asking for a **working, sample-
-efficient flow on a real open PDK that hits a hard spec across PVT.** That's an execution
-win. Our three headline differentiators, each mapped to the problem statement's own words:
+(AutoCkt, GCN-RL Circuit Designer, DNN-Opt). They're asking for a **working flow on a real
+open PDK that hits a hard spec across PVT.** That is an execution problem, and the part of
+it we have executed is verification.
 
-1. **Sample efficiency** — the ask is *"fewer search spaces, lowest design time."*
-   Our headline result is a curve: **RL reaches spec in ~10× fewer SPICE evals than
-   random / grid / Bayesian sweep.** (`src/eqrl/baselines/`)
-2. **PVT robustness** — the spec demands 5 corners + VDD ±5% + 0–125 °C. Naive teams
-   optimize at TT and break at SS/FF. Our reward penalizes worst-case-across-corners.
-3. **LLM wrapper (the bonus)** — natural-language spec → framework config, plus
-   LLM-assisted reward shaping and failure triage. (`src/eqrl/llm/`)
+1. **The scoring is guarded** (`src/eqrl/guards.py`). Twenty checks in five tiers run
+   against the operating point of the actual candidate, and `measure_all` is sealed so no
+   number can reach a reward unvalidated. This is not decoration: **86% of the designs
+   that pass all eight published specs are not valid circuits** — 24 of 28, measured
+   twice with identical results (`results/pass_vs_valid.json`).
+2. **The PVT grid is real and it is not being flattered.** 5 process corners × VDD ±5% ×
+   {0, 27, 125} °C = 45 corners, with HD3 and input-referred noise simulated at each. The
+   design currently committed in `results/` fails 10 of them
+   (`results/legacy_design_recheck.json`).
+3. **The simulator loop is fast enough to train on.** 77.5 ms per AC evaluation against
+   6370.5 ms for a fresh ngspice subprocess — a measured 82.2× (`results/speedup.json`).
+4. **LLM front-end (the bonus)** — natural-language spec → `Spec` object, with a keyword
+   fallback when no API key is set. (`src/eqrl/llm/spec_parser.py`)
 
 ## Architecture
 
@@ -90,8 +97,10 @@ win. Our three headline differentiators, each mapped to the problem statement's 
 | `src/eqrl/sim/` | ngspice/PySpice runner + measurement extraction |
 | `src/eqrl/envs/` | Gymnasium environment wrapping the testbench |
 | `src/eqrl/agents/` | RL training + evaluation scripts |
-| `src/eqrl/baselines/` | Random / grid / Bayesian sweeps (the comparison baseline) |
-| `src/eqrl/llm/` | Natural-language spec parser + reward-shaping helper |
+| `src/eqrl/guards.py` | The validation layer — 20 checks, 5 tiers, sealed measurement path |
+| `src/eqrl/baselines/` | Random + Bayesian (Optuna) sweeps; CMA-ES lives in `experiments/honest_benchmark.py` |
+| `src/eqrl/experiments/` | Measurement scripts — each writes its own artifact into `results/` |
+| `src/eqrl/llm/` | Natural-language spec parser |
 | `testbench/` | Raw SPICE testbenches (hand-written, for debugging) |
 
 ## Quickstart
@@ -108,20 +117,45 @@ pip install -r requirements.txt
 python -m eqrl.sim.ngspice_runner --selftest
 
 # train
-python -m eqrl.agents.train --spec configs/pcie_gen2.yaml
+python -m eqrl.agents.train --algo ppo --timesteps 20000
 ```
 
-## Status — working end to end on real SKY130
+## Status
 
-- Real `sky130_fd_pr` transistor CTLE; real AC peaking, HD3, input-referred noise,
-  power, area through ngspice.
-- Resident libngspice server: ~44 ms/eval (**~350× faster** than relaunching ngspice).
-- Sequential RL agent that **generalizes across specs**: median **3.5 SPICE sims/spec**
-  vs **25 for Bayesian** search (~7×), solving all held-out targets.
-- Correct PVT temperature modeling; PVT-aware training for V×T robustness.
+Working, on real SKY130:
 
-**See [`RESULTS.md`](RESULTS.md) for the numbers and plots.** Roadmap and per-phase status
-in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+- `sky130_fd_pr` transistor CTLE with a current-mirror tail. AC peaking, HD3 (transient +
+  FFT), input-referred noise (`.noise`), supply power, area and the channel + DFE eye are
+  all simulated. HD3 and noise are only simulated when `fast=False`, which is now the
+  default; with `fast=True` they are constants.
+- Guard layer, sealed: `measure_all` cannot be called from a reward path without passing
+  Tiers 1–4. Every rejection is logged by check, not just counted.
+- Resident libngspice server: **77.5 ms** per AC evaluation against **6370.5 ms** for a
+  fresh subprocess, a measured **82.2×** (`results/speedup.json`). The gain is throughput
+  per candidate: the SKY130 corner `.lib` parses once instead of every launch.
+- Full 45-corner PVT engine, HD3 and noise at every corner.
+- Test suite: **274 passed, 3 xfailed.**
+
+Not working, stated here because it changes how the rest of the repo reads:
+
+- **No trained policy runs against the current code.** Every checkpoint in `results/`
+  expects a 14-dimensional observation; the environment emits 18. The circuit changed
+  underneath them as well — the tail mirror was found in triode, delivering 326 µA of a
+  requested 1000 µA, and both the bias point and the mirror length were changed to fix it.
+  The last completed guarded run did not produce a policy that yields a valid design.
+- **The declared action space is 10.4% physically valid** — 26 of 250 uniform samples
+  (`results/space_validity.json`). Validity survives up to roughly 1 mA of tail current
+  and is zero across 90 samples above it, so most of the declared 0.05–20 mA range is
+  dead space (`results/itail_profile.json`).
+- **The design committed in `results/solved_design.json` fails 10 of 45 PVT corners**
+  (`results/legacy_design_recheck.json`). `results/final_report.json` still asserts
+  `all_pvt_pass: true` for another design of the same generation; it is stale, predates the
+  mirror fix, and has not been rechecked.
+- **`area` cannot fail as a constraint.** The worst design anywhere in the action space is
+  0.0113 mm² against a 0.05 mm² budget. It is measured, but it is not a live constraint.
+
+**See [`RESULTS.md`](RESULTS.md) for the measurements.** Roadmap and per-phase status in
+[`docs/ROADMAP.md`](docs/ROADMAP.md); `HANDOVER.md` is the working log.
 
 ## References
 

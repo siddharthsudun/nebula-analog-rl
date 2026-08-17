@@ -52,16 +52,20 @@ PYTHONPATH=src .venv/bin/python -m eqrl.llm.spec_parser "PCIe Gen2 CTLE, ~9 dB b
 ```
 
 ## Note on the current circuit
-Phase 0/1 use a **behavioral** source-degenerated diff pair (VCCS transconductors) so the
-loop closes fast. The physics is correct (DC gain, zero at 1/RsCs, boost = 1+gm·Rs/2), but
-HD3 / noise / eye are stubbed. **Phase 1's main remaining job is swapping in real SKY130
-transistor models** — that's where the analog credibility comes from for the judges.
+The behavioral diff pair (VCCS transconductors) from Phase 0/1 is gone. The CTLE is now
+`sky130_fd_pr__nfet_01v8` devices with a current-mirror tail, and HD3, input-referred noise
+and the eye are simulated rather than stubbed.
+
+One flag matters when reading numbers. `measure_all(fast=True)` skips the transient-HD3 and
+`.noise` analyses and substitutes constants (−40 dB, 1.0 mV) — it exists so baseline sweeps
+that do not need those two metrics run faster. `fast=False` measures all eight and is the
+default. Any number quoted from a `fast=True` run has two placeholder metrics in it.
 
 ---
 
 # Windows (native) — verified 2026-08-15
 
-Full suite green: **177 passed, 2 xfailed**, real ngspice + real SKY130. No WSL needed.
+Full suite green: **274 passed, 3 xfailed**, real ngspice + real SKY130. No WSL needed.
 
 Two gotchas cost the most time, both documented in `scripts/win-env.ps1`:
 - conda-forge ships **two** binaries. `ngspice.exe` is the **GUI** build and blocks on

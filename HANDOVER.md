@@ -314,9 +314,17 @@ ways.
 - **Phase C** (`honest_benchmark`, cumulative-cost curve) — blocked on training.
 - **Phase D** (`final_report.json`, eye plot, solved design) — blocked on training.
 
-**`results/final_report.json` currently asserts `all_pvt_pass: true` and is false.** The
-recheck of that same design on the corrected circuit is committed as
-`results/legacy_design_recheck.json`: 45 corners, **10 failing**, `all_pvt_pass: false`.
+**`results/final_report.json` asserts `all_pvt_pass: true`, and that claim is UNTESTED —
+correcting an error of mine.** I rechecked `results/solved_design.json` and reported it as
+"that same design". It is not. The two describe different designs:
+
+    final_report.json      w_in 11.83 um  rs 5000 ohm  cs 222 fF  r_load 1171 ohm
+    solved_design.json     w_in  5.43 um  rs 4887 ohm  cs 132 fF  r_load 1806 ohm
+
+So `results/legacy_design_recheck.json` (45 corners, **10 failing**, `all_pvt_pass: false`)
+is a real measurement of `solved_design.json` on the corrected circuit, but it does not
+refute the 45/45 claim, which belongs to the other design. That claim is being measured
+separately; until it is, "45/45 is false" is not established.
 I left the original in place rather than delete it, but it is the most concrete
 falsifiable object in the repo and should not survive to submission.
 

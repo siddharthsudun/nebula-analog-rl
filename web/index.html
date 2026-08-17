@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SILQ — reinforcement learning that designs PVT-robust analog equalizers on the SKY130 process, hitting new specs ~7x faster than search.">
+<meta name="description" content="SILQ — reinforcement learning that sizes analog equalizers on the open SKY130 process, with a validation layer that checks every candidate is a real circuit.">
 <meta property="og:title" content="SILQ — RL for analog equalizer design">
-<meta property="og:description" content="An RL agent that sizes analog equalizers on real silicon and opens the data eye. Nebula@BITS Goa, Analog Track.">
+<meta property="og:description" content="An RL framework that sizes analog equalizers on real silicon, and the guard layer that found 86% of spec-passing designs are not circuits. Nebula@BITS Goa, Analog Track.">
 <meta name="theme-color" content="#090d13">
 <title>SILQ — RL that designs analog equalizers on real silicon</title>
 <style>
@@ -21,6 +21,7 @@
     --rl: #0e8c82;        /* the learned trace */
     --base: #c17417;      /* the baseline trace */
     --good: #16924e;
+    --bad: #b3261e;
     --grid: rgba(16,32,47,0.08);
     --shadow: 0 1px 2px rgba(16,32,47,.06), 0 8px 30px rgba(16,32,47,.05);
     --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -39,6 +40,7 @@
       --rl: #34d3c4;
       --base: #f0a341;
       --good: #3ac776;
+      --bad: #f2777a;
       --grid: rgba(230,237,244,0.07);
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 40px rgba(0,0,0,.35);
     }
@@ -46,13 +48,13 @@
   :root[data-theme="dark"] {
     --bg: #090d13; --surface: #10151e; --surface-2: #0c1119; --border: #202a38;
     --ink: #e7edf4; --muted: #93a1b3; --faint: #64748b;
-    --rl: #34d3c4; --base: #f0a341; --good: #3ac776; --grid: rgba(230,237,244,0.07);
+    --rl: #34d3c4; --base: #f0a341; --good: #3ac776; --bad: #f2777a; --grid: rgba(230,237,244,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 40px rgba(0,0,0,.35);
   }
   :root[data-theme="light"] {
     --bg: #f5f7fa; --surface: #ffffff; --surface-2: #eef2f7; --border: #d3dbe6;
     --ink: #10202f; --muted: #5a6b7e; --faint: #8494a6;
-    --rl: #0e8c82; --base: #c17417; --good: #16924e; --grid: rgba(16,32,47,0.08);
+    --rl: #0e8c82; --base: #c17417; --good: #16924e; --bad: #b3261e; --grid: rgba(16,32,47,0.08);
     --shadow: 0 1px 2px rgba(16,32,47,.06), 0 8px 30px rgba(16,32,47,.05);
   }
 
@@ -128,7 +130,7 @@
   .chart-card { padding: 22px 20px 12px; }
   .legend { display: flex; gap: 20px; font-size: 13px; color: var(--muted); margin: 2px 0 6px 4px; }
   .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 7px; }
-  #genchart { width: 100%; height: auto; display: block; }
+  #validchart { width: 100%; height: auto; display: block; }
   .chart-note { font-size: 12.5px; color: var(--faint); padding: 4px 4px 8px; }
 
   /* pvt grid */
@@ -141,6 +143,10 @@
     background: color-mix(in srgb, var(--good) 18%, transparent);
     color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 35%, transparent);
     font-size: 11px;
+  }
+  .pvt td.bad {
+    background: color-mix(in srgb, var(--bad) 18%, transparent);
+    color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent);
   }
   .grouphead th { font-size: 11px; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
 
@@ -191,8 +197,8 @@
       <span class="logo">SIL<b>Q</b></span>
       <span class="tagline-sm mono">silicon eQualizer · nebula@bits goa · analog track</span>
     </div>
-    <h1>An RL agent that designs analog equalizers <em>on real silicon</em> — and hits new specs in a handful of simulations.</h1>
-    <p class="lede">Give it a target and it sizes a PCIe-Gen2 CTLE (continuous-time linear equalizer) on the open SkyWater 130&nbsp;nm process, talking to a SPICE simulator in a closed loop, with zero human tuning. Because it learns a design <i>strategy</i> rather than one answer, it retargets to specs it has never seen almost for free.</p>
+    <h1>An RL framework that sizes analog equalizers <em>on real silicon</em> — and checks that what it found is a circuit.</h1>
+    <p class="lede">SILQ sizes a PCIe-Gen2 CTLE (continuous-time linear equalizer) on the open SkyWater 130&nbsp;nm process, talking to ngspice in a closed loop. Every candidate is validated against its own DC operating point before the measurement is allowed to count. That layer is where the interesting result is: most designs that pass the published spec sheet turn out not to amplify anything.</p>
     <div class="context">
       <span>SKY130 · sky130_fd_pr</span>
       <span>ngspice (real transistors)</span>
@@ -202,16 +208,16 @@
   </div>
   <div class="statband">
     <div class="stat">
-      <div class="big accent">7×</div>
-      <div class="lbl">fewer SPICE simulations to reach a new spec than Bayesian search (median 3.5 vs 25)</div>
+      <div class="big accent">86<span style="font-size:.6em">%</span></div>
+      <div class="lbl">of the designs that pass all eight published specs are not valid circuits — 24 of 28, measured twice</div>
     </div>
     <div class="stat">
-      <div class="big">45<span style="color:var(--faint)">/45</span></div>
-      <div class="lbl">PVT corners passed — 5 process × 3 voltage × 3 temperature, real HD3 &amp; noise</div>
+      <div class="big">10.4<span style="font-size:.6em">%</span></div>
+      <div class="lbl">of the declared action space is physically valid — 26 of 250 uniform samples through the guard layer</div>
     </div>
     <div class="stat">
-      <div class="big">44<span style="font-size:.5em;color:var(--muted)"> ms</span></div>
-      <div class="lbl">per SPICE evaluation via a resident-simulator design — a measured 350× speedup</div>
+      <div class="big">82<span style="font-size:.6em">×</span></div>
+      <div class="lbl">per-evaluation speedup from keeping the simulator resident — 77.5 ms against 6370.5 ms</div>
     </div>
   </div>
 </header>
@@ -229,8 +235,10 @@
         <div class="arrow">→</div>
         <div class="node"><div class="n-lbl">SPICE</div><div class="n-txt">ngspice on SKY130 transistors</div></div>
         <div class="arrow">→</div>
-        <div class="node"><div class="n-lbl">Measure</div><div class="n-txt">peaking · HD3 · noise · power · area</div></div>
-        <div class="arrow" style="flex-basis:100%;text-align:center">↺ closes to spec in a few steps</div>
+        <div class="node"><div class="n-lbl">Measure</div><div class="n-txt">peaking · HD3 · noise · power · area · eye</div></div>
+        <div class="arrow">→</div>
+        <div class="node"><div class="n-lbl">Guard</div><div class="n-txt">20 checks against the DC operating point; a rejected design cannot score</div></div>
+        <div class="arrow" style="flex-basis:100%;text-align:center">↺</div>
       </div>
     </div>
   </section>
@@ -238,72 +246,91 @@
   <section>
     <div class="wrap">
       <div class="eyebrow">Headline result</div>
-      <h2>One trained policy hits specs it never saw — far faster than search.</h2>
-      <p class="section-intro">The agent was trained across randomized target-boost specs, then asked to design for eight <b>held-out</b> targets. For each, we count the SPICE simulations needed to reach a passing design, and compare against Bayesian optimization (Optuna TPE) run from scratch per target — because a search has no memory, it pays a full search every time.</p>
+      <h2>86% of the designs that pass all eight specs are not circuits.</h2>
+      <p class="section-intro">CMA-ES was run over four (target boost, channel loss) specifications, 60 evaluations each. Every design that passed all eight hard specs was then put through the guard layer, which probes the DC operating point of that exact candidate. Measured twice, identical both times.</p>
+      <div class="cols">
+        <table class="spec" style="margin-top:0" aria-label="spec-passing designs versus guard-valid designs">
+          <thead><tr><th>CMA-ES designs</th><th class="num">Count</th></tr></thead>
+          <tbody>
+            <tr><td>Passed all 8 hard specs</td><td class="num">28</td></tr>
+            <tr><td>…and were valid circuits</td><td class="num">4</td></tr>
+            <tr><td>…and were <b>not</b></td><td class="num">24 (86%)</td></tr>
+            <tr><td>rejected: DC gain implausible</td><td class="num">14</td></tr>
+            <tr><td>rejected: MOSFET not in saturation</td><td class="num">10</td></tr>
+          </tbody>
+        </table>
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Why the spec sheet lets this through</div>
+          <p style="color:var(--muted);font-size:14.5px;margin-top:0">Boost is defined as <b style="color:var(--ink)">peak gain minus DC gain</b>. It is a ratio, so a stage that <i>attenuates</i> at DC manufactures boost for free without the peak ever rising. Nothing in the eight checks notices: boost and peak frequency are both computed from that difference, and the other six — HD3, noise, power, area, eye height, eye width — are all <i>easier</i> to satisfy for a stage that passes less signal.</p>
+        </div>
+      </div>
+      <div class="card readout" style="margin-top:22px">
+        <h3>One of the 28, verified</h3>
+        <div class="kv">
+          <span class="k">DC gain</span><span class="v">−5.00 dB &nbsp;·&nbsp; attenuates</span>
+          <span class="k">Peak gain</span><span class="v">+1.57 dB &nbsp;·&nbsp; barely amplifies, anywhere</span>
+          <span class="k">"Boost"</span><span class="v">6.56 dB &nbsp;·&nbsp; passes 3–12 dB, peak in band, and the other six</span>
+        </div>
+      </div>
+      <p class="section-intro" style="margin-top:22px">This is a hole in the published spec sheet, not only in our reward — a benchmark that scores a stage which amplifies nothing at any frequency. The measurement is in <code>results/pass_vs_valid.json</code>. The field that closes it, <code>Spec.dc_gain_db_min</code>, exists and is off by default, because every earlier number in the repo was produced without it and has to stay reproducible.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">What else the guard caught</div>
+      <h2>Three silent failures, each fixed with a regression test.</h2>
+      <ul class="tight">
+        <li><b>The tail current mirror was in triode.</b> The tail node sat near 0.105&nbsp;V while the mirror device needs about 0.40&nbsp;V of Vdsat, so it behaved as a resistor rather than a current source and delivered 16–46% of the requested current — 326&nbsp;µA of a requested 1000&nbsp;µA. Tail current was a compressed non-linear knob, and the mirror provided none of the PVT behaviour it was added for. Fixed by moving the input common mode and by setting the mirror length from a measured accuracy sweep (34.0% worst-case error at 0.5&nbsp;µm, 3.7% at 2&nbsp;µm). The check threshold was not touched; the circuit was changed to meet it.</li>
+        <li><b>The guard's own probe was reading a different design.</b> The <code>.op</code> probe runs against whatever the resident simulator currently holds, and the evaluator never primed it with the candidate — so Tier 2 compared one design's operating point against another design's requested values. The same design evaluated twice in a row changed verdict on 9 of 14 attempts. Nothing had asserted that identical input gives identical output, which is the property that makes every other check mean anything. It is now asserted five ways.</li>
+        <li><b>Widths above 100&nbsp;µm were silently unbuildable.</b> <code>sky130_fd_pr__nfet_01v8</code> solves at W&nbsp;=&nbsp;100&nbsp;µm and aborts at 101 with <i>could not find a valid modelname</i>. The old code clamped at 200&nbsp;µm, and on the resident-simulator path that abort carries no exit code — so it read as a clean run that happened to produce no numbers. Width is now drawn as parallel fingers, which is what real layout does anyway.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">The search space</div>
+      <h2>10.4% of the declared action space is a buildable circuit.</h2>
+      <p class="section-intro">Sampling the action space uniformly — no agent, no trajectory — and running every sample through the guard layer gives 26 valid designs out of 250. Conditioned on tail current, the picture is a band rather than a slope: there is a workable region up to about 1&nbsp;mA, and nothing valid in 90 samples above it. The declared upper bound is 20&nbsp;mA, so most of that range is dead space.</p>
       <div class="card chart-card">
         <div class="legend">
-          <span><i style="background:var(--rl)"></i>SILQ (trained policy)</span>
-          <span><i style="background:var(--base)"></i>Bayesian search (per spec)</span>
+          <span><i style="background:var(--rl)"></i>valid designs per 30 uniform samples</span>
         </div>
-        <svg id="genchart" viewBox="0 0 720 300" role="img" aria-label="Simulations to reach spec, SILQ versus Bayesian, across eight held-out target boosts"></svg>
-        <div class="chart-note">Lower is better. At 11&nbsp;dB, Bayesian did not converge within 120 simulations (marked DNF). SILQ solved all eight; Bayesian solved seven.</div>
+        <svg id="validchart" viewBox="0 0 720 300" role="img" aria-label="Valid designs out of 30 uniform samples, against tail current, falling to zero above 1 mA"></svg>
+        <div class="chart-note">From <code>results/itail_profile.json</code>. Higher is better. Every other parameter is sampled uniformly at each point.</div>
       </div>
-      <p class="section-intro" style="margin-top:22px">The RL cost is paid once, in training. After that every new spec is nearly free — which is exactly the problem statement's ask: reach near-optimal solutions with fewer search and zero human intervention.</p>
+      <p class="section-intro" style="margin-top:22px">The mechanism is headroom: more tail current means more Vgs on the input pair, which pulls the tail node down, which is exactly the headroom the mirror needs. Current and mirror headroom trade against each other one-for-one, and past a few hundred µA the mirror loses. No range has been narrowed — narrowing the space would change what every published number means, and a judge is entitled to ask whether it was shrunk until the result appeared.</p>
     </div>
   </section>
 
   <section>
     <div class="wrap">
       <div class="eyebrow">Robustness</div>
-      <h2>The designed equalizer holds across the full PVT grid.</h2>
-      <p class="section-intro">A naïve nominal-only design drifts out of band at 125&nbsp;°C — the classic PVT trap. An SILQ design, signed off across all 45 corners (process × voltage × temperature) with real HD3 and noise at every corner, meets every hard spec.</p>
+      <h2>The committed design fails 10 of the 45 PVT corners.</h2>
+      <p class="section-intro">The grid is the full one: 5 process corners (TT/SS/FF/SF/FS) × 3 voltages (VDD&nbsp;±5%) × 3 temperatures (0/27/125&nbsp;°C), with HD3 and input-referred noise simulated at every corner. Re-checking the design in <code>results/solved_design.json</code> on the corrected circuit gives <code>all_pvt_pass: false</code>. The ten failures are not near-misses on a limit — those corners produce no usable measurement at all, and a corner that cannot be measured cannot be counted as a pass.</p>
       <div class="cols">
         <div class="card" style="padding:20px">
           <div class="pvt-wrap">
-            <table class="pvt" id="pvtgrid" aria-label="PVT corner pass grid, all passing"></table>
+            <table class="pvt" id="pvtgrid" aria-label="PVT corner grid: 35 corners pass, 10 fail, from results/legacy_design_recheck.json"></table>
           </div>
-          <div class="chart-note" style="padding-left:2px">Each cell = one corner. All 45 pass.</div>
+          <div class="chart-note" style="padding-left:2px">Each cell = one corner, drawn from <code>results/legacy_design_recheck.json</code>. 35 pass, 10 fail.</div>
         </div>
-        <table class="spec" aria-label="measured ranges across all corners versus spec">
-          <thead><tr><th>Metric</th><th class="num">Across 45 corners</th><th class="num">Spec</th></tr></thead>
+        <table class="spec" style="margin-top:0" aria-label="measured ranges across the 35 corners that solve, versus spec">
+          <thead><tr><th>Metric</th><th class="num">Across the 35 that solve</th><th class="num">Spec</th></tr></thead>
           <tbody>
-            <tr><td>HF boost</td><td class="num">8.9–10.9 dB</td><td class="num">3–12</td></tr>
-            <tr><td>Peak freq</td><td class="num">1.33–1.50 GHz</td><td class="num">1.25–2.5</td></tr>
-            <tr><td>HD3 @100 MHz</td><td class="num">−48…−51 dB</td><td class="num">&lt; −30</td></tr>
-            <tr><td>Input noise</td><td class="num">570–956 µV</td><td class="num">&lt; 1500</td></tr>
-            <tr><td>Power</td><td class="num">0.17–0.19 mW</td><td class="num">&lt; 15</td></tr>
-            <tr><td>Area (est.)</td><td class="num">0.002 mm²</td><td class="num">&lt; 0.05</td></tr>
-            <tr><td>Eye height</td><td class="num">0.50–0.56 UI</td><td class="num">&gt; 0.4</td></tr>
-            <tr><td>Eye opening</td><td class="num">172–199 mV</td><td class="num">&gt; 100</td></tr>
+            <tr><td>HF boost</td><td class="num">6.42–8.05 dB</td><td class="num">3–12</td></tr>
+            <tr><td>Peak freq</td><td class="num">1.27–1.51 GHz</td><td class="num">1.25–2.5</td></tr>
+            <tr><td>HD3 @100 MHz</td><td class="num">−53.1…−51.8 dB</td><td class="num">&lt; −30</td></tr>
+            <tr><td>Input noise</td><td class="num">703–1097 µV</td><td class="num">&lt; 1500</td></tr>
+            <tr><td>Power</td><td class="num">0.25–0.28 mW</td><td class="num">&lt; 15</td></tr>
+            <tr><td>Eye height</td><td class="num">0.62 UI</td><td class="num">&gt; 0.4</td></tr>
+            <tr><td>Eye opening</td><td class="num">246–302 mV</td><td class="num">&gt; 100</td></tr>
+            <tr><td>Area</td><td class="num">0.001 mm² · non-binding</td><td class="num">&lt; 0.05</td></tr>
           </tbody>
         </table>
       </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <div class="eyebrow">The point of it all</div>
-      <h2>The equalizer opens an eye the channel had closed.</h2>
-      <p class="section-intro">An equalizer's whole job is to reopen the data eye a lossy channel smears shut. This is measured, not assumed: the SPICE-extracted <b>complex</b> CTLE response is put in series with a minimum-phase <b>PCIe-Gen2 channel</b> (12&nbsp;dB loss at Nyquist) and a real <b>adapted 1-tap DFE</b>, then a random 5&nbsp;Gb/s NRZ pattern is run through and folded into an eye.</p>
-      <div class="card" style="padding:20px 20px 8px">
-        <img src="eye.png" alt="Eye diagram: channel-only eye nearly closed at 69 mV, versus channel plus CTLE plus 1-tap DFE open at 192 mV" style="width:100%;height:auto;display:block">
-      </div>
-      <div class="cols" style="margin-top:22px">
-        <table class="spec" aria-label="eye opening, channel only versus equalized">
-          <thead><tr><th>Link</th><th class="num">Eye height</th><th class="num">Eye width</th></tr></thead>
-          <tbody>
-            <tr><td>Channel only</td><td class="num">69 mV</td><td class="num">0.31 UI</td></tr>
-            <tr><td>+ CTLE + 1-tap DFE</td><td class="num ok">192 mV</td><td class="num ok">0.50 UI</td></tr>
-            <tr><td>Spec</td><td class="num">&gt; 100 mV</td><td class="num">&gt; 0.4 UI</td></tr>
-          </tbody>
-        </table>
-        <div>
-          <div class="eyebrow" style="margin-bottom:10px">Describe it in English</div>
-          <p style="color:var(--muted);font-size:14.5px;margin-top:0">The bonus front-end: an LLM turns a plain-English request into a spec, and the trained policy sizes the circuit.</p>
-          <div class="pill" style="display:block;white-space:normal;line-height:1.7">$ silq "PCIe Gen2 CTLE, ~8 dB peaking, under 10 mW"<br>→ sized in 5 sims · eye 0.62 UI / 277 mV · all checks pass</div>
-        </div>
-      </div>
+      <p class="caveat">The eye numbers above come out of a measured engine, not an assumption: the SPICE-extracted <b>complex</b> CTLE response is put in series with a minimum-phase PCIe-Gen2 channel (12&nbsp;dB loss at Nyquist) and a 1-tap DFE adapted to the first post-cursor, then a random 5&nbsp;Gb/s NRZ pattern is run through and folded. Area is listed for completeness and marked non-binding: the worst design anywhere in the action space is 0.0113&nbsp;mm² against a 0.05&nbsp;mm² budget, so this constraint cannot fail. <code>results/final_report.json</code> still asserts <code>all_pvt_pass: true</code> for an earlier design of the same generation; it predates the mirror fix, was produced by a checkpoint the current environment cannot load, and is superseded.</p>
     </div>
   </section>
 
@@ -311,22 +338,23 @@
     <div class="wrap">
       <div class="eyebrow">The artifact</div>
       <h2>A real, sized circuit — not a block diagram.</h2>
-      <p class="section-intro">Every value below was chosen by the agent. It is a 1-stage source-degenerated CTLE built from SKY130 <code>nfet_01v8</code> devices; the exported netlist runs in ngspice as-is.</p>
+      <p class="section-intro">This is the design the PVT recheck above characterizes: a 1-stage source-degenerated CTLE built from SKY130 <code>nfet_01v8</code> devices, exported as a netlist that runs in ngspice as-is. The values came out of an earlier training run whose checkpoint the current environment can no longer load — it expects a 14-dimensional observation where the environment now emits 18, and the circuit itself changed underneath it when the mirror was fixed. So the circuit is presented here, not a claim about the policy that produced it.</p>
       <div class="cols">
         <div class="card readout">
-          <h3>Sized CTLE — SILQ output</h3>
+          <h3>Sized CTLE — <code>results/solved_design.json</code></h3>
           <div class="kv">
-            <span class="k">Input pair W / L</span><span class="v">11.83 / 0.15 µm</span>
+            <span class="k">Input pair W / L</span><span class="v">5.43 / 0.15 µm</span>
             <span class="k">Tail current</span><span class="v">100 µA</span>
-            <span class="k">Degeneration Rs</span><span class="v">5.00 kΩ</span>
-            <span class="k">Degeneration Cs</span><span class="v">222 fF</span>
-            <span class="k">Load R</span><span class="v">1.17 kΩ</span>
+            <span class="k">Degeneration Rs</span><span class="v">4.89 kΩ</span>
+            <span class="k">Degeneration Cs</span><span class="v">132 fF</span>
+            <span class="k">Load R</span><span class="v">1.81 kΩ</span>
+            <span class="k">DFE tap</span><span class="v">0.345 UI</span>
             <span class="k">Process</span><span class="v">SKY130 130 nm</span>
           </div>
         </div>
         <div>
           <div class="eyebrow" style="margin-bottom:10px">How the peaking works</div>
-          <p style="color:var(--muted);font-size:14.5px;margin-top:0">The <b style="color:var(--ink)">Rs·Cs</b> across the differential-pair sources creates a zero that boosts the high-frequency (Nyquist) band and flattens the channel loss. The agent trades W/L, tail current, Rs, Cs and the load to place that zero in the 1.25–2.5&nbsp;GHz window while holding linearity, noise, power and area — the sizing problem, learned.</p>
+          <p style="color:var(--muted);font-size:14.5px;margin-top:0">The <b style="color:var(--ink)">Rs·Cs</b> across the differential-pair sources creates a zero that boosts the high-frequency (Nyquist) band and flattens the channel loss. The sizing problem is to place that zero inside the 1.25–2.5&nbsp;GHz window while holding linearity, noise, power and area, trading W/L against tail current, Rs, Cs and the load. Those six numbers are the action space the policy searches.</p>
         </div>
       </div>
     </div>
@@ -335,12 +363,13 @@
   <section>
     <div class="wrap">
       <div class="eyebrow">Why it's fast enough to be real</div>
-      <h2>A resident simulator turns hours of training into minutes.</h2>
-      <p class="section-intro">Loading the SKY130 corner models costs ~15 seconds every time ngspice launches, but a simulation itself is ~40 ms. SILQ keeps the simulator resident and re-evaluates each candidate with <code>alterparam; reset</code> — so models parse once and every evaluation is milliseconds. That measured 350× speedup is the difference between "RL on real SPICE is a nice idea" and "we trained it this afternoon."</p>
+      <h2>A resident simulator makes training on real SPICE affordable.</h2>
+      <p class="section-intro">Loading the SKY130 corner models costs about 15 seconds every time ngspice launches. SILQ keeps the simulator resident and re-evaluates each candidate with <code>alterparam; reset</code>, so the models parse once. Measured over 10 evaluations each (<code>results/speedup.json</code>): <b>77.5 ms</b> per AC evaluation resident, against <b>6370.5 ms</b> for a fresh subprocess — <b>82.2×</b>. An earlier figure of 350× compared one evaluation against a whole process launch plus model reparse, which is not the quantity that matters during a search.</p>
       <ul class="tight">
-        <li><b>Real, not behavioral.</b> Every number is measured on SKY130 BSIM transistors in ngspice — AC peaking, HD3 by transient + FFT, input-referred noise by <code>.noise</code>.</li>
-        <li><b>Generalizing, not memorizing.</b> The policy conditions on the target, so it solves specs held out of training.</li>
-        <li><b>Honest baselines.</b> A first, naïve RL setup <i>lost</i> to Bayesian search; we reformulated to the sequential design-closing MDP where RL wins — and kept the losing result in the git history.</li>
+        <li><b>Real, not behavioral.</b> Every number is measured on SKY130 BSIM transistors in ngspice — AC peaking, HD3 by transient + FFT, input-referred noise by <code>.noise</code>, supply power from the actual rail current.</li>
+        <li><b>Honest baselines.</b> A first, naïve RL setup <i>lost</i> to Bayesian search; we reformulated to a sequential design-closing MDP — and kept the losing result in the git history rather than deleting it.</li>
+        <li><b>No working policy right now, and no sample-efficiency claim.</b> The last completed 40k-step guarded run did not end with a policy that produces a valid design, and no checkpoint in the repo matches the current environment. Two reasons, one measured and one structural: the action space is 10.4% valid, and the penalty for a rejected design is a flat −5.0 by default, so a design that misses saturation by 10&nbsp;mV scores the same as one asking for 50&nbsp;V across the load. With most candidates rejected the reward is nearly constant, which is a flat value function with no gradient to descend.</li>
+        <li><b>Two metrics used to be constants.</b> The environment defaulted to <code>fast=True</code>, which skips the transient-HD3 and <code>.noise</code> analyses and substitutes −40&nbsp;dB and 1.0&nbsp;mV. Every training run and every search number this project published earlier scored those two as constants. <code>fast=False</code> is now the default; the PVT characterizations always ran that way.</li>
       </ul>
     </div>
   </section>
@@ -349,14 +378,15 @@
     <div class="wrap">
       <div class="eyebrow">Stack &amp; reproducibility</div>
       <h2>Open tools, top to bottom.</h2>
-      <p class="section-intro">Python · PPO (stable-baselines3) · Gymnasium · ngspice via libngspice · SkyWater SKY130 open PDK · Optuna (baseline). The repository holds the circuit generator, the resident-simulator server, the RL environment, the baselines, the PVT engine, the characterization, and every plot on this page.</p>
+      <p class="section-intro">Python · PPO (stable-baselines3) · Gymnasium · ngspice via libngspice · SkyWater SKY130 open PDK · Optuna and CMA-ES (baselines). The repository holds the circuit generator, the resident-simulator server, the RL environment, the guard layer, the baselines, the PVT engine and the characterization. Every number on this page is written to an artifact in <code>results/</code> by the script that measured it, and each of these runs with no arguments:</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
-        <span class="pill">python -m eqrl.experiments.generalization</span>
-        <span class="pill">python -m eqrl.experiments.characterize</span>
-        <span class="pill">44 ms / eval</span>
-        <span class="pill">45/45 PVT</span>
+        <span class="pill">python -m eqrl.experiments.pass_vs_valid</span>
+        <span class="pill">python -m eqrl.experiments.space_validity</span>
+        <span class="pill">python -m eqrl.experiments.itail_profile</span>
+        <span class="pill">python -m eqrl.experiments.speedup</span>
+        <span class="pill">python -m eqrl.experiments.characterize --design results/solved_design.json</span>
       </div>
-      <p class="caveat">Scope notes for review: the CTLE sizing, all AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE), and the 45-corner PVT sweep are fully simulated on SKY130 — nothing in the scoring is a placeholder. The channel is a minimum-phase PCIe-Gen2 model (12&nbsp;dB at Nyquist); the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail; the ±tolerance around a target is a training-reward shaping choice, kept separate from spec compliance.</p>
+      <p class="caveat">Scope notes for review. The CTLE sizing, the AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE) and the 45-corner PVT sweep are simulated on SKY130. The channel is a minimum-phase PCIe-Gen2 model (12&nbsp;dB at Nyquist); the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail; the ±tolerance around a target is a training-reward shaping choice, kept separate from spec compliance. The baselines are random search, Bayesian optimization (Optuna TPE) and CMA-ES — there is no grid baseline. Area is measured but cannot fail against the 0.05&nbsp;mm² budget. The natural-language front-end parses a plain-English request into the framework's <code>Spec</code> object, with a keyword fallback when no API key is present; sizing from that spec needs a policy the repo does not currently have.</p>
     </div>
   </section>
 </main>
@@ -370,24 +400,27 @@
 
 <script>
 (function () {
-  // ---- generalization chart ----
+  // ---- validity against tail current ----
+  // Transcribed from results/itail_profile.json: 30 uniform samples per point, every
+  // other parameter varied freely, each sample run through the guard layer.
   var data = [
-    {t:"5.0", rl:4,  bo:34},
-    {t:"5.9", rl:5,  bo:22},
-    {t:"6.7", rl:4,  bo:25},
-    {t:"7.6", rl:2,  bo:16},
-    {t:"8.4", rl:3,  bo:43},
-    {t:"9.3", rl:5,  bo:5},
-    {t:"10.1",rl:2,  bo:32},
-    {t:"11.0",rl:3,  bo:null}   // null = did not converge
+    {t:"0.05", valid:5},
+    {t:"0.10", valid:7},
+    {t:"0.20", valid:6},
+    {t:"0.35", valid:9},
+    {t:"0.50", valid:7},
+    {t:"0.75", valid:2},
+    {t:"1.0",  valid:4},
+    {t:"1.5",  valid:0},
+    {t:"2.0",  valid:0},
+    {t:"4.0",  valid:0}
   ];
-  var svg = document.getElementById("genchart");
-  var W = 720, H = 300, padL = 40, padR = 12, padT = 14, padB = 46;
+  var svg = document.getElementById("validchart");
+  var W = 720, H = 300, padL = 40, padR = 12, padT = 20, padB = 46;
   var plotW = W - padL - padR, plotH = H - padT - padB;
-  var maxV = 45;
+  var maxV = 12;
   var css = getComputedStyle(document.documentElement);
   var rl = css.getPropertyValue("--rl").trim();
-  var base = css.getPropertyValue("--base").trim();
   var grid = css.getPropertyValue("--grid").trim();
   var muted = css.getPropertyValue("--muted").trim();
   var faint = css.getPropertyValue("--faint").trim();
@@ -396,41 +429,47 @@
   function y(v){ return padT + plotH - (v/maxV)*plotH; }
 
   // gridlines + y labels
-  [0,10,20,30,40].forEach(function(g){
+  [0,3,6,9,12].forEach(function(g){
     svg.appendChild(el("line",{x1:padL,y1:y(g),x2:W-padR,y2:y(g),stroke:grid,"stroke-width":1}));
     var tx = el("text",{x:padL-8,y:y(g)+4,fill:faint,"font-size":11,"text-anchor":"end","font-family":"ui-monospace,monospace"});
     tx.textContent = g; svg.appendChild(tx);
   });
 
   var groupW = plotW / data.length;
-  var bw = 15, gap = 5;
+  var bw = 26;
   data.forEach(function(d, i){
     var cx = padL + i*groupW + groupW/2;
-    var x1 = cx - bw - gap/2, x2 = cx + gap/2;
-    // RL bar
-    var h1 = plotH - (y(d.rl)-padT);
-    svg.appendChild(el("rect",{x:x1,y:y(d.rl),width:bw,height:h1,rx:2,fill:rl}));
-    var v1=el("text",{x:x1+bw/2,y:y(d.rl)-5,fill:rl,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace","font-weight":600}); v1.textContent=d.rl; svg.appendChild(v1);
-    // BO bar or DNF
-    if (d.bo === null) {
-      var top = y(maxV);
-      var r = el("rect",{x:x2,y:top,width:bw,height:plotH-(top-padT),rx:2,fill:"none",stroke:base,"stroke-width":1.4,"stroke-dasharray":"3 3"});
-      svg.appendChild(r);
-      var dn=el("text",{x:x2+bw/2,y:top-5,fill:base,"font-size":10,"text-anchor":"middle","font-family":"ui-monospace,monospace"}); dn.textContent="DNF"; svg.appendChild(dn);
-    } else {
-      var h2 = plotH - (y(d.bo)-padT);
-      svg.appendChild(el("rect",{x:x2,y:y(d.bo),width:bw,height:h2,rx:2,fill:base}));
-      var v2=el("text",{x:x2+bw/2,y:y(d.bo)-5,fill:base,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace"}); v2.textContent=d.bo; svg.appendChild(v2);
-    }
-    // x label
+    var x1 = cx - bw/2;
+    var h = plotH - (y(d.valid)-padT);
+    if (h > 0) svg.appendChild(el("rect",{x:x1,y:y(d.valid),width:bw,height:h,rx:2,fill:rl}));
+    var v=el("text",{x:cx,y:y(d.valid)-5,fill:d.valid?rl:faint,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace","font-weight":600});
+    v.textContent = d.valid; svg.appendChild(v);
     var xl=el("text",{x:cx,y:H-padB+18,fill:muted,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace"}); xl.textContent=d.t; svg.appendChild(xl);
   });
-  var xt=el("text",{x:padL+plotW/2,y:H-8,fill:faint,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace"}); xt.textContent="target HF boost (dB)  →  held-out specs"; svg.appendChild(xt);
-  var yt=el("text",{x:14,y:padT+plotH/2,fill:faint,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace",transform:"rotate(-90 14 "+(padT+plotH/2)+")"}); yt.textContent="SPICE sims to reach spec"; svg.appendChild(yt);
+
+  // the dead band: nothing valid above 1 mA, 90 samples
+  var divX = padL + 7*groupW;
+  svg.appendChild(el("line",{x1:divX,y1:padT,x2:divX,y2:padT+plotH,stroke:faint,"stroke-width":1,"stroke-dasharray":"3 4"}));
+  var dn=el("text",{x:W-padR-4,y:padT+11,fill:faint,"font-size":11,"text-anchor":"end","font-family":"ui-monospace,monospace"});
+  dn.textContent="0 valid in 90 samples above 1 mA"; svg.appendChild(dn);
+
+  var xt=el("text",{x:padL+plotW/2,y:H-8,fill:faint,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace"}); xt.textContent="tail current (mA)  →  declared range runs to 20 mA"; svg.appendChild(xt);
+  var yt=el("text",{x:14,y:padT+plotH/2,fill:faint,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace",transform:"rotate(-90 14 "+(padT+plotH/2)+")"}); yt.textContent="valid designs / 30 samples"; svg.appendChild(yt);
 
   // ---- PVT grid ----
+  // Transcribed from results/legacy_design_recheck.json. 1 = the corner passed,
+  // 0 = it produced no usable measurement. Cell order is VDD (-5%, nom, +5%) x
+  // temperature (0, 27, 125 C), matching the header rows below.
+  var verdicts = {
+    TT: [1,1,1, 1,1,1, 1,1,1],
+    SS: [1,1,1, 0,1,0, 1,0,1],
+    FF: [1,1,1, 1,1,1, 1,1,1],
+    SF: [1,0,1, 1,0,0, 1,1,0],
+    FS: [0,1,1, 1,0,1, 1,0,1]
+  };
   var procs = ["TT","SS","FF","SF","FS"];
   var volts = ["−5%","nom","+5%"];
+  var voltsV = ["1.71 V","1.80 V","1.89 V"];
   var temps = ["0","27","125"];
   var tbl = document.getElementById("pvtgrid");
   // group header row (voltages)
@@ -447,7 +486,14 @@
   procs.forEach(function(p){
     var tr=document.createElement("tr");
     var rh=document.createElement("th"); rh.className="rowh"; rh.textContent=p; tr.appendChild(rh);
-    for (var c=0;c<9;c++){ var td=document.createElement("td"); td.textContent="✓"; td.title=p+" corner — pass"; tr.appendChild(td); }
+    verdicts[p].forEach(function(ok, c){
+      var td=document.createElement("td");
+      td.textContent = ok ? "✓" : "×";
+      if (!ok) td.className = "bad";
+      td.title = p+" · VDD "+voltsV[Math.floor(c/3)]+" · "+temps[c%3]+" °C — "
+               + (ok ? "pass" : "no usable measurement");
+      tr.appendChild(td);
+    });
     tbl.appendChild(tr);
   });
 })();
