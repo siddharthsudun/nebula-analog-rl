@@ -1,0 +1,16 @@
+{
+  "model": "results\\seq_fast40k.zip",
+  "timesteps": 40000,
+  "n_sims": 43979,
+  "n_invalid": 21556,
+  "wall_minutes": 257.5,
+  "seed": 0,
+  "fast": true,
+  "guarded": true,
+  "shaped_invalid": false,
+  "pvt": false,
+  "horizon": 20,
+  "n_envs": 8,
+  "resumed_from": null,
+  "feasible_decode": false
+}

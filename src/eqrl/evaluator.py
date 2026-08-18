@@ -93,7 +93,7 @@ def _adopt_server_data(server: Any, artifacts: RunArtifacts) -> None:
 
 
 def make_raw_eval(*, corner: str = "tt", fast: bool = True,
-                  temp_c: float = 27.0,
+                  temp_c: float = 27.0, channel_loss_db: float = 12.0,
                   server_factory: Callable[[str], Any] | None = None,
                   with_operating_point: bool = True):
     """Build the `raw_eval` callable GuardedEvaluator expects.
@@ -143,7 +143,15 @@ def make_raw_eval(*, corner: str = "tt", fast: bool = True,
                 srv._prime(dv, vdd, temp_c)
                 op = probe_operating_point(srv)
             from eqrl.sim import measures as _m
+            # channel_loss_db must be threaded through. The eye metrics depend on it,
+            # and Tier 4.15 checks them, so a guard built for one channel silently judges
+            # every design against that channel however the caller varies the spec.
+            # Measured consequence: policy_rollout reported 0 of 8 held-out specs solved
+            # while direct measurement at each spec's own channel showed 4 of 6 designs
+            # passing all eight checks. The verdicts were about a link nobody was asking
+            # about.
             m = _m.measure_all(dv, vdd=vdd, temp_c=temp_c, corner=corner, fast=fast,
+                               channel_loss_db=channel_loss_db,
                                srv=srv, _via_guards=True)
             artifacts.exit_code = 0
         except (NgspiceError, ProbeError) as e:
@@ -175,6 +183,7 @@ def make_raw_eval(*, corner: str = "tt", fast: bool = True,
 
 
 def build_evaluator(spec: Spec = DEFAULT_SPEC, *, corner: str = "tt", fast: bool = True,
+                    channel_loss_db: float | None = None,
                     temp_c: float = 27.0,
                     store: ArtifactStore | None = None,
                     monitor: SearchMonitor | None = None,
@@ -196,6 +205,8 @@ def build_evaluator(spec: Spec = DEFAULT_SPEC, *, corner: str = "tt", fast: bool
 
     return GuardedEvaluator(
         make_raw_eval(corner=corner, fast=fast, temp_c=temp_c,
+                      channel_loss_db=(spec.channel_loss_db if channel_loss_db is None
+                                       else channel_loss_db),
                       server_factory=factory,
                       with_operating_point=with_operating_point),
         spec,

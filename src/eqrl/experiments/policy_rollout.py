@@ -58,7 +58,19 @@ def main() -> None:
              for _ in range(args.specs)]
 
     env = SequentialEqualizerEnv(fast=False, seed=123)
-    guard = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False)
+
+    #: One guard per spec, built at THAT spec's channel loss. A single guard built once
+    #: measures the eye at whatever channel it was constructed with, so every verdict
+    #: describes a link the caller is not asking about. That defect made this script
+    #: report 0 of 8 solved while direct measurement at each spec's own channel showed
+    #: 4 of 6 final designs passing all eight checks.
+    guards: dict[float, object] = {}
+
+    def guard_for(channel: float):
+        if channel not in guards:
+            guards[channel] = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False,
+                                              channel_loss_db=channel)
+        return guards[channel]
 
     def succeeds(x, target, channel):
         """All 8 specs AND a valid circuit -- honest_benchmark --require-valid's test."""
@@ -66,7 +78,7 @@ def main() -> None:
         spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target,
                                    channel_loss_db=channel)
         try:
-            v = guard.evaluate(dv, vdd=spec.vdd_nominal)
+            v = guard_for(channel).evaluate(dv, vdd=spec.vdd_nominal)
         except Exception:
             return False
         if not v.is_valid:

@@ -106,22 +106,38 @@ TARGET, CHANNEL = 9.0, 12.0
 
 class TestDefaultsUnchanged:
 
-    def test_spec_has_no_dc_gain_floor_by_default(self):
-        assert DEFAULT_SPEC.dc_gain_db_min is None
+    def test_the_dc_gain_floor_is_now_ON_by_default(self):
+        """This default was flipped deliberately, and it changes what "passes" means.
 
-    def test_hard_pass_still_reports_exactly_eight_checks(self):
+        Two independent optimisers exploited its absence. CMA-ES: 14 of 28 spec-passing
+        designs rejected by the guard as T4.10_dc_gain_implausible. PPO after 40k steps:
+        4 of 6 held-out rollouts, same check. Boost is peak MINUS DC, so a stage that
+        attenuates at DC manufactures boost for free and every other check is *easier*
+        for a stage passing less signal. A spec set that admits a circuit with no gain at
+        any frequency is not describing an equalizer.
+        """
+        assert DEFAULT_SPEC.dc_gain_db_min == 0.0
+
+    def test_hard_pass_reports_nine_checks_by_default(self):
         ok, checks = hard_pass(passing(), DEFAULT_SPEC)
         assert ok
-        assert len(checks) == 8
-        assert "dc_gain" not in checks
+        assert len(checks) == 9
+        assert checks["dc_gain"] is True
 
-    def test_hard_pass_ignores_dc_gain_when_the_floor_is_unset(self):
-        """The attenuating design is the one the search baselines actually found. Left
-        alone, hard_pass calls it a pass — that is the published behaviour, and this
-        test pins it so the fix cannot become a silent default."""
+    def test_the_floor_can_still_be_disabled_explicitly(self):
+        """Turning it off must remain possible, so the pre-fix behaviour stays
+        reproducible and the eight-check numbers already published can be regenerated."""
+        no_floor = dataclasses.replace(DEFAULT_SPEC, dc_gain_db_min=None)
+        ok, checks = hard_pass(attenuating(), no_floor)
+        assert ok                                   # the old, exploitable verdict
+        assert len(checks) == 8 and "dc_gain" not in checks
+
+    def test_the_attenuating_design_no_longer_passes(self):
+        """The design the baselines actually found: dc_gain -5.00 dB, peak +1.57 dB,
+        "boost" 6.56 dB. It amplifies nothing at any frequency."""
         ok, checks = hard_pass(attenuating(), DEFAULT_SPEC)
-        assert ok
-        assert "dc_gain" not in checks
+        assert not ok
+        assert checks["dc_gain"] is False
 
     def test_benchmark_does_not_consult_the_guard_by_default(self, sim):
         sim(passing())
@@ -292,9 +308,9 @@ class TestDcGainFloor:
         assert ok is False and checks == {"sim_ok": False}
 
     def test_spec_is_still_frozen_and_hashable(self):
-        spec = Spec(dc_gain_db_min=0.0)
+        spec = Spec(dc_gain_db_min=3.0)          # differs from the 0.0 default
         with pytest.raises(dataclasses.FrozenInstanceError):
-            spec.dc_gain_db_min = 3.0           # type: ignore[misc]
+            spec.dc_gain_db_min = 6.0           # type: ignore[misc]
         assert hash(spec) != hash(DEFAULT_SPEC)
 
     def test_the_benchmark_can_install_the_floor(self, sim):
@@ -324,11 +340,13 @@ class TestDcGainFloor:
 class TestTheTwoOptInsAreIndependent:
 
     def test_require_valid_does_not_imply_the_dc_floor(self, sim):
+        """The two mechanisms stay separable. Checked against an explicitly floor-less
+        spec, since the floor is now on by default."""
         sim(attenuating())
         hb.set_validity_guard(FakeGuard(valid=True))   # a guard that permits everything
-        ok, checks = hard_pass(attenuating(), DEFAULT_SPEC)
+        no_floor = dataclasses.replace(DEFAULT_SPEC, dc_gain_db_min=None)
+        ok, checks = hard_pass(attenuating(), no_floor)
         assert ok and "dc_gain" not in checks
-        assert hb.evaluate(X, TARGET, CHANNEL)[0] is True
 
     def test_the_dc_floor_does_not_imply_the_guard(self, sim):
         sim(passing())

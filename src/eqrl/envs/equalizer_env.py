@@ -33,7 +33,7 @@ def _margins(m: Measures, spec: Spec) -> dict[str, float]:
     else:                                                                # smooth gradient toward band
         edge = lo if f < lo else hi
         fpk = -min(abs(f - edge) / edge, 2.0)
-    return {
+    out = {
         "boost_lo": (m.boost_db - spec.boost_db_min) / 3.0,             # >= 3 dB peaking
         "boost_hi": (spec.boost_db_max - m.boost_db) / 3.0,             # <= 12 dB
         "fpeak":  fpk,
@@ -44,6 +44,22 @@ def _margins(m: Measures, spec: Spec) -> dict[str, float]:
         "eye_h":  (m.eye_h_ui - spec.eye_h_ui_min) / spec.eye_h_ui_min,
         "eye_v":  (m.eye_v_mv - spec.eye_v_mv_min) / spec.eye_v_mv_min,
     }
+    # DC gain, when the spec asks for it. Its ABSENCE was the defect that stalled this
+    # project: boost is peak MINUS DC, so a stage that attenuates at DC manufactures boost
+    # for free, and nothing in the other nine margins notices -- HD3, noise, power, area
+    # and both eye terms are all EASIER for a stage that passes less signal.
+    #
+    # Two independent optimisers found this unprompted. CMA-ES: 14 of 28 spec-passing
+    # designs were rejected by the guard as T4.10_dc_gain_implausible
+    # (results/pass_vs_valid.json). PPO after 40k steps: 4 of 6 held-out rollouts, same
+    # check (results/policy_rollout.json). One verified example measured
+    # dc_gain -5.00 dB, peak +1.57 dB, "boost" 6.56 dB -- a circuit with no gain at any
+    # frequency, passing every published spec.
+    #
+    # The agent was optimising exactly what it was scored on. The score was wrong.
+    if spec.dc_gain_db_min is not None:
+        out["dc_gain"] = (m.dc_gain_db - spec.dc_gain_db_min) / 3.0
+    return out
 
 
 def compute_reward(m: Measures, spec: Spec) -> tuple[float, bool, dict]:

@@ -44,7 +44,7 @@ class Spec:
     #: Setting it to 0.0 matches guards.DC_GAIN_DB_MIN (do not read that constant from
     #: here: guard thresholds are the project owners' to set, and a spec that silently
     #: tracked them would move whenever they did).
-    dc_gain_db_min: float | None = None
+    dc_gain_db_min: float | None = 0.0
 
     # constraints (hard limits)
     hd3_db_max: float = -30.0          # linearity: HD3 must be below this
