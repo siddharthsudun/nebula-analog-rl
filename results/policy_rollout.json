@@ -1,0 +1,63 @@
+{
+  "model": "results/checkpoints/seq_4096_steps.zip",
+  "specs": 8,
+  "solved": 0,
+  "rows": [
+    {
+      "target_boost_db": 8.82,
+      "channel_loss_db": 10.16,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 5.25,
+      "channel_loss_db": 8.13,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.88,
+      "channel_loss_db": 15.3,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.64,
+      "channel_loss_db": 13.84,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.26,
+      "channel_loss_db": 15.48,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.9,
+      "channel_loss_db": 8.02,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 10.14,
+      "channel_loss_db": 8.27,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.38,
+      "channel_loss_db": 9.41,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    }
+  ]
+}
