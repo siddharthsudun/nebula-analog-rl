@@ -16,6 +16,14 @@ from eqrl.envs.sequential_env import SequentialEqualizerEnv
 from eqrl.specs import DEFAULT_SPEC
 
 
+def _env_total(env, attr):
+    """Sum a counter across sub-environments, or read it directly if not vectorised."""
+    try:
+        return int(sum(env.get_attr(attr)))          # SubprocVecEnv / DummyVecEnv
+    except AttributeError:
+        return getattr(env, attr, None)
+
+
 def _invalid_logger(env, path: Path, every: int = 500):
     """Record which guard check rejected each step, and how often.
 
@@ -45,8 +53,8 @@ def _invalid_logger(env, path: Path, every: int = 500):
             path.write_text(json.dumps({
                 "timesteps": int(self.num_timesteps),
                 "elapsed_s": round(time.time() - self.t0, 1),
-                "n_sims": getattr(env, "n_sims", None),
-                "n_invalid": getattr(env, "n_invalid", None),
+                "n_sims": _env_total(env, "n_sims"),
+                "n_invalid": _env_total(env, "n_invalid"),
                 "invalid_rate": round(invalid / total, 4),
                 "by_check": dict(self.counts.most_common()),
             }, indent=2))
@@ -66,60 +74,89 @@ def main() -> None:
     p.add_argument("--guarded", action="store_true",
                    help="validate every candidate through the guard layer (Tiers 1-4); "
                         "rejected designs score --invalid-reward instead of a measurement")
-    p.add_argument("--shaped-invalid", action="store_true",
-                   help="grade rejected designs by how far outside the constraint they "
-                        "are instead of giving every one the same flat penalty. Requires "
-                        "--guarded. The shaped penalty is bounded above by the flat "
-                        "penalty it replaces, so no rejection scores better than it does "
-                        "today; only worse ones move.")
     p.add_argument("--fast", dest="fast", action="store_true",
                    help="stub HD3 and noise instead of simulating them (much faster, "
                         "and four metrics stop being measurements)")
     p.add_argument("--no-fast", dest="fast", action="store_false")
     p.set_defaults(fast=False)
+    p.add_argument("--shaped-invalid", action="store_true",
+                   help="scale the invalid penalty by how far outside the bound a design "
+                        "sits, instead of a flat constant")
     p.add_argument("--feasible-decode", action="store_true",
                    help="EXPERIMENT: project R_load onto what the supply can drive, so "
                         "the agent is handed the nearest buildable design instead of a "
                         "flat penalty. Changes what the search space means.")
+    #: Parallelism. libngspice is a process singleton -- one resident simulator per
+    #: process -- so the only way to evaluate candidates concurrently is separate
+    #: processes, which is exactly what SubprocVecEnv gives. Measured single-env
+    #: throughput at fast=False was 11.3 s/step, i.e. 31 h for a 10k run; a 31 h feedback
+    #: loop makes tuning impossible, and that, rather than any hyperparameter, is what
+    #: stalled this. 24 physical cores are available.
+    p.add_argument("--n-envs", type=int, default=1,
+                   help="parallel environments, each with its own resident simulator")
+    #: Resume. A 10k run died at ~4,600 steps with no traceback and no final model, and
+    #: every step of it was lost because nothing could pick the checkpoints back up.
+    p.add_argument("--resume", default=None,
+                   help="continue from a checkpoint .zip instead of starting fresh; "
+                        "the step counter carries on rather than restarting")
     p.add_argument("--out", default="results/seq_agent.zip")
     args = p.parse_args()
+
     if args.shaped_invalid and not args.guarded:
-        # Only the guarded path produces an Invalid to grade. Accepting the flag here
-        # would run a training job that silently ignores it and report it as enabled.
-        p.error("--shaped-invalid requires --guarded: without the guard layer nothing "
-                "is ever rejected, so there is no rejection to shape.")
+        p.error("--shaped-invalid needs --guarded: nothing produces an Invalid without it")
 
     from stable_baselines3 import PPO
     from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
+    from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
-    env = SequentialEqualizerEnv(spec=DEFAULT_SPEC, horizon=args.horizon,
-                                 fast=args.fast, seed=args.seed, pvt=args.pvt,
-                                 guarded=args.guarded,
-                                 feasible_decode=args.feasible_decode,
-                                 invalid_shaping=args.shaped_invalid)
-    model = PPO("MlpPolicy", env, seed=args.seed, verbose=1,
-                n_steps=1024, batch_size=128, gamma=0.95, gae_lambda=0.95,
-                ent_coef=0.005, learning_rate=3e-4)
-    # checkpoint so a converged model is on disk even if we stop early
+    def make_env(rank: int):
+        def _init():
+            return SequentialEqualizerEnv(
+                spec=DEFAULT_SPEC, horizon=args.horizon, fast=args.fast,
+                seed=args.seed + rank, pvt=args.pvt, guarded=args.guarded,
+                invalid_shaping=args.shaped_invalid,
+                feasible_decode=args.feasible_decode)
+        return _init
+
+    if args.n_envs > 1:
+        env = SubprocVecEnv([make_env(i) for i in range(args.n_envs)])
+    else:
+        env = DummyVecEnv([make_env(0)])
+
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    ckpt = CheckpointCallback(save_freq=2048, save_path="results/checkpoints",
-                              name_prefix="seq")
+
+    if args.resume:
+        model = PPO.load(args.resume, env=env)
+        print(f"resumed from {args.resume} at {model.num_timesteps} steps")
+    else:
+        model = PPO("MlpPolicy", env, seed=args.seed, verbose=1,
+                    n_steps=max(1024 // args.n_envs, 64), batch_size=128,
+                    gamma=0.95, gae_lambda=0.95, ent_coef=0.005, learning_rate=3e-4)
+
+    #: Checkpoint prefix is derived from the output name. Two runs launched in parallel
+    #: previously both wrote "seq_*_steps.zip" into the same directory and silently
+    #: overwrote each other, which destroyed the provenance of every checkpoint.
+    prefix = out.stem
+    ckpt = CheckpointCallback(save_freq=max(2048 // args.n_envs, 1),
+                              save_path="results/checkpoints", name_prefix=prefix)
     cbs = [ckpt]
     if args.guarded:
         cbs.append(_invalid_logger(env, out.with_name(out.stem + "_invalid.json")))
+
     t0 = time.time()
     model.learn(total_timesteps=args.timesteps, progress_bar=False,
-                callback=CallbackList(cbs))
+                callback=CallbackList(cbs),
+                reset_num_timesteps=not args.resume)
     model.save(args.out)
     mins = (time.time() - t0) / 60.0
-    # The training debt is the headline number in the amortization comparison, so it is
-    # recorded next to the model that incurred it rather than passed in by hand later.
+    n_sims = _env_total(env, "n_sims")
+    n_invalid = _env_total(env, "n_invalid")
     out.with_name(out.stem + "_train.json").write_text(json.dumps({
         "model": str(out),
         "timesteps": args.timesteps,
-        "n_sims": env.n_sims,
-        "n_invalid": env.n_invalid,
+        "n_sims": n_sims,
+        "n_invalid": n_invalid,
         "wall_minutes": round(mins, 1),
         "seed": args.seed,
         "fast": args.fast,
@@ -127,10 +164,12 @@ def main() -> None:
         "shaped_invalid": args.shaped_invalid,
         "pvt": args.pvt,
         "horizon": args.horizon,
+        "n_envs": args.n_envs,
+        "resumed_from": args.resume,
         "feasible_decode": args.feasible_decode,
     }, indent=2))
-    print(f"saved -> {args.out}  (total sims: {env.n_sims}, "
-          f"invalid: {env.n_invalid}, wall: {mins:.1f} min)")
+    print(f"saved -> {args.out}  (total sims: {n_sims}, "
+          f"invalid: {n_invalid}, wall: {mins:.1f} min)")
 
 
 if __name__ == "__main__":
