@@ -63,6 +63,25 @@ class Spec:
     target_boost_db: float = 9.0
     boost_tol_db: float = 1.5
 
+    #: OPT-IN tolerance, in dB, on hitting `target_boost_db`. `None` (the default) means
+    #: `hard_pass` does not look at the target at all and boost is judged only against the
+    #: 3-12 dB range, which is how every result before 22 Aug 2026 was scored.
+    #:
+    #: WHY IT EXISTS. The submission claims RETARGETING: give the system a spec, get a
+    #: design meeting THAT spec. Nothing in the eight hard checks ever referenced
+    #: `target_boost_db`, so any design anywhere in a 9 dB window passed every target. The
+    #: consequences were measured, not suspected: one fixed design passes 32/32 held-out
+    #: specs, and re-simulating the 26 designs a trained policy solved gives a correlation
+    #: between REQUESTED and ACHIEVED boost of 0.114 -- no steering at all -- with the
+    #: policy scoring the same 4/32 within +/-0.5 dB as the fixed design that ignores the
+    #: spec entirely (results/target_tracking_clean40k.json).
+    #:
+    #: Setting this makes the target a spec like any other: it appears here AND as a margin
+    #: in envs.equalizer_env._margins, so the reward optimises exactly what is scored. It
+    #: is opt-in for the same reason `dc_gain_db_min` is -- turning it on silently would
+    #: change what every existing artifact means. The key is absent, not False, when None.
+    boost_target_tol_db: float | None = None
+
     # PVT corners to enforce
     process_corners: tuple[str, ...] = ("tt", "ss", "ff", "sf", "fs")
     vdd_nominal: float = 1.8
@@ -75,8 +94,11 @@ class Spec:
 
 
 def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
-    """Poster's HARD spec compliance (pass/fail), distinct from the training-reward
-    tolerance. Boost is the tunable 3-12 dB *range*, not a per-corner target tolerance.
+    """Poster's HARD spec compliance (pass/fail).
+
+    Boost is the tunable 3-12 dB *range*, not a per-target tolerance -- UNLESS
+    `spec.boost_target_tol_db` is set, which adds a tenth check requiring the measured
+    boost to land within that tolerance of `target_boost_db`. See that field for why.
 
     Returns (all_pass, per-check dict).
 
@@ -99,6 +121,9 @@ def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
     }
     if spec.dc_gain_db_min is not None:
         checks["dc_gain"] = m.dc_gain_db >= spec.dc_gain_db_min
+    if spec.boost_target_tol_db is not None:
+        checks["boost_target"] = (abs(m.boost_db - spec.target_boost_db)
+                                  <= spec.boost_target_tol_db)
     return all(checks.values()), checks
 
 

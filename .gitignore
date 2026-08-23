@@ -25,6 +25,10 @@ results/*.zip
 # anyone who clones this repo. 159 KB — small enough to track. Must come after the
 # results/*.zip rules above: the LAST matching pattern wins.
 !results/seq_agent.zip
+# Same rule, same reason: seq_clean40k.zip (164 KB) is the frozen baseline every
+# headline number in docs/REPRODUCE.md comes from. Untracked, the tag below is a
+# reproducibility claim nobody can check.
+!results/seq_clean40k.zip
 
 # training logs: ngspice writes thousands of "Note: Transient op" lines to stderr
 results/train.log*

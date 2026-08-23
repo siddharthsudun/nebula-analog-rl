@@ -1,0 +1,311 @@
+{
+  "model": "results/seq_clean40k.zip",
+  "specs": 32,
+  "solved": 10,
+  "rows": [
+    {
+      "target_boost_db": 8.82,
+      "channel_loss_db": 10.16,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 5.25,
+      "channel_loss_db": 8.13,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.88,
+      "channel_loss_db": 15.3,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.64,
+      "channel_loss_db": 13.84,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.26,
+      "channel_loss_db": 15.48,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.9,
+      "channel_loss_db": 8.02,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 10.14,
+      "channel_loss_db": 8.27,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.38,
+      "channel_loss_db": 9.41,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 10.18,
+      "channel_loss_db": 12.33,
+      "sims": 10,
+      "solved_at": 10,
+      "design": {
+        "w_in": 4.5247338396750626e-05,
+        "l_in": 2.738152794539928e-07,
+        "i_tail": 0.001,
+        "rs": 3229.174715280533,
+        "cs": 1.7714167575206722e-13,
+        "r_load": 2174.419119954109,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 6.8,
+      "channel_loss_db": 11.38,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 5.17,
+      "channel_loss_db": 8.99,
+      "sims": 6,
+      "solved_at": 6,
+      "design": {
+        "w_in": 3.071401808038585e-05,
+        "l_in": 5.642376348376274e-07,
+        "i_tail": 0.0004557126134634018,
+        "rs": 2631.0850918293,
+        "cs": 1.349009519211114e-13,
+        "r_load": 2904.595148563385,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 9.02,
+      "channel_loss_db": 13.18,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.69,
+      "channel_loss_db": 11.07,
+      "sims": 4,
+      "solved_at": 4,
+      "design": {
+        "w_in": 3.3509113248683144e-05,
+        "l_in": 4.2234055697917937e-07,
+        "i_tail": 0.0008723198771476746,
+        "rs": 2229.083776473999,
+        "cs": 2.8922660293672996e-13,
+        "r_load": 2039.1192942857742,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 10.98,
+      "channel_loss_db": 15.85,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 9.11,
+      "channel_loss_db": 13.2,
+      "sims": 5,
+      "solved_at": 5,
+      "design": {
+        "w_in": 5.6379879535825725e-05,
+        "l_in": 3.951308503746986e-07,
+        "i_tail": 0.001,
+        "rs": 2707.2387039661407,
+        "cs": 2.1111389511481022e-13,
+        "r_load": 1907.6397955417633,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 9.13,
+      "channel_loss_db": 11.11,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 5.81,
+      "channel_loss_db": 13.77,
+      "sims": 4,
+      "solved_at": 4,
+      "design": {
+        "w_in": 2.710372957855197e-05,
+        "l_in": 4.4425550103187556e-07,
+        "i_tail": 0.0005750600010156632,
+        "rs": 1707.2505712509155,
+        "cs": 2.4202719502947607e-13,
+        "r_load": 2506.2136590480804,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 8.15,
+      "channel_loss_db": 10.48,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 7.92,
+      "channel_loss_db": 15.12,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 10.6,
+      "channel_loss_db": 10.86,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.43,
+      "channel_loss_db": 10.57,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 8.57,
+      "channel_loss_db": 10.7,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 7.35,
+      "channel_loss_db": 15.12,
+      "sims": 6,
+      "solved_at": 6,
+      "design": {
+        "w_in": 2.828282765788695e-05,
+        "l_in": 3.4290642738342286e-07,
+        "i_tail": 0.0006256849437952041,
+        "rs": 2438.0228459835052,
+        "cs": 2.511692721128997e-13,
+        "r_load": 2971.45853638649,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 6.36,
+      "channel_loss_db": 12.99,
+      "sims": 4,
+      "solved_at": 4,
+      "design": {
+        "w_in": 5.163869562334502e-05,
+        "l_in": 3.6110994592308994e-07,
+        "i_tail": 0.0009765061914920807,
+        "rs": 2453.877618908882,
+        "cs": 1.1423945023150625e-13,
+        "r_load": 1792.4093544483185,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 5.5,
+      "channel_loss_db": 14.66,
+      "sims": 9,
+      "solved_at": 9,
+      "design": {
+        "w_in": 4.481771188002884e-05,
+        "l_in": 4.225738137960434e-07,
+        "i_tail": 0.000803235885500908,
+        "rs": 1334.8717212677002,
+        "cs": 1.6168405905470283e-13,
+        "r_load": 1502.4425834417343,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 9.72,
+      "channel_loss_db": 9.91,
+      "sims": 4,
+      "solved_at": 4,
+      "design": {
+        "w_in": 2.298017847851542e-05,
+        "l_in": 2.1787881664931773e-07,
+        "i_tail": 0.0007748044848442078,
+        "rs": 1848.525270819664,
+        "cs": 2.7117120933980614e-13,
+        "r_load": 1754.7022998332977,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 10.26,
+      "channel_loss_db": 8.47,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 7.02,
+      "channel_loss_db": 9.2,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 7.7,
+      "channel_loss_db": 14.37,
+      "sims": 3,
+      "solved_at": 3,
+      "design": {
+        "w_in": 3.85352963009518e-05,
+        "l_in": 3.038252204656601e-07,
+        "i_tail": 0.0008204286992549896,
+        "rs": 1396.5263158082962,
+        "cs": 2.7518123655089153e-13,
+        "r_load": 1773.8173693418503,
+        "w_dfe": 0.0
+      }
+    },
+    {
+      "target_boost_db": 6.38,
+      "channel_loss_db": 8.42,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 7.43,
+      "channel_loss_db": 9.59,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    },
+    {
+      "target_boost_db": 5.54,
+      "channel_loss_db": 12.64,
+      "sims": 20,
+      "solved_at": null,
+      "design": null
+    }
+  ]
+}

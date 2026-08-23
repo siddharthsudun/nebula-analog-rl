@@ -1,0 +1,107 @@
+{
+  "specs": 8,
+  "success_test": "all 8 hard specs AND guard-valid",
+  "sweep_baseline_evals_to_first_success": 2394,
+  "curve": [
+    {
+      "steps": 2048,
+      "solved": 0,
+      "of": 8
+    },
+    {
+      "steps": 4096,
+      "solved": 0,
+      "of": 8
+    },
+    {
+      "steps": 6144,
+      "solved": 0,
+      "of": 8
+    },
+    {
+      "steps": 8192,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 10240,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 12288,
+      "solved": 2,
+      "of": 8
+    },
+    {
+      "steps": 14336,
+      "solved": 2,
+      "of": 8
+    },
+    {
+      "steps": 16384,
+      "solved": 2,
+      "of": 8
+    },
+    {
+      "steps": 18432,
+      "solved": 2,
+      "of": 8
+    },
+    {
+      "steps": 20480,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 22528,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 24576,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 26624,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 28672,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 30720,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 32768,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 34816,
+      "solved": 1,
+      "of": 8
+    },
+    {
+      "steps": 36864,
+      "solved": 2,
+      "of": 8
+    },
+    {
+      "steps": 38912,
+      "solved": 2,
+      "of": 8
+    },
+    {
+      "steps": 40960,
+      "solved": 2,
+      "of": 8
+    }
+  ]
+}

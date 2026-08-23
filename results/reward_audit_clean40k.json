@@ -1,0 +1,414 @@
+{
+  "model": "results/seq_clean40k.zip",
+  "episodes": 12,
+  "transitions": 6,
+  "normal_valid": {
+    "n": 36,
+    "mean": 4.355367858392372,
+    "max": 13.756140001916574
+  },
+  "after_invalid": {
+    "n": 6,
+    "mean": -0.04705016780836675,
+    "max": -0.0323010068502005
+  },
+  "invalid": {
+    "n": 7,
+    "mean": -5.0,
+    "max": -5.0
+  },
+  "rows": [
+    {
+      "ep": 0,
+      "t": 0,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T4.10_dc_gain_implausible",
+      "after_invalid": false
+    },
+    {
+      "ep": 0,
+      "t": 1,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": true
+    },
+    {
+      "ep": 0,
+      "t": 2,
+      "reward": 11.415,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 0,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T2.5_mosfet_not_in_saturation",
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 1,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T2.5_mosfet_not_in_saturation",
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 2,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": true
+    },
+    {
+      "ep": 1,
+      "t": 3,
+      "reward": -4.501,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 4,
+      "reward": 0.846,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 5,
+      "reward": 4.682,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 6,
+      "reward": -1.136,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 7,
+      "reward": 2.17,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 1,
+      "t": 8,
+      "reward": 10.712,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 2,
+      "t": 0,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 2,
+      "t": 1,
+      "reward": 0.459,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 2,
+      "t": 2,
+      "reward": 0.631,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 2,
+      "t": 3,
+      "reward": 11.153,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 3,
+      "t": 0,
+      "reward": 11.62,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 4,
+      "t": 0,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T2.5_mosfet_not_in_saturation",
+      "after_invalid": false
+    },
+    {
+      "ep": 4,
+      "t": 1,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": true
+    },
+    {
+      "ep": 4,
+      "t": 2,
+      "reward": 3.759,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 4,
+      "t": 3,
+      "reward": 13.756,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 5,
+      "t": 0,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T2.5_mosfet_not_in_saturation",
+      "after_invalid": false
+    },
+    {
+      "ep": 5,
+      "t": 1,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": true
+    },
+    {
+      "ep": 5,
+      "t": 2,
+      "reward": 0.76,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 5,
+      "t": 3,
+      "reward": 11.8,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 6,
+      "t": 0,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 6,
+      "t": 1,
+      "reward": 10.196,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 7,
+      "t": 0,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T4.10_dc_gain_implausible",
+      "after_invalid": false
+    },
+    {
+      "ep": 7,
+      "t": 1,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": true
+    },
+    {
+      "ep": 7,
+      "t": 2,
+      "reward": -5.0,
+      "invalid": true,
+      "check": "T4.10_dc_gain_implausible",
+      "after_invalid": false
+    },
+    {
+      "ep": 7,
+      "t": 3,
+      "reward": -0.032,
+      "invalid": false,
+      "check": null,
+      "after_invalid": true
+    },
+    {
+      "ep": 7,
+      "t": 4,
+      "reward": 5.441,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 7,
+      "t": 5,
+      "reward": 0.567,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 7,
+      "t": 6,
+      "reward": -0.198,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 7,
+      "t": 7,
+      "reward": 11.267,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 8,
+      "t": 0,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 8,
+      "t": 1,
+      "reward": 0.939,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 8,
+      "t": 2,
+      "reward": -0.88,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 8,
+      "t": 3,
+      "reward": 1.371,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 8,
+      "t": 4,
+      "reward": 10.765,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 9,
+      "t": 0,
+      "reward": 0.006,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 9,
+      "t": 1,
+      "reward": -0.106,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 9,
+      "t": 2,
+      "reward": 1.987,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 9,
+      "t": 3,
+      "reward": 4.412,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 9,
+      "t": 4,
+      "reward": -0.105,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 9,
+      "t": 5,
+      "reward": 9.713,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 10,
+      "t": 0,
+      "reward": 9.95,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 11,
+      "t": 0,
+      "reward": -0.05,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    },
+    {
+      "ep": 11,
+      "t": 1,
+      "reward": 13.542,
+      "invalid": false,
+      "check": null,
+      "after_invalid": false
+    }
+  ]
+}

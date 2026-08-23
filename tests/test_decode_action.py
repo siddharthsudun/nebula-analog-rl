@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from eqrl.circuits.ctle import ACTION_SPACE, decode_action
+from eqrl.circuits.ctle import ACTION_SPACE, DesignVars, decode_action, encode_action
 
 FIELDS = list(ACTION_SPACE)
 
@@ -112,6 +112,13 @@ class TestDomainIsExplicit:
             assert v == pytest.approx(ACTION_SPACE[f][1], rel=1e-12), f
         for f, v in zip(FIELDS, vals([-5.0] * 7, "pm1")):
             assert v == pytest.approx(ACTION_SPACE[f][0], rel=1e-12), f
+
+    def test_encode_is_the_inverse_of_decode(self):
+        original = DesignVars(w_in=47.9e-6, l_in=0.246e-6, i_tail=0.624e-3,
+                              rs=2448.0, cs=234e-15, r_load=3330.0)
+        recovered = decode_action(encode_action(original))
+        for f in FIELDS:
+            assert getattr(recovered, f) == pytest.approx(getattr(original, f), rel=1e-6)
 
 
 class TestEnvWiring:

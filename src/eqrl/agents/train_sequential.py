@@ -70,6 +70,14 @@ def main() -> None:
     p.add_argument("--timesteps", type=int, default=40_000)
     p.add_argument("--horizon", type=int, default=20)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--target-lo", type=float, default=5.0,
+                   help="minimum target boost used during training")
+    p.add_argument("--target-hi", type=float, default=11.0,
+                   help="maximum target boost used during training")
+    p.add_argument("--channel-lo", type=float, default=8.0,
+                   help="minimum channel loss used during training (dB)")
+    p.add_argument("--channel-hi", type=float, default=16.0,
+                   help="maximum channel loss used during training (dB)")
     p.add_argument("--pvt", action="store_true", help="worst-case V x T robust training")
     p.add_argument("--guarded", action="store_true",
                    help="validate every candidate through the guard layer (Tiers 1-4); "
@@ -86,6 +94,19 @@ def main() -> None:
                    help="EXPERIMENT: project R_load onto what the supply can drive, so "
                         "the agent is handed the nearest buildable design instead of a "
                         "flat penalty. Changes what the search space means.")
+    p.add_argument("--anchor-baseline", action="store_true",
+                   help="train residual corrections around the verified robust baseline")
+    p.add_argument("--anchor-noise", type=float, default=0.0,
+                   help="normalized reset noise around the robust baseline")
+    #: Scores AND rewards hitting the randomized target boost within this tolerance, in
+    #: dB. Off by default. Without it the target is worth 1.8% of the reward and the agent
+    #: correctly ignores it -- the 22 Aug policy solved 26/32 with a requested-vs-achieved
+    #: boost correlation of 0.114. With it, target tracking becomes a spec like any other.
+    #: Note this makes the task strictly HARDER: solve rates measured with it are not
+    #: comparable to any earlier number.
+    p.add_argument("--boost-tol", type=float, default=None,
+                   help="dB tolerance on hitting the target boost; makes it a scored "
+                        "check and a reward margin (default: off, target unscored)")
     #: Parallelism. libngspice is a process singleton -- one resident simulator per
     #: process -- so the only way to evaluate candidates concurrently is separate
     #: processes, which is exactly what SubprocVecEnv gives. Measured single-env
@@ -99,6 +120,14 @@ def main() -> None:
     p.add_argument("--resume", default=None,
                    help="continue from a checkpoint .zip instead of starting fresh; "
                         "the step counter carries on rather than restarting")
+    #: Exploration step. Each action nudges the normalized sizing vector by this much, so
+    #: over a 20-step horizon it sets how far a trajectory can wander. Measured at the
+    #: default 0.18: validity falls 19.4% -> 10.0% from an episode's first third to its
+    #: last under an untrained policy (Fisher exact p = 0.0133), i.e. the walk drifts into
+    #: the edges of the box faster than the policy can correct. This exposes it so that
+    #: hypothesis can be tested rather than assumed.
+    p.add_argument("--step-size", type=float, default=0.18,
+                   help="per-step movement in normalized design space")
     p.add_argument("--out", default="results/seq_agent.zip")
     args = p.parse_args()
 
@@ -111,11 +140,19 @@ def main() -> None:
 
     def make_env(rank: int):
         def _init():
+            anchor = None
+            if args.anchor_baseline:
+                from eqrl.baselines.robust import robust_design
+                anchor = robust_design()
             return SequentialEqualizerEnv(
                 spec=DEFAULT_SPEC, horizon=args.horizon, fast=args.fast,
                 seed=args.seed + rank, pvt=args.pvt, guarded=args.guarded,
-                invalid_shaping=args.shaped_invalid,
-                feasible_decode=args.feasible_decode)
+                invalid_shaping=args.shaped_invalid, step_size=args.step_size,
+                feasible_decode=args.feasible_decode,
+                target_range=(args.target_lo, args.target_hi),
+                channel_range=(args.channel_lo, args.channel_hi),
+                anchor_design=anchor, anchor_noise=args.anchor_noise,
+                boost_tol=args.boost_tol)
         return _init
 
     if args.n_envs > 1:
@@ -165,8 +202,14 @@ def main() -> None:
         "pvt": args.pvt,
         "horizon": args.horizon,
         "n_envs": args.n_envs,
+        "step_size": args.step_size,
+        "target_range": [args.target_lo, args.target_hi],
+        "channel_range": [args.channel_lo, args.channel_hi],
         "resumed_from": args.resume,
         "feasible_decode": args.feasible_decode,
+        "anchor_baseline": args.anchor_baseline,
+        "anchor_noise": args.anchor_noise,
+        "boost_tol": args.boost_tol,
     }, indent=2))
     print(f"saved -> {args.out}  (total sims: {n_sims}, "
           f"invalid: {n_invalid}, wall: {mins:.1f} min)")

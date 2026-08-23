@@ -7,6 +7,7 @@ current model ids and SDK usage.
 from __future__ import annotations
 
 import json
+import os
 
 from eqrl.specs import Spec
 
@@ -20,8 +21,13 @@ eye_h_ui_min, eye_v_mv_min. Convert units to SI (mW->W, mV->V)."""
 def parse_spec(text: str, model: str = "claude-opus-4-8") -> Spec:
     """Parse a natural-language request into a Spec via Claude.
 
-    Requires ANTHROPIC_API_KEY. Falls back to a keyword heuristic if the SDK is absent.
+    Requires an Anthropic credential for LLM parsing; otherwise uses a keyword heuristic.
     """
+    # The SDK may be installed in a developer environment even when no credential is
+    # configured. Avoid constructing a client in that case so offline baseline/fallback
+    # runs use the documented parser instead of failing before the circuit is evaluated.
+    if not (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
+        return _heuristic(text)
     try:
         import anthropic
     except ImportError:

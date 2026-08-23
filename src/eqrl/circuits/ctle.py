@@ -12,6 +12,8 @@ import dataclasses
 import math
 from dataclasses import dataclass
 
+import numpy as np
+
 
 @dataclass
 class DesignVars:
@@ -139,6 +141,27 @@ def decode_action(a, domain: str = "unit") -> DesignVars:
             v = lo + (hi - lo) * x
         vals[k] = v
     return DesignVars(**vals)
+
+
+def encode_action(dv: DesignVars, domain: str = "unit") -> np.ndarray:
+    """Map physical design variables back to the normalized action vector.
+
+    This is the inverse of :func:`decode_action` for designs inside ACTION_SPACE. It
+    keeps the log/linear conversion in one place for anchored residual policies and
+    reproducible baseline fixtures.
+    """
+    if domain not in {"unit", "pm1"}:
+        raise ValueError(f"unknown domain {domain!r}; use 'unit' or 'pm1'")
+    vals = []
+    for k, (lo, hi) in ACTION_SPACE.items():
+        v = float(getattr(dv, k))
+        if lo > 0 and hi / lo > 50:
+            x = math.log(max(v, lo) / lo) / math.log(hi / lo)
+        else:
+            x = (v - lo) / (hi - lo)
+        x = min(max(x, 0.0), 1.0)
+        vals.append(2.0 * x - 1.0 if domain == "pm1" else x)
+    return np.asarray(vals, dtype=np.float32)
 
 
 C_LOAD = 30e-15   # next-stage input cap the CTLE drives [F]

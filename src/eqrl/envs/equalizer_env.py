@@ -22,10 +22,12 @@ from eqrl.specs import DEFAULT_SPEC, Spec
 
 
 def _margins(m: Measures, spec: Spec) -> dict[str, float]:
-    """Normalized signed margins for the 8 HARD specs — one per pass/fail check in
-    specs.hard_pass, so the training reward optimizes exactly what is scored. Each is >=0
-    iff that spec is met; magnitude ~ how comfortably. Boost is the tunable 3-12 dB range
-    (the agent picks the peaking the channel needs), not a per-target tolerance.
+    """Normalized signed margins — one per pass/fail check in specs.hard_pass, so the
+    training reward optimizes exactly what is scored. Each is >=0 iff that spec is met;
+    magnitude ~ how comfortably. Boost is the tunable 3-12 dB range (the agent picks the
+    peaking the channel needs), not a per-target tolerance -- unless
+    `spec.boost_target_tol_db` is set, which adds a `boost_target` margin, exactly as
+    `spec.dc_gain_db_min` adds `dc_gain`. Both are opt-in and both mirror hard_pass.
     """
     lo, hi, f = spec.peak_freq_lo_ghz, spec.peak_freq_hi_ghz, m.peak_freq_ghz
     if lo <= f <= hi:
@@ -59,6 +61,20 @@ def _margins(m: Measures, spec: Spec) -> dict[str, float]:
     # The agent was optimising exactly what it was scored on. The score was wrong.
     if spec.dc_gain_db_min is not None:
         out["dc_gain"] = (m.dc_gain_db - spec.dc_gain_db_min) / 3.0
+    # Target tracking, when the spec asks for it. Its absence was the second scoring
+    # defect: the agent was handed the target in its observation but paid almost nothing
+    # for using it, so it didn't. Measured on the 22 Aug policy, correlation between
+    # requested and achieved boost was 0.114 -- statistically none, and identical on
+    # target-tracking to a single fixed design that ignores the spec.
+    #
+    # Weighting matters more than presence here. sequential_env._shaped previously carried
+    # a soft term worth at most +0.5 against a margin sum spanning ~27 points -- 1.8% of
+    # the available reward. Expressed as a margin it gets the same [-2, +1] clip as every
+    # other spec, so hitting the target is worth up to 3 points, the same as any other
+    # check. That is the whole fix: the target was not missing, it was mispriced.
+    if spec.boost_target_tol_db is not None:
+        tol = max(float(spec.boost_target_tol_db), 1e-9)
+        out["boost_target"] = (tol - abs(m.boost_db - spec.target_boost_db)) / tol
     return out
 
 

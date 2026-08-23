@@ -1,0 +1,5 @@
+========================================================================
+[supervisor] attempt 1 at 2026-08-21 19:18:27: 0 -> 40000 (40000 to go) cold start
+========================================================================
+[supervisor] exit 0, checkpoint now at 40960 steps
+[supervisor] training completed cleanly -> results\seq_clean40k.zip

@@ -45,6 +45,15 @@ def main() -> None:
     p.add_argument("--model", required=True)
     p.add_argument("--specs", type=int, default=8)
     p.add_argument("--out", default="results/policy_rollout.json")
+    #: Makes success require hitting the spec's target boost within this tolerance, not
+    #: merely landing anywhere in the 3-12 dB range. Off by default so the number stays
+    #: comparable to every earlier rollout; on, it measures RETARGETING, which is the
+    #: claim the submission actually makes.
+    p.add_argument("--boost-tol", type=float, default=None,
+                   help="dB tolerance on the target boost; success must also hit the "
+                        "requested target (default: off)")
+    p.add_argument("--anchor-baseline", action="store_true",
+                   help="start each rollout at the verified robust baseline")
     args = p.parse_args()
 
     from stable_baselines3 import PPO
@@ -57,7 +66,12 @@ def main() -> None:
     specs = [(float(rng.uniform(5, 11)), float(rng.uniform(8, 16)))
              for _ in range(args.specs)]
 
-    env = SequentialEqualizerEnv(fast=False, seed=123)
+    anchor = None
+    if args.anchor_baseline:
+        from eqrl.baselines.robust import robust_design
+        anchor = robust_design()
+    env = SequentialEqualizerEnv(fast=False, seed=123, anchor_design=anchor,
+                                 boost_tol=args.boost_tol)
 
     #: One guard per spec, built at THAT spec's channel loss. A single guard built once
     #: measures the eye at whatever channel it was constructed with, so every verdict
@@ -76,7 +90,8 @@ def main() -> None:
         """All 8 specs AND a valid circuit -- honest_benchmark --require-valid's test."""
         dv = decode_action(np.asarray(x))
         spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target,
-                                   channel_loss_db=channel)
+                                   channel_loss_db=channel,
+                                   boost_target_tol_db=args.boost_tol)
         try:
             v = guard_for(channel).evaluate(dv, vdd=spec.vdd_nominal)
         except Exception:

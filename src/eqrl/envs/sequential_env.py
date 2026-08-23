@@ -24,7 +24,7 @@ except ImportError:
     gym = object  # type: ignore
     spaces = None  # type: ignore
 
-from eqrl.circuits.ctle import ACTION_SPACE, decode_action
+from eqrl.circuits.ctle import ACTION_SPACE, DesignVars, decode_action, encode_action
 from eqrl.envs.equalizer_env import _margins, compute_reward
 from eqrl.sim.measures import Measures, measure_all
 from eqrl.specs import DEFAULT_SPEC, Spec
@@ -115,14 +115,26 @@ def shaped_invalid_reward(verdict, base: float = INVALID_REWARD,
 
 
 def _shaped(m: Measures, spec: Spec) -> tuple[float, bool]:
-    """Dense score + all-pass flag. `passed` == the 8 HARD specs (specs.hard_pass), which
-    is feasible. A small soft term pulls boost toward the requested target (for the demo /
-    generalization-across-target story) without gating success on it."""
+    """Dense score + all-pass flag. `passed` == the HARD specs (specs.hard_pass), which
+    is feasible.
+
+    TARGET TRACKING. When `spec.boost_target_tol_db` is None the target is not scored at
+    all, and a small soft term worth at most +0.5 pulls boost toward it without gating
+    success on it. That was measured to be far too weak to act on: against a margin sum
+    spanning ~27 points it is 1.8% of the available reward, and the resulting policy had a
+    correlation of 0.114 between the boost it was asked for and the boost it delivered.
+
+    When the tolerance IS set, `_margins` carries a `boost_target` term that gets the same
+    [-2, +1] clip as every other spec -- up to 3 points, the same as any other check -- and
+    `passed` gates on it like any other. The soft term is dropped in that case rather than
+    added to it, so the target is priced once, not twice."""
     if not m.ok:
         return -5.0, False
     mg = _margins(m, spec)
     passed = all(v >= 0 for v in mg.values())
     base = float(sum(np.clip(v, -2.0, 1.0) for v in mg.values()))
+    if spec.boost_target_tol_db is not None:
+        return base, passed
     soft = 0.5 * (1.0 - min(abs(m.boost_db - spec.target_boost_db) / 3.0, 1.0))
     return base + soft, passed
 
@@ -134,11 +146,20 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
 
     def __init__(self, spec: Spec = DEFAULT_SPEC, horizon: int = 20,
                  corner: str = "tt", fast: bool = False, step_size: float = 0.18,
-                 target_range: tuple[float, float] = (4.0, 11.0), seed: int | None = None,
-                 pvt: bool = False, channel_range: tuple[float, float] = (6.0, 12.0),
+                 target_range: tuple[float, float] = (5.0, 11.0), seed: int | None = None,
+                 pvt: bool = False, channel_range: tuple[float, float] = (8.0, 16.0),
                  guarded: bool = False, invalid_reward: float = INVALID_REWARD,
-                 feasible_decode: bool = False, invalid_shaping: bool = False):
+                 feasible_decode: bool = False, invalid_shaping: bool = False,
+                 anchor_design: DesignVars | None = None, anchor_noise: float = 0.0,
+                 boost_tol: float | None = None):
         super().__init__()
+        # OPT-IN. Sets Spec.boost_target_tol_db on the per-episode spec, which makes
+        # hitting the randomized target a scored check AND a reward margin. Off by
+        # default: turning it on changes what "solved" means, so every artifact that
+        # predates it would silently become incomparable. See specs.boost_target_tol_db.
+        if boost_tol is not None and (boost_tol <= 0.0 or not np.isfinite(boost_tol)):
+            raise ValueError("boost_tol must be a finite positive number, or None")
+        self.boost_tol = None if boost_tol is None else float(boost_tol)
         # OPT-IN. Projects R_load onto what the supply can drive; see
         # ctle.project_feasible. Changes what the search space means, so default off.
         self.feasible_decode = feasible_decode
@@ -149,6 +170,11 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         # reward path is unchanged. Only has any effect on the guarded path — nothing else
         # produces an Invalid to grade.
         self.invalid_shaping = invalid_shaping
+        if anchor_noise < 0.0 or not np.isfinite(anchor_noise):
+            raise ValueError("anchor_noise must be a finite non-negative number")
+        self._anchor_x = (encode_action(anchor_design)
+                          if anchor_design is not None else None)
+        self.anchor_noise = float(anchor_noise)
         self._guard = None
         self._last_invalid = None
         self.n_invalid = 0
@@ -178,8 +204,11 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
 
     # -- helpers -----------------------------------------------------------
     def _spec(self) -> Spec:
-        return dataclasses.replace(self.base_spec, target_boost_db=self._target,
+        spec = dataclasses.replace(self.base_spec, target_boost_db=self._target,
                                    channel_loss_db=self._channel)
+        if self.boost_tol is not None:
+            spec = dataclasses.replace(spec, boost_target_tol_db=self.boost_tol)
+        return spec
 
     def _measure(self, x: np.ndarray) -> Measures:
         dv = decode_action(x)                       # x in [0,1]; decode accepts it
@@ -242,20 +271,51 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
             self._rng = np.random.default_rng(seed)
         self._target = float(self._rng.uniform(*self.target_range))
         self._channel = float(self._rng.uniform(*self.channel_range))
-        self._x = self._rng.uniform(0.0, 1.0, size=N_PARAM).astype(np.float32)
+        if self._anchor_x is None:
+            self._x = self._rng.uniform(0.0, 1.0, size=N_PARAM).astype(np.float32)
+        else:
+            noise = self._rng.normal(0.0, self.anchor_noise, size=N_PARAM)
+            self._x = np.clip(self._anchor_x + noise, 0.0, 1.0).astype(np.float32)
         self._t = 0
         m = self._measure(self._x)
-        self._score, _ = _shaped(m, self._spec())
+        # A rejected reset has no trustworthy score. Starting the improvement baseline
+        # at the invalid penalty lets the first valid action collect a fake recovery
+        # bonus even though the agent never produced a real design at reset.
+        self._score = _shaped(m, self._spec())[0] if m.ok else None
         return self._obs(m), {"target_boost": self._target}
 
     def step(self, action):
-        self._x = np.clip(self._x + self.step_size * np.asarray(action, dtype=np.float32),
-                          0.0, 1.0)
+        delta = self.step_size * np.asarray(action, dtype=np.float32)
+        if self._anchor_x is None:
+            self._x = np.clip(self._x + delta, 0.0, 1.0)
+        else:
+            # Anchored mode is a residual policy: zero action means "keep the verified
+            # design", while the policy learns only a bounded correction around it.
+            self._x = np.clip(self._anchor_x + delta, 0.0, 1.0)
         m = self._measure(self._x)
         spec = self._spec()
         score, passed = _shaped(m, spec)
-        reward = (score - self._score) - 0.05           # improvement, small time cost
-        self._score = score
+        # If reset was rejected, there is no trustworthy prior score to compare against.
+        # Do not manufacture an improvement bonus when the first valid candidate arrives.
+        reward = (score - self._score) - 0.05 if self._score is not None else -0.05
+        if m.ok:
+            # Only a trustworthy measurement may move the baseline. A guard rejection or
+            # a failed simulation is scored -5.0 by _shaped, and letting that become the
+            # baseline hands the NEXT valid step the whole gap back as "improvement".
+            #
+            # Measured on the 100k policy under the training configuration: a valid step
+            # following a rejection paid +11.84 on average against +4.33 for one
+            # following a valid step, and because a rejection can be re-entered at will
+            # the loop repeats without limit. Honest rewards telescope -- a clean episode
+            # collects at most (final score - initial score) + the pass bonus, about 25 --
+            # yet all 12 audited episodes returned more than that, averaging +62.74 while
+            # spending 48.3% of their steps invalid.
+            #
+            # That is what "more training makes it worse" was: 40k -> 100k steps raised
+            # the rejection rate 35.6% -> 45.1% and tripled T4.10_dc_gain_implausible,
+            # because the agent was getting better at the loop, not at the task. See
+            # experiments/reward_audit.py.
+            self._score = score
         self._t += 1
         if passed:
             reward += 10.0

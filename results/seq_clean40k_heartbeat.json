@@ -1,0 +1,20 @@
+{
+  "state": "done",
+  "prefix": "seq_clean40k",
+  "target": 40000,
+  "steps_reached": 40960,
+  "pct": 102.4,
+  "attempts": 1,
+  "stalls": 0,
+  "elapsed_min": 425.7,
+  "history": [
+    {
+      "attempt": 1,
+      "started": "2026-08-21 19:18:27",
+      "resumed_from_steps": 0,
+      "exit_code": 0,
+      "steps_after": 40960
+    }
+  ],
+  "log": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\seq_clean40k_supervised.log"
+}
