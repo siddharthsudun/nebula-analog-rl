@@ -76,11 +76,19 @@ def main() -> None:
                         "searched over -- picking a seed by result would be cherry-picking")
     p.add_argument("--sigma0", type=float, default=0.25,
                    help="CMA-ES initial step. 0.25 is honest_benchmark's existing value")
+    p.add_argument("--spec-seed", type=int, default=0,
+                   help="RNG seed for the spec set, passed straight to "
+                        "target_audit.make_specs. 0 is the historical 32 specs; any "
+                        "other value is a clean held-out set at the same distribution. "
+                        "The OPTIMIZER seeds are unchanged by this, so a seed-1 run "
+                        "differs from a seed-0 run in the specs and nothing else.")
     p.add_argument("--out", default=None)
     args = p.parse_args()
-    out = args.out or f"results/search_audit_{args.method}.json"
+    out = args.out or (f"results/search_audit_{args.method}"
+                       + (f"_seed{args.spec_seed}" if args.spec_seed else "")
+                       + ".json")
 
-    specs = make_specs(args.specs)
+    specs = make_specs(args.specs, args.spec_seed)
     guards: dict[float, object] = {}
 
     def guard_for(channel: float):
@@ -190,7 +198,7 @@ def main() -> None:
               flush=True)
         Path(out).write_text(json.dumps(
             {"method": args.method, "specs": args.specs, "budget": args.budget,
-             "tol": args.tol, "base_seed": args.seed,
+             "tol": args.tol, "base_seed": args.seed, "spec_seed": args.spec_seed,
              "complete": len(rows) == len(specs), "rows": rows}, indent=1))
 
     print("\nwrote", out)

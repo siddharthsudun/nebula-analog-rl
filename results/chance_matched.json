@@ -1,0 +1,32 @@
+{
+ "PPO": {
+  "strict": 6,
+  "mean_loose_pass": 5.15625,
+  "chance": 19.69948574762285,
+  "p": 1.0
+ },
+ "PPO-restart": {
+  "strict": 16,
+  "mean_loose_pass": 3.40625,
+  "chance": 16.908935867468116,
+  "p": 0.759
+ },
+ "RANDOM": {
+  "strict": 4,
+  "mean_loose_pass": 0.3125,
+  "chance": 2.473372781065089,
+  "p": 0.1842
+ },
+ "CMA-ES": {
+  "strict": 7,
+  "mean_loose_pass": 0.71875,
+  "chance": 6.269970414201183,
+  "p": 0.4384
+ },
+ "TPE": {
+  "strict": 2,
+  "mean_loose_pass": 0.40625,
+  "chance": 3.1683422021153107,
+  "p": 0.9036
+ }
+}
