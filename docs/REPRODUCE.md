@@ -521,3 +521,95 @@ not aim, and will be reported as such.
 Arms required on each new spec seed, since none exist yet for seeds 2 and 3:
 `target_audit` (PPO replay + random), `target_audit --fresh-restarts`,
 `search_audit cmaes`, `search_audit tpe`, `hybrid_audit H1`, `hybrid_audit H2`.
+
+## 18. Amendment 1 to the pre-registration — made BEFORE any compute against it
+
+**Status: prospective.** No spec-seed-2 or spec-seed-3 simulation had been run when this
+was written, and none is contained in the commit that introduces it. The section-17 text
+above is left standing exactly as first committed rather than edited in place, so the
+record shows what was originally written and what was changed — an amendment that erased
+its own predecessor would be worth nothing.
+
+### 18.1 The defect being fixed
+
+Section 17 asserted three things that cannot all hold:
+
+  1. **H1** is "CMA-ES seeded at the handoff design with `sigma0 = 0.05`" — ADAPTIVE.
+  2. **H2** is "propose 20x r candidates, rank them by surrogate-predicted
+     `abs(boost - target)`, and spend the r SPICE evaluations only on the top-ranked"
+     — ONE-SHOT, non-adaptive.
+  3. "H1 and H2 differ in exactly one thing, so the difference between them measures the
+     surrogate and nothing else."
+
+Claim 3 is FALSE given claims 1 and 2. As written the two arms differ in TWO ways: whether
+the surrogate ranks candidates, and whether the search adapts between generations. An
+H2 > H1 result would therefore have been uninterpretable — it could have been the
+surrogate or it could have been adaptivity, and no measurement in the experiment could
+separate them. That is the same class of confound this project has spent its whole
+methodology removing, and shipping it would have been worse than shipping nothing.
+
+### 18.2 The fix
+
+**H2 becomes the SAME adaptive CMA-ES as H1, differing only by a surrogate pre-screen.**
+
+    H1  each generation: ask CMA-ES for `popsize` candidates
+                         SPICE all of them
+                         tell CMA-ES the true scores
+
+    H2  each generation: ask CMA-ES for 20 x `popsize` candidates
+                         rank them by SURROGATE-PREDICTED abs(boost - target)
+                         SPICE only the `popsize` best
+                         tell CMA-ES the true scores for those
+
+Same optimizer, same seed, same `sigma0 = 0.05`, same handoff design, same initialization,
+same objective, same SPICE budget. **The only difference is which candidates get simulated.**
+So the comparison recovers exactly the quantity it was supposed to measure:
+
+    H2 - H1  ~  the value of surrogate pre-screening
+
+The `cma` API supports this directly and it was verified before this amendment was
+written: `ask(number=20*popsize)` returns the oversampled population, and `tell()` accepts
+the `popsize`-sized subset that was actually evaluated, after which the next generation
+proceeds normally.
+
+### 18.3 What does NOT change
+
+Every pre-registered constant stands: `k = 5`, `r = 10`, `sigma0 = 0.05`, the
+`2k + r <= 20 measure_all` budget rule, the objective left exactly as `honest_benchmark`
+defines it, the matched-chance-line success criterion, per-target-tercile reporting, and
+replication across spec seeds 2 and 3. This amendment changes the STRUCTURE OF H2 only, and
+changes it in the direction of a stricter comparison, not a more favourable one.
+
+### 18.4 Stage 1 termination — made explicit
+
+`SequentialEqualizerEnv` sets `terminated = passed` on the first LOOSE pass. Stage 1
+therefore has to say what it does when that fires inside the k = 5 evaluations. It is
+recorded here rather than left to the code:
+
+> **Stage 1 runs exactly k = 5 evaluations and does NOT reset on `terminated`.** The
+> policy keeps stepping from the design it currently holds, and that design is the handoff.
+
+Two reasons, both already measured rather than assumed:
+
+  * **Resetting would import a known confound.** Section 8 measured what re-seeding after
+    termination does: it is the replay artifact, and it changes the arm's distinct-design
+    count by a factor of 3-6. Rolling a good design away and starting over is the behaviour
+    this project already identified as a measurement problem, not a search strategy.
+  * **The budget must be identical for every spec.** Ending stage 1 early on termination
+    and donating the remainder to refinement would give some specs more refinement budget
+    than others, and would give the EASY specs the most — a bias in favour of the arm.
+
+Fixed k also means `2k + r` is exactly 20 `measure_all` on every spec, with no per-spec
+variance to explain away.
+
+### 18.5 The 6,000-record smoke test is NOT evidence about the gate
+
+While implementing `surrogate_audit`, a 6,000-record slice was run as an implementation
+check and returned 0.257 dB MAE with 95.8% in the sparsest decile. **That number carries no
+weight in the acceptance decision and must not be cited as though it did.** The slice was
+the chronologically earliest records, so it spans a single run-day and its "chronological"
+split holds out almost nothing — the split it reports is not the split the gate is defined
+on. Section 16's gate is judged on the FULL-CORPUS chronological audit and on nothing else.
+
+A smoke test proves the code runs. It does not prove the model works, and the two must not
+be allowed to blur, least of all in the direction of accepting something.
