@@ -39,17 +39,72 @@
     "n": 22,
     "corr": 0.230449787666343,
     "null_ci": [
-     -0.4309840293511927,
-     0.4120242930370073
+     -0.4293044576231803,
+     0.3976686728432214
     ],
-    "p_one_sided": 0.1558,
+    "p_one_sided": 0.162,
     "median_abs_err_db": 2.3310444685549445
    },
    "chance_matched": {
     "observed": 8,
     "expected": 11.891182469101222,
     "mean_distinct_k": 1.59375,
-    "p_one_sided": 0.987
+    "p_one_sided": 0.984
+   }
+  },
+  "PPO-restart": {
+   "loose": 26,
+   "strict": 20,
+   "n_specs": 32,
+   "loose_median": 4.0,
+   "strict_median": 7.0,
+   "mean_valid_evals": 11.125,
+   "mean_distinct_boosts": 10.84375,
+   "vs_ppo": {
+    "loose": {
+     "ppo_only": 0,
+     "other_only": 4,
+     "p": 0.125
+    },
+    "strict": {
+     "ppo_only": 0,
+     "other_only": 12,
+     "p": 0.00048828125
+    }
+   },
+   "sim_matched": {
+    "evals": 10,
+    "measure_all": 20.0,
+    "loose": 22,
+    "strict": 14
+   },
+   "tracking_all_valid": {
+    "n": 31,
+    "corr": 0.7377304559010754,
+    "null_mean": 0.5305127113264876,
+    "null_ci": [
+     0.24609997709219003,
+     0.7625293290166223
+    ],
+    "p_one_sided": 0.0508,
+    "median_abs_err_db": 0.29043371741363533,
+    "within_tol": 28
+   },
+   "tracking_loose_pass": {
+    "n": 26,
+    "corr": 0.7737952285324302,
+    "null_ci": [
+     -0.38554182591662156,
+     0.3821576159612525
+    ],
+    "p_one_sided": 0.0,
+    "median_abs_err_db": 0.9125684077094256
+   },
+   "chance_matched": {
+    "observed": 20,
+    "expected": 19.22146318384976,
+    "mean_distinct_k": 3.71875,
+    "p_one_sided": 0.459
    }
   },
   "RANDOM": {
@@ -81,12 +136,12 @@
    "tracking_all_valid": {
     "n": 32,
     "corr": 0.19491290227865443,
-    "null_mean": 0.2394638302749418,
+    "null_mean": 0.23833605645255748,
     "null_ci": [
-     -0.07590871793311019,
-     0.5324631709501818
+     -0.07772605042443245,
+     0.5324573178566991
     ],
-    "p_one_sided": 0.6134,
+    "p_one_sided": 0.6132,
     "median_abs_err_db": 1.7937230998892484,
     "within_tol": 15
    },
@@ -94,17 +149,17 @@
     "n": 7,
     "corr": 0.3589100180137159,
     "null_ci": [
-     -0.8040294514941351,
-     0.8066554884747815
+     -0.8160041374249979,
+     0.801072995659933
     ],
-    "p_one_sided": 0.1912,
+    "p_one_sided": 0.1962,
     "median_abs_err_db": 1.8741367525877806
    },
    "chance_matched": {
     "observed": 2,
     "expected": 2.710059171597633,
     "mean_distinct_k": 0.25,
-    "p_one_sided": 0.842
+    "p_one_sided": 0.8485
    }
   },
   "CMA-ES": {
@@ -136,12 +191,12 @@
    "tracking_all_valid": {
     "n": 30,
     "corr": 0.3485858638078357,
-    "null_mean": 0.31814273008265975,
+    "null_mean": 0.31641189968478456,
     "null_ci": [
-     0.0035175322740219686,
-     0.607259064284163
+     0.002248335242060818,
+     0.603857044446793
     ],
-    "p_one_sided": 0.4352,
+    "p_one_sided": 0.4348,
     "median_abs_err_db": 2.031453137587939,
     "within_tol": 14
    },
@@ -149,17 +204,17 @@
     "n": 15,
     "corr": -0.17489715164604308,
     "null_ci": [
-     -0.5237032589213377,
-     0.5129056498218482
+     -0.5056137554024079,
+     0.5152773076863668
     ],
-    "p_one_sided": 0.7252,
+    "p_one_sided": 0.73,
     "median_abs_err_db": 2.550299009960707
    },
    "chance_matched": {
     "observed": 4,
     "expected": 7.165054619936277,
     "mean_distinct_k": 0.75,
-    "p_one_sided": 0.983
+    "p_one_sided": 0.9805
    }
   },
   "TPE": {
@@ -191,12 +246,12 @@
    "tracking_all_valid": {
     "n": 31,
     "corr": 0.22180627323205698,
-    "null_mean": 0.32633715384188317,
+    "null_mean": 0.3306412296597215,
     "null_ci": [
-     0.012269535444839465,
-     0.6208140588791178
+     0.01753908843211735,
+     0.6179868918513758
     ],
-    "p_one_sided": 0.7448,
+    "p_one_sided": 0.7534,
     "median_abs_err_db": 0.9861850131052794,
     "within_tol": 20
    },
@@ -204,17 +259,17 @@
     "n": 10,
     "corr": 0.6690668943235852,
     "null_ci": [
-     -0.620317016689717,
-     0.6508184979686616
+     -0.6327366130473899,
+     0.6423156511404039
     ],
-    "p_one_sided": 0.0212,
+    "p_one_sided": 0.0192,
     "median_abs_err_db": 0.8820728334894721
    },
    "chance_matched": {
     "observed": 7,
     "expected": 4.639645105078738,
     "mean_distinct_k": 0.5,
-    "p_one_sided": 0.0785
+    "p_one_sided": 0.069
    }
   }
  }

@@ -204,6 +204,29 @@ point the two produce identical action sequences — the observation vector does
 `--fresh-restarts` re-seeds each restart, giving PPO 20 genuinely distinct attempts. Off by
 default so the run above reproduces. Variant artifact: `results/target_audit_freshrestart.json`.
 
+### The restart arm, and what it does and does not show — both spec sets
+
+| | seed 0 replay | seed 0 restarts | seed 1 replay | seed 1 restarts |
+|---|---|---|---|---|
+| loose solves | 26 / 32 | 26 / 32 | 22 / 32 | 26 / 32 |
+| strict solves (±1.5 dB) | 6 / 32 | **16 / 32** | 8 / 32 | **20 / 32** |
+| median \|achieved − requested\| | 2.81 dB | 1.10 dB | 2.33 dB | 0.91 dB |
+| mean distinct designs per spec | 3.2 | 10.0 | 1.6 | 3.7 |
+| paired exact McNemar, strict, vs replay | — | p = 0.0020 (16 gained, 0 lost) | — | p = 0.0005 (12 gained, 0 lost) |
+
+The strict gain replicates on the held-out spec set and is paired-significant on both. It is
+also fully accounted for by the extra distinct designs: against the per-method matched chance
+line (section 11) the restart arm scores 16 vs 16.9 expected on seed 0 (p = 0.75) and 20 vs
+19.2 on seed 1 (p = 0.46). **More attempts, not better aim.** Restarts buy coverage; nothing
+here shows the policy steering toward a requested boost.
+
+The "closest loose-passing design" correlation for this arm is +0.553 against a null mean of
++0.584 on seed 0 (p = 0.63, *below* its null) and +0.774 against a null band of [−0.386, +0.382]
+on seed 1 (p < 0.0001, above it). A statistic that flips sign relative to its own null between
+two draws of the same distribution is not reportable in either direction. The matched chance
+line, which controls for the number of distinct designs, is consistent across both and is the
+one to quote.
+
 ## 9. Random search as a named baseline
 
 Usable, with one caveat to state in the writeup. Under the matched protocol it shares the
@@ -316,6 +339,24 @@ frozen model: construct the rollout env with `guarded=True, fast=True` while lea
 verification evaluator at `guarded, fast=False`. `target_audit --match-train-env` does
 exactly that. It is a separate audit result and is not comparable to the historical
 numbers, because the trajectory the policy walks genuinely differs.
+
+**Measured.** Artifact: `results/target_audit_matchtrain.json`, seed-0 specs, budget 20,
+verification identical to the headline run.
+
+| | eval env (headline) | train-matched env |
+|---|---|---|
+| loose solves | 26 / 32 | **32 / 32** |
+| strict solves (±1.5 dB) | 6 / 32 | 8 / 32 |
+| median \|achieved − requested\| | 2.81 dB | 2.43 dB |
+| mean distinct designs per spec | 3.2 | 2.5 |
+
+Paired exact McNemar on loose solves: 6 specs solved only in the train-matched env, 0 only in
+the eval env, p = 0.031. Strict: 6 vs 4, p = 0.75.
+
+**The mismatch penalises the policy; it does not inflate it.** The published 26/32 is the
+conservative figure, and in-distribution feasibility is higher than the number we report. The
+strict result does not move — 8/32 against a matched chance line of 16.9/32 — so the mismatch
+is not what is hiding a retargeting signal either.
 
 ## 15. Model selection overlaps the test set
 
