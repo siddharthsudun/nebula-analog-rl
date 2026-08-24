@@ -373,3 +373,151 @@ checkpoint, and those must be labelled.
 same draw order; `n = 0` is the historical set and any other `n` has never been seen by
 any selection decision. Running all four arms on a fresh seed is a one-command validation
 whenever the team wants it.
+
+---
+
+# PRE-REGISTRATION — Strategy A, week 1
+
+**Committed before any spec-seed-2 or spec-seed-3 simulation was run.** Everything from
+section 16 down was written and committed first, deliberately, so that the constants below
+cannot have been chosen after seeing the result they are used to judge. The commit that
+introduces this text contains no seed-2 or seed-3 artifact; check `git log` on this file
+against the artifact timestamps if you want to verify that rather than trust it.
+
+Nothing in sections 1–15 changes. The reward, the PPO hyperparameters, the design-space
+bounds, the ±1.5 dB criterion and the frozen `seq_clean40k` checkpoint are all untouched by
+this work. The hybrid enters the comparison as an ADDITIONAL ARM under the protocol
+section 11 already froze — it does not modify any existing arm.
+
+## 16. Surrogate model — specification and acceptance gate
+
+### What it is
+
+A regressor over the SPICE runs already on disk in `results/raw`:
+
+    normalized 6-D design  ->  (dc_gain_db, boost_db, peak_freq_ghz)
+
+The corpus holds 414,955 recorded runs, 374,455 of which carry an `acx.data`. All three
+target-relevant metrics derive from the AC run alone (`sim/measures.py:peaking`), so the
+dataset is recoverable by PARSING FILES ALREADY ON DISK. It costs zero new simulation.
+
+Designs are normalized exactly as `ctle.decode_action` maps them — log-scaled on `w_in`,
+`i_tail`, `rs`, `cs`, `r_load`; linear on `l_in` — so a distance in surrogate space is the
+same distance the policy's action space uses.
+
+### Scope, stated as a limit rather than discovered as one
+
+  * It predicts AC metrics ONLY. It does not predict guard validity, eye height/width,
+    input-referred noise, or HD3. Guard validity is the binding constraint: a uniform
+    sample of the space is 23% guard-valid and 1.2% all-pass
+    (`results/feasibility_band.json`, 2000 samples). The surrogate cannot see that and
+    must never be asked to.
+  * Its coverage is BIASED toward the regions PPO visited, because that is what generated
+    the corpus. The test TARGETS are drawn fresh (`--spec-seed 2`, `3`), so this is not
+    leakage of the test set; it is a stated limit on where the model is accurate.
+  * IT IS A RANKER, NEVER A JUDGE. No success, solve, or pass in any reported number is
+    ever decided by the surrogate. Every design that appears in a result is verified by
+    the same guarded `fast=False` evaluator every other arm uses.
+
+### Acceptance gate — PRE-REGISTERED, NOT TO BE LOOSENED
+
+The surrogate ships into the H2 arm only if, on a CHRONOLOGICAL split of the corpus
+(train on the earliest runs, test on the latest — an i.i.d. split leaks, because PPO
+trajectories put a design's own one-step neighbour into the training set):
+
+    (a) boost_db MAE  <=  0.5 dB  overall,                                   AND
+    (b) >= 90% of held-out designs within 1.5 dB of truth IN THE SPARSEST
+        DECILE by distance to the nearest training design.
+
+A preliminary 40,000-record probe returned 0.295 dB MAE and 95.2% in the sparsest decile,
+so this gate is a floor that is expected to clear, not a hope. **It is recorded here at
+that level precisely so it cannot be relaxed after the full-corpus number is seen.** If
+the full corpus misses the gate, the surrogate is CUT and the week proceeds with H1 only;
+the gate does not move.
+
+## 17. The hybrid arm — pre-registered protocol
+
+### Motivation, and what it does not claim
+
+PPO is measured-good at feasibility (26/32 loose, median 4 evaluations) and
+measured-not-good at hitting a requested boost (section 8: on its matched chance line on
+both spec sets). The hybrid tests whether SPLITTING THE PROBLEM beats asking one policy to
+do both.
+
+If it succeeds, the honest claim is *"a two-stage designer, in which the RL policy supplies
+feasibility and a local refiner supplies precision, hits requested specs above matched
+chance."* It is NOT a claim that the RL policy learned to retarget. That distinction is the
+whole point and must survive into the writeup.
+
+### Structure
+
+    spec (target, channel)
+      -> STAGE 1: frozen seq_clean40k, k evaluations       [2.00 measure_all each]
+      -> hand off the design the policy currently holds
+      -> STAGE 2: local refinement, r evaluations          [1.00 measure_all each]
+      -> verification: guarded, fast=False, outside the loop, identical to every other arm
+
+### Constants — FIXED HERE, BEFORE ANY RUN
+
+| constant | value | why this value, decided in advance |
+|---|---|---|
+| `k` (PPO evaluations) | **5** | PPO's median first loose solve is 4 evaluations, a fact measured in section 8 BEFORE this experiment existed. k = 5 places the handoff just past it. |
+| `r` (refinement evaluations) | **10** | forced by the budget rule below, given k = 5 |
+| budget rule | **2k + r <= 20 `measure_all`** | every baseline arm spends 20. PPO costs 2.00 `measure_all` per evaluation and the search arms 1.00 (section 13, measured). Matching the SIMULATION budget rather than the evaluation count is what makes the comparison fair. |
+| `sigma0` (refiner) | **0.05** | ~5% of each normalized axis, i.e. local by construction. Not searched over. |
+| objective | `honest_benchmark`'s existing dense score, **unchanged**: `hard-pass count - abs(boost - target)/3` | introducing a new objective here would confound "splitting the problem helped" with "a better objective helped" |
+
+`k` is the cherry-picking surface of this experiment and pre-registering it is the entire
+defence. A `k`-sweep may be run afterwards; if it is, it is labelled EXPLORATORY and never
+becomes the headline number.
+
+### The two variants — same SPICE budget, different use of it
+
+  * **H1** — CMA-ES seeded at the handoff design with `sigma0 = 0.05`, spending all r
+    evaluations on SPICE. No surrogate involved. This is the control for H2.
+  * **H2** — propose 20x r candidates, rank them by SURROGATE-PREDICTED
+    `abs(boost - target)`, and spend the r SPICE evaluations only on the top-ranked.
+    Identical SPICE budget to H1; more candidates considered. This is where the surrogate
+    either earns its place or does not.
+
+H1 and H2 differ in exactly one thing, so the difference between them measures the
+surrogate and nothing else.
+
+### Success criterion — SINGLE, PRE-REGISTERED
+
+> The hybrid arm must exceed its OWN PER-METHOD MATCHED CHANCE LINE (section 11), with k
+> counted as DISTINCT designs, on spec seed 2 — AND replicate that on spec seed 3.
+
+Raw strict-solve count is explicitly NOT the criterion. Section 8 is the reason: fresh
+restarts raised strict solves 6/32 -> 16/32 and 8/32 -> 20/32 while landing ON the chance
+line both times, because more feasible designs produce more accidental target hits. A
+hybrid that raises the strict count without clearing its line has demonstrated coverage,
+not aim, and will be reported as such.
+
+### Reporting requirements
+
+  * **Per-target-tercile.** Measured across all 3,624 recorded guard-valid boosts, the
+    fraction of distinct achieved boosts within +/-1.5 dB of a request is 0.232 on average
+    but 0.086 at an 11 dB request. The top of the 5-11 dB band is genuinely harder, so a
+    method that happens to draw high targets looks worse for reasons that are not the
+    method. Aggregate numbers hide this; terciles do not.
+  * **Both budget readings**, evaluation-matched and simulation-matched, as `final_report`
+    already prints for every arm.
+  * **Replication across spec seeds 2 and 3.** Neither has been seen by any selection
+    decision. A result that holds on one and not the other is reported as not replicating —
+    the same rule that retired the CMA-ES loose comparison and the restart arm's
+    correlation statistic.
+
+### Run order
+
+    commit this protocol
+      -> surrogate audit
+      -> gate check (cut H2 here if it fails; do not move the gate)
+      -> H1 + H2 implemented
+      -> spec seed 2, all arms
+      -> spec seed 3, all arms
+      -> compare against frozen PPO and the matched chance line
+
+Arms required on each new spec seed, since none exist yet for seeds 2 and 3:
+`target_audit` (PPO replay + random), `target_audit --fresh-restarts`,
+`search_audit cmaes`, `search_audit tpe`, `hybrid_audit H1`, `hybrid_audit H2`.
