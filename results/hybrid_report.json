@@ -1,0 +1,26 @@
+[
+ {
+  "spec_seed": 2,
+  "n": 32,
+  "strict": 14,
+  "loose": 23,
+  "stage1_strict": 9,
+  "stage1_loose": 22,
+  "chance_expected": 14.739318216406334,
+  "chance_p": 0.73,
+  "mean_distinct_k": 3.46875,
+  "measure_all_total": 640.0
+ },
+ {
+  "spec_seed": 3,
+  "n": 32,
+  "strict": 13,
+  "loose": 23,
+  "stage1_strict": 4,
+  "stage1_loose": 17,
+  "chance_expected": 12.863491412788337,
+  "chance_p": 0.574,
+  "mean_distinct_k": 2.6875,
+  "measure_all_total": 640.0
+ }
+]
