@@ -1,0 +1,69 @@
+checking the surrogate's coordinates against ctle.encode_action ...
+  bitwise identical after the float32 cast; float64 residual 2.980e-08 (= float32 eps, which is the cast and not a disagreement)  OK
+
+parsing the recorded SPICE corpus under results/raw (no simulation is run) ...
+  scanned   25000/415092  kept    3765
+  scanned   50000/415092  kept    9498
+  scanned   75000/415092  kept   34498
+  scanned  100000/415092  kept   59498
+  scanned  125000/415092  kept   84498
+  scanned  150000/415092  kept  109498
+  scanned  175000/415092  kept  134498
+  scanned  200000/415092  kept  159498
+  scanned  225000/415092  kept  184498
+  scanned  250000/415092  kept  209498
+  scanned  275000/415092  kept  234498
+  scanned  300000/415092  kept  259498
+  scanned  325000/415092  kept  284496
+  scanned  350000/415092  kept  309496
+  scanned  375000/415092  kept  334496
+  scanned  400000/415092  kept  359496
+  scanned 415092, kept 374588, no acx 40502, unusable 2
+  cached -> results\surrogate_corpus.npz
+corpus: 374588 records, 8 distinct run days
+
+IID SPLIT  (leaky -- shown for contrast only, the gate is NOT judged here)   (test n = 20000)
+   dc_gain_db     MAE  0.919   median  0.415   R2  0.953   (sd of truth  8.71)
+   boost_db       MAE  0.503   median  0.211   R2  0.951   (sd of truth  5.00)
+   peak_freq_ghz  MAE  0.873   median  0.024   R2  0.816   (sd of truth  7.10)
+   boost error by distance to nearest training design:
+     decile  1  d in [0.000, 0.000]  n= 2000   MAE  0.293   within 1.5 dB  95.2%
+     decile  2  d in [0.000, 0.024]  n= 2000   MAE  0.341   within 1.5 dB  94.8%
+     decile  3  d in [0.025, 0.044]  n= 2000   MAE  0.353   within 1.5 dB  96.5%
+     decile  4  d in [0.044, 0.056]  n= 2000   MAE  0.401   within 1.5 dB  96.0%
+     decile  5  d in [0.056, 0.066]  n= 2000   MAE  0.423   within 1.5 dB  96.1%
+     decile  6  d in [0.066, 0.076]  n= 2000   MAE  0.448   within 1.5 dB  96.0%
+     decile  7  d in [0.076, 0.085]  n= 2000   MAE  0.522   within 1.5 dB  93.9%
+     decile  8  d in [0.085, 0.096]  n= 2000   MAE  0.541   within 1.5 dB  92.8%
+     decile  9  d in [0.096, 0.112]  n= 2000   MAE  0.698   within 1.5 dB  88.3%
+     decile 10  d in [0.112, 0.324]  n= 2000   MAE  1.012   within 1.5 dB  80.0%   <- SPARSEST, the gate is judged here
+
+CHRONOLOGICAL SPLIT  (held-out era -- THE GATE IS JUDGED ON THIS)   (test n = 20000)
+   dc_gain_db     MAE  0.900   median  0.463   R2  0.945   (sd of truth  7.47)
+   boost_db       MAE  0.456   median  0.176   R2  0.943   (sd of truth  4.30)
+   peak_freq_ghz  MAE  0.632   median  0.020   R2  0.784   (sd of truth  5.55)
+   boost error by distance to nearest training design:
+     decile  1  d in [0.000, 0.035]  n= 2000   MAE  0.199   within 1.5 dB  97.7%
+     decile  2  d in [0.035, 0.055]  n= 2000   MAE  0.287   within 1.5 dB  98.3%
+     decile  3  d in [0.055, 0.065]  n= 2000   MAE  0.352   within 1.5 dB  96.8%
+     decile  4  d in [0.065, 0.073]  n= 2000   MAE  0.390   within 1.5 dB  96.6%
+     decile  5  d in [0.073, 0.081]  n= 2000   MAE  0.426   within 1.5 dB  96.1%
+     decile  6  d in [0.081, 0.088]  n= 2000   MAE  0.442   within 1.5 dB  94.8%
+     decile  7  d in [0.088, 0.096]  n= 2000   MAE  0.479   within 1.5 dB  93.8%
+     decile  8  d in [0.096, 0.106]  n= 2000   MAE  0.516   within 1.5 dB  92.2%
+     decile  9  d in [0.106, 0.122]  n= 2000   MAE  0.550   within 1.5 dB  89.2%
+     decile 10  d in [0.122, 0.225]  n= 2000   MAE  0.917   within 1.5 dB  81.2%   <- SPARSEST, the gate is judged here
+
+COVERAGE  distance from a UNIFORMLY RANDOM design to the nearest recorded one
+   median 0.111   90th pct 0.152   max 0.224   (unit cube diagonal 2.45)
+
+========================================================================
+PRE-REGISTERED GATE  (docs/REPRODUCE.md section 16, committed before this ran)
+  (a) boost MAE 0.456 dB  <=  0.50 dB           PASS
+  (b) sparsest decile within 1.5 dB: 81.2%  >=  90%   FAIL
+
+  GATE MISSED -- H2 IS CUT. The week proceeds with H1 only.
+  The gate does not move. Do not re-run this with a looser threshold.
+========================================================================
+
+wrote results/surrogate_audit.json

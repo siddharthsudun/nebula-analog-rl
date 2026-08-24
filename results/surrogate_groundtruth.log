@@ -1,0 +1,4 @@
+PARSER MATCHES SPICE GROUND TRUTH on 51 uniformly drawn designs
+   dc_gain_db     max error 0.00047 dB
+   boost_db       max error 0.00049 dB
+   peak_freq_ghz  max error 0.00005 dB

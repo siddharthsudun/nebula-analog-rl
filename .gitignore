@@ -37,3 +37,11 @@ results/*.err
 # Guard-layer raw artifact store: one directory per simulation. The 40k training
 # run alone produced 44,280 of them, 5.0 GB. It is an on-disk audit trail, not history.
 results/raw/
+
+# Surrogate corpora: 18 MB each, and regenerable in ~20 min from results/raw by
+# `surrogate_audit --rebuild`. What has to be reproducible is the PARSER and its
+# ground-truth check, both of which are tracked; the blob is a cache.
+#   surrogate_corpus_REALPART_BUG.npz is kept ON DISK, deliberately untracked, as the
+#   evidence artifact for the mislabelling described in docs/REPRODUCE.md section 19.
+#   It is INVALID and is not part of any reproducibility path.
+results/*.npz
