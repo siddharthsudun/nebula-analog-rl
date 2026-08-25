@@ -1,0 +1,2266 @@
+{
+ "probe_h": [
+  0.02,
+  0.05
+ ],
+ "verify_s": 0.1,
+ "influential_db": 0.25,
+ "spec_seed": 2,
+ "k": 5,
+ "model": "results/seq_clean40k.zip",
+ "n_measure_all": 492,
+ "complete": true,
+ "rows": [
+  {
+   "spec": 0,
+   "target_boost_db": 6.569672805495898,
+   "channel_loss_db": 10.387929147312986,
+   "handoff_valid": true,
+   "handoff_boost_db": 4.843162989844577,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -8.836291217875473,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.8836291217875474
+      },
+      "0.05": {
+       "slope_db_per_unit": -8.881203698530824,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.8881203698530824
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.7319498496982417,
+       "delta_db": -1.1112131401463357
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -2.638448814564676,
+       "span": 0.039999999999999994,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2638448814564676
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.433007556941984,
+       "span": 0.09999999999999999,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2433007556941984
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.1,
+       "valid": true,
+       "boost_db": 4.604125418102902,
+       "delta_db": -0.23903757174167506
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 5.163562229059717,
+       "delta_db": 0.32039923921513935
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 2.1243485056011906,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.21243485056011907
+      },
+      "0.05": {
+       "slope_db_per_unit": 2.309752843941808,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.2309752843941808
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.012658381417591,
+       "delta_db": 0.16949539157301352
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.586605593072086,
+       "delta_db": -0.25655739677249123
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": null,
+       "span": 0.040000000000000036,
+       "plus_valid": false,
+       "minus_valid": true,
+       "pred_delta_db": null
+      },
+      "0.05": {
+       "slope_db_per_unit": null,
+       "span": 0.10000000000000009,
+       "plus_valid": false,
+       "minus_valid": true,
+       "pred_delta_db": null
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.6590938121851257,
+       "delta_db": -1.1840691776594516
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 21.299830014493583,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.1299830014493586
+      },
+      "0.05": {
+       "slope_db_per_unit": 21.275027849539303,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.1275027849539305
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.09349727932916,
+       "delta_db": 2.2503342894845826
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 2.889844263317436,
+       "delta_db": -1.9533187265271414
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": null,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": false,
+       "pred_delta_db": null
+      },
+      "0.05": {
+       "slope_db_per_unit": null,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": false,
+       "pred_delta_db": null
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.9827201248416433,
+       "delta_db": -1.860442865002934
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 1,
+   "target_boost_db": 9.885354443565681,
+   "channel_loss_db": 8.735327537080774,
+   "handoff_valid": true,
+   "handoff_boost_db": 9.634191022625837,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 5.6632300319764575,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.5663230031976457
+      },
+      "0.05": {
+       "slope_db_per_unit": 5.594902101829481,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.5594902101829481
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 9.916152886220802,
+       "delta_db": 0.2819618635949652
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 8.833947313290656,
+       "delta_db": -0.8002437093351809
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -5.229206582990241,
+       "span": 0.04000000000000001,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.5229206582990241
+      },
+      "0.05": {
+       "slope_db_per_unit": -5.2029251897226745,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.5202925189722675
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 9.131008719874062,
+       "delta_db": -0.5031823027517746
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 10.154321766851803,
+       "delta_db": 0.5201307442259662
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 1.2880020342372667,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.12880020342372667
+      },
+      "0.05": {
+       "slope_db_per_unit": 1.5094061208378293,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.15094061208378295
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 9.743109123433394,
+       "delta_db": 0.10891810080755704
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 9.450106792827807,
+       "delta_db": -0.18408422979802985
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 17.342937052652314,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.7342937052652314
+      },
+      "0.05": {
+       "slope_db_per_unit": 17.398898835348614,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.7398898835348615
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.678486214878267,
+       "delta_db": -1.95570480774757
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 16.543111353681656,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.6543111353681657
+      },
+      "0.05": {
+       "slope_db_per_unit": 16.525947409314096,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.6525947409314097
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 11.08036924008716,
+       "delta_db": 1.4461782174613234
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.787658396242326,
+       "delta_db": -1.8465326263835111
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -11.643424831578642,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.1643424831578641
+      },
+      "0.05": {
+       "slope_db_per_unit": null,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": false,
+       "pred_delta_db": null
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 8.500617799116633,
+       "delta_db": -1.1335732235092042
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 2,
+   "target_boost_db": 8.600603155793923,
+   "channel_loss_db": 13.828484214494356,
+   "handoff_valid": false,
+   "handoff_boost_db": null,
+   "dims": {}
+  },
+  {
+   "spec": 3,
+   "target_boost_db": 6.12740644019962,
+   "channel_loss_db": 8.441173018664546,
+   "handoff_valid": false,
+   "handoff_boost_db": null,
+   "dims": {}
+  },
+  {
+   "spec": 4,
+   "target_boost_db": 6.649816207436229,
+   "channel_loss_db": 13.25946411900474,
+   "handoff_valid": true,
+   "handoff_boost_db": 1.6966545811841063,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -14.17217829136887,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.417217829136887
+      },
+      "0.05": {
+       "slope_db_per_unit": -14.182395872866508,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.418239587286651
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.09586015973111994,
+       "delta_db": -1.6007944214529863
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.891426985857991,
+       "delta_db": 1.1947724046738846
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -6.760420768526913,
+       "span": 0.04000000000000001,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6760420768526914
+      },
+      "0.05": {
+       "slope_db_per_unit": -5.372385102530981,
+       "span": 0.1,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.5372385102530981
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.1,
+       "valid": true,
+       "boost_db": 1.1027232499999502,
+       "delta_db": -0.5939313311841561
+      },
+      "minus": {
+       "step": -0.06468980759382248,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -7.679458933741156,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.7679458933741157
+      },
+      "0.05": {
+       "slope_db_per_unit": -9.10552156125422,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.910552156125422
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.8955859530466848,
+       "delta_db": 0.19893137186257848
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 9.047183529836609,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.9047183529836609
+      },
+      "0.05": {
+       "slope_db_per_unit": 9.021068700280207,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.9021068700280207
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.5588394780248596,
+       "delta_db": 0.8621848968407533
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.7595946600150967,
+       "delta_db": -0.9370599211690096
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 22.36937747831692,
+       "span": 0.04000000000000001,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.2369377478316923
+      },
+      "0.05": {
+       "slope_db_per_unit": 22.177966863098636,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.2177966863098635
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.10090701554928,
+       "delta_db": 2.404252434365174
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 1.0350911683332242e-08,
+       "delta_db": -1.6966545708331946
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -26.93344225272357,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -2.693344225272357
+      },
+      "0.05": {
+       "slope_db_per_unit": -27.1801230212641,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -2.7180123021264104
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.5814143122407955,
+       "delta_db": 1.8847597310566893
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 5,
+   "target_boost_db": 8.373593976682567,
+   "channel_loss_db": 9.200498106442689,
+   "handoff_valid": false,
+   "handoff_boost_db": null,
+   "dims": {}
+  },
+  {
+   "spec": 6,
+   "target_boost_db": 7.595784744828723,
+   "channel_loss_db": 13.354378388596162,
+   "handoff_valid": true,
+   "handoff_boost_db": 4.020012619722631,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -12.770122284568497,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.27701222845685
+      },
+      "0.05": {
+       "slope_db_per_unit": -12.80956560011216,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.280956560011216
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.3623891992143777,
+       "delta_db": -1.6576234205082532
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.96030851226754,
+       "delta_db": 0.940295892544909
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -7.3726913909439205,
+       "span": 0.039999999999999994,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.7372691390943921
+      },
+      "0.05": {
+       "slope_db_per_unit": -7.239531060491587,
+       "span": 0.09999999999999999,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.7239531060491587
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.1,
+       "valid": true,
+       "boost_db": 3.316107646796321,
+       "delta_db": -0.7039049729263098
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 4.744764115083673,
+       "delta_db": 0.7247514953610423
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -13.464390496919775,
+       "span": 0.020000000000000018,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.3464390496919776
+      },
+      "0.05": {
+       "slope_db_per_unit": -10.845157610803353,
+       "span": 0.050000000000000044,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.0845157610803353
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.0,
+       "valid": true,
+       "boost_db": 4.020012619722631,
+       "delta_db": 0.0
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.811819506868342,
+       "delta_db": 0.7918068871457109
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 13.459029957866786,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.3459029957866786
+      },
+      "0.05": {
+       "slope_db_per_unit": 13.481544077910751,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.3481544077910752
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.260674426427565,
+       "delta_db": 1.2406618067049342
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.5526027353647054,
+       "delta_db": -1.4674098843579255
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 24.57041371748938,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.457041371748938
+      },
+      "0.05": {
+       "slope_db_per_unit": 24.478404696093904,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.4478404696093907
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.43387696559572,
+       "delta_db": 2.4138643458730895
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.6229608778841778,
+       "delta_db": -2.397051741838453
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -53.163288546226106,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -5.316328854622611
+      },
+      "0.05": {
+       "slope_db_per_unit": null,
+       "span": 0.10000000000000003,
+       "plus_valid": false,
+       "minus_valid": true,
+       "pred_delta_db": null
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.738446376418104,
+       "delta_db": 2.7184337566954735
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 7,
+   "target_boost_db": 7.536708039620767,
+   "channel_loss_db": 13.065475194192931,
+   "handoff_valid": false,
+   "handoff_boost_db": null,
+   "dims": {}
+  },
+  {
+   "spec": 8,
+   "target_boost_db": 10.80461571496206,
+   "channel_loss_db": 13.464518578477001,
+   "handoff_valid": true,
+   "handoff_boost_db": 7.543964459588279,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -6.030992538350727,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6030992538350728
+      },
+      "0.05": {
+       "slope_db_per_unit": -6.172123684660868,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6172123684660868
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.609614933009775,
+       "delta_db": -0.9343495265785045
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.839682426676086,
+       "delta_db": 0.29571796708780695
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -3.4922455061945326,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.3492245506194533
+      },
+      "0.05": {
+       "slope_db_per_unit": -3.37451221425881,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.337451221425881
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.198541529706578,
+       "delta_db": -0.34542292988170153
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 7.914594647307917,
+       "delta_db": 0.3706301877196374
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -2.7927721271535173,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2792772127153517
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.6567838231913505,
+       "span": 0.09265028238296513,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.26567838231913504
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.04265028238296509,
+       "valid": true,
+       "boost_db": 7.408931428775249,
+       "delta_db": -0.1350330308130303
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.691689678941332,
+       "delta_db": 0.1477252193530525
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 14.471075242947427,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.4471075242947427
+      },
+      "0.05": {
+       "slope_db_per_unit": 14.502444565115184,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.4502444565115185
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 8.86981558189923,
+       "delta_db": 1.3258511223109508
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.946643550362406,
+       "delta_db": -1.597320909225873
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 25.336239067410006,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.533623906741001
+      },
+      "0.05": {
+       "slope_db_per_unit": 25.272383886223093,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.5272383886223095
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 9.942318371768181,
+       "delta_db": 2.3983539121799016
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.949813755283108,
+       "delta_db": -2.5941507043051715
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -22.296873898600445,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -2.2296873898600444
+      },
+      "0.05": {
+       "slope_db_per_unit": -24.920207462123113,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -2.4920207462123116
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 9.428455449547581,
+       "delta_db": 1.8844909899593016
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 9,
+   "target_boost_db": 7.349748998480157,
+   "channel_loss_db": 9.498020557760785,
+   "handoff_valid": false,
+   "handoff_boost_db": null,
+   "dims": {}
+  },
+  {
+   "spec": 10,
+   "target_boost_db": 7.075763993430399,
+   "channel_loss_db": 12.088527788556616,
+   "handoff_valid": true,
+   "handoff_boost_db": 5.580810876945682,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -2.6649791562424174,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.26649791562424174
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.7059096060195187,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.27059096060195187
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.040949930757444,
+       "delta_db": -0.539860946188238
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.603270071833862,
+       "delta_db": 0.022459194888179823
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -2.2962505170301495,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.22962505170301495
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.309168424067546,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2309168424067546
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.3555300977290745,
+       "delta_db": -0.22528077921660739
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.814411105289379,
+       "delta_db": 0.23360022834369687
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 1.7913014838494263,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.17913014838494265
+      },
+      "0.05": {
+       "slope_db_per_unit": 1.7730757847379945,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.17730757847379947
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.617401447090877,
+       "delta_db": 0.0365905701451954
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.287643185087433,
+       "delta_db": -0.2931676918582493
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 16.067237125218767,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.6067237125218767
+      },
+      "0.05": {
+       "slope_db_per_unit": 16.098499697148675,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.6098499697148676
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.054973068464223,
+       "delta_db": 1.4741621915185412
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.8130542526453386,
+       "delta_db": -1.7677566243003433
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 22.35867479221454,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.235867479221454
+      },
+      "0.05": {
+       "slope_db_per_unit": 22.30227885043829,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.230227885043829
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.600640496919906,
+       "delta_db": 2.0198296199742245
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.1858520802637127,
+       "delta_db": -2.394958796681969
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -6.707280003522092,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6707280003522093
+      },
+      "0.05": {
+       "slope_db_per_unit": -6.737017250428317,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6737017250428318
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.903752776038496,
+       "delta_db": -0.6770581009071863
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.262145115047771,
+       "delta_db": 0.6813342381020888
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 11,
+   "target_boost_db": 10.347256457003475,
+   "channel_loss_db": 14.204511539781516,
+   "handoff_valid": true,
+   "handoff_boost_db": 5.685216580706907,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -6.534298831447954,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6534298831447954
+      },
+      "0.05": {
+       "slope_db_per_unit": -6.339481590112465,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.6339481590112466
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.765006823399675,
+       "delta_db": -0.9202097573072319
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.121209400628666,
+       "delta_db": 0.43599281992175865
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -2.715646269046125,
+       "span": 0.03999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2715646269046125
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.660076989059812,
+       "span": 0.09999999999999999,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2660076989059812
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.4155358177553214,
+       "delta_db": -0.2696807629515856
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 5.937596357912752,
+       "delta_db": 0.2523797772058449
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -1.8146599184348784,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.18146599184348786
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.4254471984699832,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.24254471984699832
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.888134998844169,
+       "delta_db": -0.7970815818627379
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.692908944047623,
+       "delta_db": 0.007692363340716213
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 7.599742633564992,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.7599742633564992
+      },
+      "0.05": {
+       "slope_db_per_unit": 7.604320291843553,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.7604320291843554
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.08225882053375244,
+       "valid": true,
+       "boost_db": 6.285972465578874,
+       "delta_db": 0.6007558848719672
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.885365110639206,
+       "delta_db": -0.7998514700677006
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 27.430353510022584,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.7430353510022587
+      },
+      "0.05": {
+       "slope_db_per_unit": 27.334089486810043,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.7334089486810047
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 8.395013748677995,
+       "delta_db": 2.7097971679710877
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.9992341918839895,
+       "delta_db": -2.6859823888229175
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -13.415105212081723,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.3415105212081724
+      },
+      "0.05": {
+       "slope_db_per_unit": -13.791521189981598,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.37915211899816
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.9117490887135276,
+       "delta_db": -1.7734674919933795
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 12,
+   "target_boost_db": 6.908879603692246,
+   "channel_loss_db": 15.393735172054594,
+   "handoff_valid": true,
+   "handoff_boost_db": 6.66923831460399,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -4.016283384682869,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.40162833846828694
+      },
+      "0.05": {
+       "slope_db_per_unit": -4.0460890350554966,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.4046089035055497
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.961951308236154,
+       "delta_db": -0.707287006367836
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.777936832552952,
+       "delta_db": 0.10869851794896235
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -3.6450888138658457,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.3645088813865846
+      },
+      "0.05": {
+       "slope_db_per_unit": -3.507750762631404,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.3507750762631404
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.323776304278335,
+       "delta_db": -0.3454620103256554
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 7.037911556241492,
+       "delta_db": 0.36867324163750226
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 1.476401490556921,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.1476401490556921
+      },
+      "0.05": {
+       "slope_db_per_unit": 1.475282865045163,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.1475282865045163
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.799763052966746,
+       "delta_db": 0.13052473836275613
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.5033692507703424,
+       "delta_db": -0.16586906383364752
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 20.062211943853118,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.006221194385312
+      },
+      "0.05": {
+       "slope_db_per_unit": 20.136098036265903,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.0136098036265904
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 4.381858876416203,
+       "delta_db": -2.287379438187787
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 23.11750732504552,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.311750732504552
+      },
+      "0.05": {
+       "slope_db_per_unit": 23.003971212092324,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.3003971212092327
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 8.861250814079165,
+       "delta_db": 2.192012499475175
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.324063996873829,
+       "delta_db": -2.3451743177301614
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -17.192161212990925,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.7192161212990926
+      },
+      "0.05": {
+       "slope_db_per_unit": null,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": false,
+       "pred_delta_db": null
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.030539237596616,
+       "delta_db": -1.6386990770073737
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 13,
+   "target_boost_db": 7.825459312494545,
+   "channel_loss_db": 13.55007073761784,
+   "handoff_valid": true,
+   "handoff_boost_db": 3.8273211974977865,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -15.246983783208176,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.5246983783208177
+      },
+      "0.05": {
+       "slope_db_per_unit": -15.271927504083944,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.5271927504083944
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.845152419153529,
+       "delta_db": -1.9821687783442576
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.93328358557632,
+       "delta_db": 1.1059623880785336
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -8.630763324653072,
+       "span": 0.03999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.8630763324653072
+      },
+      "0.05": {
+       "slope_db_per_unit": -8.587788647682919,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.8587788647682919
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.027760069528519,
+       "delta_db": -0.7995611279692674
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 4.707577743490967,
+       "delta_db": 0.8802565459931806
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -24.60398185649939,
+       "span": 0.020000000000000018,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -2.4603981856499395
+      },
+      "0.05": {
+       "slope_db_per_unit": -19.95277514383213,
+       "span": 0.050000000000000044,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.995277514383213
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.0,
+       "valid": true,
+       "boost_db": 3.8273211974977865,
+       "delta_db": 0.0
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.286659345397034,
+       "delta_db": 1.4593381478992473
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 15.425795821927089,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.542579582192709
+      },
+      "0.05": {
+       "slope_db_per_unit": 15.452129613260691,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.5452129613260692
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 5.23750449182744,
+       "delta_db": 1.410183294329653
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.1315686016948394,
+       "delta_db": -1.6957525958029471
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 25.463545363468242,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.5463545363468243
+      },
+      "0.05": {
+       "slope_db_per_unit": 25.379865783286004,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.5379865783286006
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 6.242876733022195,
+       "delta_db": 2.4155555355244083
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.2552234294581655,
+       "delta_db": -2.572097768039621
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": null,
+       "span": 0.040000000000000036,
+       "plus_valid": false,
+       "minus_valid": true,
+       "pred_delta_db": null
+      },
+      "0.05": {
+       "slope_db_per_unit": null,
+       "span": 0.10000000000000003,
+       "plus_valid": false,
+       "minus_valid": true,
+       "pred_delta_db": null
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": false,
+       "boost_db": null,
+       "delta_db": null
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 7.215458272473672,
+       "delta_db": 3.3881370749758855
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 14,
+   "target_boost_db": 5.643243850721529,
+   "channel_loss_db": 8.836348467463532,
+   "handoff_valid": true,
+   "handoff_boost_db": 1.4702105985696017,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -8.200982809102069,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.8200982809102069
+      },
+      "0.05": {
+       "slope_db_per_unit": -8.317617535678814,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.8317617535678814
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.5081011457695856,
+       "delta_db": -0.962109452800016
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.1762019624307563,
+       "delta_db": 0.7059913638611546
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -1.2080222772128157,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.12080222772128157
+      },
+      "0.05": {
+       "slope_db_per_unit": -1.4425264682847863,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.14425264682847863
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.339676285666628,
+       "delta_db": -0.13053431290297368
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 1.633818974892832,
+       "delta_db": 0.16360837632323033
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 1.9257848171779983,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.19257848171779984
+      },
+      "0.05": {
+       "slope_db_per_unit": 1.6706122824620702,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 0.16706122824620703
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.05211764574050903,
+       "valid": true,
+       "boost_db": 1.5534490276550237,
+       "delta_db": 0.083238429085422
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.2773100779694637,
+       "delta_db": -0.19290052060013796
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 20.123368682065752,
+       "span": 0.04000000000000001,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.0123368682065754
+      },
+      "0.05": {
+       "slope_db_per_unit": 19.759857786703353,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.9759857786703354
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.356402690330057,
+       "delta_db": 1.886192091760455
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 0.0,
+       "delta_db": -1.4702105985696017
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 18.942547857473542,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.8942547857473544
+      },
+      "0.05": {
+       "slope_db_per_unit": 18.715310795334975,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.8715310795334976
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 3.551112513192839,
+       "delta_db": 2.0809019146232375
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 0.02884763310192806,
+       "delta_db": -1.4413629654676736
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -15.972298926561166,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.5972298926561166
+      },
+      "0.05": {
+       "slope_db_per_unit": -15.759001260548876,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.5759001260548877
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.1056416174343573,
+       "delta_db": -1.3645689811352444
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 3.2812467948204405,
+       "delta_db": 1.8110361962508388
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 15,
+   "target_boost_db": 6.211444685176702,
+   "channel_loss_db": 15.075597389506349,
+   "handoff_valid": true,
+   "handoff_boost_db": 1.6963881451538825,
+   "dims": {
+    "w_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -9.541199976254369,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.9541199976254369
+      },
+      "0.05": {
+       "slope_db_per_unit": -9.477996480513742,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.9477996480513742
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.5608232185242823,
+       "delta_db": -1.1355649266296002
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.4632218519591214,
+       "delta_db": 0.7668337068052389
+      }
+     }
+    },
+    "l_in": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -2.144003045329802,
+       "span": 0.03999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.2144003045329802
+      },
+      "0.05": {
+       "slope_db_per_unit": -2.2199788064615604,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.22199788064615605
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.5050853671745479,
+       "delta_db": -0.1913027779793346
+      },
+      "minus": {
+       "step": -0.1,
+       "valid": true,
+       "boost_db": 1.9161126278786336,
+       "delta_db": 0.2197244827247511
+      }
+     }
+    },
+    "i_tail": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -3.0779836806830136,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.3077983680683014
+      },
+      "0.05": {
+       "slope_db_per_unit": -3.1158995810500807,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -0.3115899581050081
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.6483115889907118,
+       "delta_db": -1.0480765561631706
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 1.7256953219839648,
+       "delta_db": 0.029307176830082327
+      }
+     }
+    },
+    "rs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 11.191875492955583,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.1191875492955583
+      },
+      "0.05": {
+       "slope_db_per_unit": 11.16694587342188,
+       "span": 0.10000000000000003,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 1.116694587342188
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.766253786936301,
+       "delta_db": 1.0698656417824184
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.5551874963333683,
+       "delta_db": -1.1412006488205142
+      }
+     }
+    },
+    "cs": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": 25.31971367457846,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.531971367457846
+      },
+      "0.05": {
+       "slope_db_per_unit": 24.943669379576395,
+       "span": 0.09999999999999998,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": 2.49436693795764
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 4.343213390665003,
+       "delta_db": 2.6468252455111205
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.0,
+       "delta_db": -1.6963881451538825
+      }
+     }
+    },
+    "r_load": {
+     "probes": {
+      "0.02": {
+       "slope_db_per_unit": -13.994813550345008,
+       "span": 0.040000000000000036,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.3994813550345009
+      },
+      "0.05": {
+       "slope_db_per_unit": -14.51493333999824,
+       "span": 0.10000000000000009,
+       "plus_valid": true,
+       "minus_valid": true,
+       "pred_delta_db": -1.4514933339998242
+      }
+     },
+     "verify": {
+      "plus": {
+       "step": 0.09999999999999998,
+       "valid": true,
+       "boost_db": 0.0,
+       "delta_db": -1.6963881451538825
+      },
+      "minus": {
+       "step": -0.09999999999999998,
+       "valid": true,
+       "boost_db": 2.95190190736504,
+       "delta_db": 1.2555137622111574
+      }
+     }
+    }
+   }
+  }
+ ]
+}
