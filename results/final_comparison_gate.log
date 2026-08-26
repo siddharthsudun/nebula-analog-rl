@@ -1,0 +1,31 @@
+(stdout with ngspice per-simulation "Note: Transient op ..." lines removed; nothing else altered)
+FINAL COMPARISON | arms A+B | spec-seed 3, specs 8-17 | 20 measure_all ceiling
+  stage 1  PPO k=5 at 2.00 measure_all each = 10.00, charged to every arm
+  stage 2  up to 10 evaluations at 1.00 each; arm C splits these ONE pool
+  routing  G3.2 reached_target ? stop : hand the REMAINDER to CMA-ES
+
+  *** EQUIVALENCE GATE: seed 3 specs 8-17, diffed against the frozen artifacts.
+      Seed 23 is not touched by this mode. ***
+
+  spec  8  tgt  6.71 | A 9.41   2.70  loose  | B 6.77   0.07  strict |
+  spec  9  tgt  9.18 | A -      -     -      | B -      -     -      |
+  spec 10  tgt  5.01 | A -      -     -      | B -      -     -      |
+  spec 11  tgt  6.79 | A 6.29   0.50  strict | B 6.80   0.01  strict |
+  spec 12  tgt 10.35 | A 10.40  0.05  strict | B 10.41  0.06  strict |
+  spec 13  tgt  7.83 | A 7.76   0.07  strict | B 7.84   0.01  strict |
+  spec 14  tgt  5.18 | A 5.03   0.15  strict | B 5.37   0.19  strict |
+  spec 15  tgt  7.25 | A 4.48   2.76  loose  | B 4.91   2.33  loose  |
+  spec 16  tgt  8.96 | A -      -     -      | B -      -     -      |
+  spec 17  tgt  6.24 | A 5.64   0.60  strict | B 5.83   0.41  strict |
+
+191 simulations actually run (stage 1 is shared across arms; each arm is still
+charged the full 10.00 measure_all it would have paid alone)
+wrote results/final_comparison_gate.json
+
+======================================================================================
+EQUIVALENCE GATE -- transcribed solvers vs the frozen committed artifacts
+======================================================================================
+  A / H1    10/10 specs reproduce the frozen artifact exactly  (results/hybrid_audit_h1_seed3.json)
+  B / G3.2  10/10 specs reproduce the frozen artifact exactly  (results/g32_repair_smoke.json)
+======================================================================================
+GATE PASSED -- the transcription is the frozen controller

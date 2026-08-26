@@ -160,3 +160,92 @@ Recorded here so they are answered before rather than during:
 2. Whether arm A should also be re-run on seed 23 (it must be, for a paired comparison) or
    whether the existing seed-3 H1 numbers are considered sufficient. This document assumes
    **re-run**.
+
+---
+
+# Amendment 1 — 26 Aug 2026
+
+Recorded as an amendment rather than edited in place, per this document's own rule. All of
+it is fixed **before** any spec of seed 23 is simulated. Items 1–2 are the reporting
+additions asked for when the run was approved; item 3 is a disclosure; item 4 pins down a
+rule §3 left implicit; item 5 is a gate on the code that implements the arms.
+
+## 1. Additional reporting (requested at approval)
+
+Added to §5, for **all three arms**, alongside the outcomes already listed:
+
+* **Results by target tercile.** Terciles cut at the 1/3 and 2/3 quantiles of *this* set's
+  40 requested targets, using `hybrid_report.terciles` unchanged.
+
+## 2. Arm C's value proposition, reported explicitly
+
+Added to §5, for **arm C only**:
+
+* How often G3.2 solved the spec **before** any fallback (`reached_target` true, fallback
+  never fired), and
+* when it did not, **how often H1 recovered it** with the remaining budget — recovery
+  counted at both the strict ±1.5 dB criterion and as target-error reduction in dB.
+* Fallback frequency, the number of evaluations the fallback received, and the recorded
+  `reason` / `blocked_by` for every spec on which it fired.
+
+## 3. Disclosure — seed 23 was not entirely untouched
+
+The approval said seed 23 must remain "completely untouched … no inspection". Before that
+instruction was given, while proposing seed 23, one command was run:
+
+```
+make_specs(40, 23) -> printed first 3 (target, channel) pairs, and min/max of each column
+```
+
+That is the whole of it. **No circuit was simulated, no design was drawn, and no constant
+in this document or in any controller was chosen after or because of it** — every constant
+in play (`k`, `r`, `sigma0`, `step_cap`, `stop_abs_err_db`, the plane, the ladder) was
+already frozen in committed code before seed 23 was named. The specs themselves are an
+i.i.d. draw from the same `U(5,11) x U(8,16)` the whole project uses, so the printed range
+carries no information that could bias an arm.
+
+It is recorded here rather than left out because §4 claims seed 23 "has been used for
+nothing", and that sentence is now not literally true. The set is still held out in the
+sense that matters — nothing has been evaluated on it — but the choice of whether that is
+good enough belongs to the reviewer, not to me. Switching to a genuinely unseen seed costs
+nothing before the run and everything after it.
+
+## 4. Arm C's fallback starting point — fixed here because §3 left it implicit
+
+§3 says the fallback receives "best valid design". Made precise, using only rankings the
+frozen controller already applies and inventing none:
+
+1. Over **every guard-valid design the arm has evaluated** (stage 1 and G3.2 combined):
+   `hard_pass` designs first, ranked by `|boost - target|`.
+2. If none passes `hard_pass`: guard-valid designs ranked by `(number of failing checks,
+   |boost - target|)` — the Case-2 start rule, unchanged.
+3. If **no** guard-valid design exists anywhere: the PPO handoff `x`, which is what
+   standalone H1 starts from in exactly this situation. The guard-invalid case is
+   therefore given no special mechanism of its own.
+
+CMA-ES `sigma0` is 0.05 and its seed is `20260823 + spec_index` — the same constant and
+the same stream arm A uses, so the fallback differs from arm A only in start point and
+budget, as §2 already states.
+
+## 5. Equivalence gate on the implementation — runs before seed 23
+
+The three arms share one 20-`measure_all` pool, so arm C cannot be assembled by running two
+scripts back to back; it needs one process holding the budget. The G3.2 solver and the
+CMA-ES refinement both live inside `main()` in their own files and cannot be imported.
+
+They are therefore **transcribed** into `final_comparison.py`, for the same reason
+`g32_repair.py` gives for re-implementing G3.1's advance loop rather than importing it:
+`results/g32_repair_smoke.json` and `results/hybrid_audit_h1_seed3.json` must stay
+reproducible from **unmodified** committed code. No frozen file is edited.
+
+Transcription can drift, so it is not asserted, it is tested. Both controllers are fully
+deterministic given the spec index, so:
+
+> **Gate.** `final_comparison.py` runs arms A and B on **spec-seed 3, specs 8–17** — the
+> already-burned development slice, never seed 23 — and each spec's outcome is compared to
+> the frozen artifact. The compared fields are `best_boost_db`, `best_abs_err`,
+> `loose_solved_at`, `strict_solved_at`, `n_valid`, and for arm B additionally
+> `n_solver_evals`, `solver.reason`, `solver.case` and `solver.reached_target`.
+>
+> **Any mismatch stops the experiment and is reported.** Seed 23 is not touched until this
+> gate passes, and the gate's output is committed beside the result.
