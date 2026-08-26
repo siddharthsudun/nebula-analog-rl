@@ -1,0 +1,12 @@
+G3.2a SELECT | seed 11 | accept guard-valid with 0.0011 < peak < 1.25 GHz | take first 8 in draw order
+  accepted #1 at draw  25: peak 1.1986 GHz  boost   7.42  dc   0.55
+  accepted #2 at draw  65: peak 0.7135 GHz  boost  13.47  dc   2.30
+  accepted #3 at draw  71: peak 0.7135 GHz  boost   5.75  dc   3.03
+  accepted #4 at draw  82: peak 0.1895 GHz  boost   0.02  dc   4.50
+  accepted #5 at draw  86: peak 0.7135 GHz  boost   3.93  dc   4.48
+  accepted #6 at draw  88: peak 0.8482 GHz  boost   3.48  dc   0.84
+  accepted #7 at draw  95: peak 0.8007 GHz  boost   4.62  dc   7.97
+  accepted #8 at draw 106: peak 0.7558 GHz  boost   3.43  dc   7.15
+
+106 drawn, 23 guard-valid, 8 accepted below the band
+wrote results/g32a_lowpeak_set.json
