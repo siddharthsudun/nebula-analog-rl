@@ -1,0 +1,67 @@
+(stdout with ngspice per-simulation "Note: Transient op ..." lines and the codemodel ".cm couldn't be loaded" notices removed; nothing else altered)
+PVT SIGN-OFF | docs/PREREG_PVT_SIGNOFF.md
+  source               results/final_comparison_seed23.json
+  arm                  b
+  pool_rule            strict_solved_at is not None
+  grid_mode            full
+  fast                 False
+  boost_target_tol_db  1.5
+  clean_rule           45/45 guard_valid and pass10
+  tie_db               0.01
+  pool: 22 strict-solved arm-b candidates x 45 corners = 990 evaluations
+  tt   0C done    66/ 990 corners     45s elapsed, ~  624s left
+  tt  27C done   132/ 990 corners     98s elapsed, ~  634s left
+  tt 125C done   198/ 990 corners    166s elapsed, ~  664s left
+  ss   0C done   264/ 990 corners    263s elapsed, ~  724s left
+  ss  27C done   330/ 990 corners    364s elapsed, ~  729s left
+  ss 125C done   396/ 990 corners    481s elapsed, ~  722s left
+  ff   0C done   462/ 990 corners    629s elapsed, ~  719s left
+  ff  27C done   528/ 990 corners    784s elapsed, ~  686s left
+  ff 125C done   594/ 990 corners    959s elapsed, ~  639s left
+  sf   0C done   660/ 990 corners   1168s elapsed, ~  584s left
+  sf  27C done   726/ 990 corners   1380s elapsed, ~  502s left
+  sf 125C done   792/ 990 corners   1613s elapsed, ~  403s left
+  fs   0C done   858/ 990 corners   1882s elapsed, ~  290s left
+  fs  27C done   924/ 990 corners   2158s elapsed, ~  154s left
+  fs 125C done   990/ 990 corners   2432s elapsed, ~    0s left
+
+per candidate (of 45 corners)
+  spec  target  chan   TT err   guard_ok  pass9  pass10  worst_err  clean
+     0    9.16  13.13   0.193         43     43      42      1.453  
+     1    5.77   8.91   0.117         36     36      36      1.155  
+     2    8.92  14.83   0.246         45     45      45      1.081  YES
+     7    6.81  11.11   0.236         41     36      32      1.305  
+     8    8.24  13.47   0.172         36     36      36      1.184  
+    13    9.97  10.03   0.878         18     18      17      1.237  
+    14    8.75  14.12   0.201         43     43      43      1.059  
+    16    8.81  14.87   0.053         43     39      39      1.064  
+    17    7.99   9.87   0.226         17     17      17      1.198  
+    18    5.96  11.98   0.212         43     43      43      0.968  
+    19    9.47  11.59   1.131         20     20      17      1.416  
+    20    9.09   9.00   0.204         38     36      36      1.167  
+    22    9.96  13.83   1.018         23     23      20      1.320  
+    24    5.66  11.64   0.017         43     43      43      0.949  
+    25    6.99  11.19   0.015         30     28      28      0.541  
+    28    8.56  10.77   0.023         37     37      37      1.184  
+    30   10.61  12.63   0.744         27     27      23      1.183  
+    33    5.79  13.75   0.165         40     31      31      0.742  
+    35   10.80  10.16   0.839         23     23      23      1.321  
+    36    9.70  10.53   0.684         43     43      40      1.451  
+    38    5.22  13.70   0.063         44     36      36      0.452  
+    39    6.75  11.48   0.013         38     38      38      1.260  
+
+PVT-clean candidates: 1 of 22
+
+why corners failed (guard-valid check failures, then guard rejections)
+  guard:T4.10_dc_gain_implausible                 130
+  guard:T2.5_mosfet_not_in_saturation              89
+  peak_in_band                                     30
+  boost_target                                     19
+
+FLAGSHIP (PVT-clean)
+  spec 2  target 8.920 dB  channel 14.83 dB
+  TT boost 9.166 dB (err 0.246)   corners passed 45/45   worst-corner err 1.081 dB
+  design: w_in=5.57844e-05  l_in=3.92119e-07  i_tail=0.000712275  rs=3287.45  cs=1.81621e-13  r_load=2450.3  w_dfe=0
+
+artifact -> results\pvt_signoff_seed23.json
+flagship netlist -> results\pvt_signoff_flagship.spice
