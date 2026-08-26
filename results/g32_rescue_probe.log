@@ -1,0 +1,719 @@
+G3.2 RESCUE PROBE | 8 specs, spec-seed 2 | magnitudes [0.1, 0.25]
+  asks: from a guard-INVALID handoff, does any single-axis step restore validity?
+
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  0  handoff already guard-valid -- not a Case 1, skipped
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  1  handoff already guard-valid -- not a Case 1, skipped
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  2  handoff INVALID: T2.5_mosfet_not_in_saturation
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+      RESCUED by i_tail -0.10 -> boost  5.98 peak 1.794  hard_pass
+      RESCUED by r_load -0.10 -> boost  8.47 peak 2.133  hard_pass
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  3  handoff INVALID: T4.10_dc_gain_implausible
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+      RESCUED by rs -0.25 -> boost  2.05 peak 3.382  fails boost_range,peak_in_band,eye_h
+      RESCUED by r_load +0.10 -> boost  3.05 peak 3.014  fails peak_in_band,eye_h
+  spec  4  handoff already guard-valid -- not a Case 1, skipped
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  5  handoff INVALID: T4.10_dc_gain_implausible
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+      RESCUED by i_tail -0.10 -> boost  4.33 peak 2.686  fails peak_in_band
+      RESCUED by rs -0.25 -> boost  0.25 peak 1.509  fails boost_range
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  6  handoff already guard-valid -- not a Case 1, skipped
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  7  handoff INVALID: T4.10_dc_gain_implausible
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+      RESCUED by w_in +0.10 -> boost  4.25 peak 2.686  fails peak_in_band
+      RESCUED by rs -0.10 -> boost  4.42 peak 2.845  fails peak_in_band
+      RESCUED by r_load +0.10 -> boost  3.79 peak 2.393  hard_pass
+
+129 measure_all spent (calibration, not a controller arm)
+wrote results/g32_rescue_probe.json

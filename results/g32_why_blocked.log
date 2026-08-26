@@ -1,0 +1,16 @@
+WHERE THE PLANE WAS FITTED (spec-seed 2 calibration handoffs):
+   spec  0  peak  3.193 GHz   ABOVE band
+   spec  1  peak  1.901 GHz   in band
+   spec  4  peak  2.393 GHz   in band
+   spec  6  peak  2.259 GHz   in band
+   range 1.901 to 3.193 GHz
+
+WHERE IT WAS APPLIED (the blocked seed-3 handoffs):
+   spec  9  every stage-1 design guard-invalid
+   spec 10  peak  0.952 GHz  boost  3.23  BELOW band  l_in=0.581 rs=0.361  fails=peak_in_band
+   spec 15  peak  2.259 GHz  boost  4.48  in band     l_in=0.200 rs=0.664  fails=none
+   spec 16  peak  0.567 GHz  boost  7.21  BELOW band  l_in=0.379 rs=0.269  fails=peak_in_band
+
+   2 of 4 blocked handoffs sit BELOW the band
+   the calibration contains no design below the band, so the sign and gain the
+   controller uses there are extrapolations, not measurements

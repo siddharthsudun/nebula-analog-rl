@@ -1,0 +1,33 @@
+G3.2 PEAK PROBE REPORT | spec-seed 2 | h=0.050 | 88 measure_all
+  peak resolution: ac dec 40 -> one grid step is 5.93%; band 1.25-2.50 GHz is 12.0 steps wide
+
+  points dropped: 4 guard-invalid, 1 at a sweep edge (no interior peak)
+  7 surviving slope estimates moved the peak by LESS THAN ONE grid step -- those are
+  upper bounds of 5.93%, not zeros
+
+  per-axis, median over the specs where the slope is measurable
+  axis        n       dpeak      dboost  |dpk/dbo|   peak-sign
+  w_in        4      -0.633      -10.85      0.150   MIXED (3/4 moved)
+  l_in        4      -3.144       -5.29      0.585   fixed - (4/4 moved)
+  i_tail      4      +0.000       -3.80      0.000   fixed - (1/4 moved)
+  rs          4      +0.000      +12.45      0.000   fixed + (1/4 moved)
+  cs          4      -1.527      +21.73      0.128   MIXED (4/4 moved)
+  r_load      4      -5.684      -18.92      0.233   fixed - (4/4 moved)
+
+  boost coordinate (moves boost, least peak disturbance): rs   12.45 dB/unit, peak under one grid step on 3 of 4 specs
+  peak  coordinate (most peak per unit boost):             l_in   -3.144 GHz/unit, boost -5.29 dB/unit
+
+  THE NULL -- per-design probe against one constant table:
+      spec  0  probe picks boost=rs      peak=l_in      agrees
+      spec  1  probe picks boost=rs      peak=l_in      agrees
+      spec  4  probe picks boost=cs      peak=l_in      DIFFERS from the constant table
+      spec  6  probe picks boost=rs      peak=l_in      agrees
+    the constant table matches the per-design probe on 3/4 specs for the boost axis
+    and 4/4 for the peak axis
+
+  guard rejections across every point in this run (stage 1 + probes):
+      T4.10_dc_gain_implausible                14
+      T2.5_mosfet_not_in_saturation            11
+  hard_pass failures among the guard-valid points:
+      peak_in_band                             26
+      boost_range                              17

@@ -1,0 +1,534 @@
+G3.2 PEAK PROBE | 8 specs, spec-seed 2 | h=0.050 | band 1.25-2.50 GHz
+  asks: is there an axis that moves the peak with less boost coupling than d_boost?
+
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  0  base boost  4.84 peak 3.193 GHz  FAILS peak_in_band
+      w_in    dpeak    +1.788 GHz/unit   dboost    -8.88 dB/unit   central
+      l_in    dpeak    -3.682 GHz/unit   dboost    -2.43 dB/unit   central
+      i_tail  dpeak    +0.000 GHz/unit   dboost    +2.31 dB/unit   central
+      rs      dpeak    -0.000 GHz/unit   dboost   +11.43 dB/unit   one-sided
+      cs      dpeak    -1.788 GHz/unit   dboost   +21.28 dB/unit   central
+      r_load  dpeak    -6.952 GHz/unit   dboost   -17.42 dB/unit   one-sided
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  1  base boost  9.63 peak 1.901 GHz
+      w_in    dpeak    +0.000 GHz/unit   dboost    +5.59 dB/unit   central
+      l_in    dpeak    -2.192 GHz/unit   dboost    -5.20 dB/unit   central
+      i_tail  dpeak    +0.000 GHz/unit   dboost    +1.51 dB/unit   central
+      rs      dpeak    +0.000 GHz/unit   dboost   +17.40 dB/unit   central
+      cs      dpeak    -4.391 GHz/unit   dboost   +16.53 dB/unit   central
+      r_load  dpeak    -2.129 GHz/unit   dboost   -11.78 dB/unit   one-sided
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  2  handoff GUARD-INVALID (T2.5_mosfet_not_in_saturation) -- no baseline, probe skipped
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  3  handoff GUARD-INVALID (T4.10_dc_gain_implausible) -- no baseline, probe skipped
+  spec  4  base boost  1.70 peak 2.393 GHz  FAILS boost_range
+      w_in    dpeak    -5.220 GHz/unit   dboost   -14.18 dB/unit   central
+      l_in    dpeak    -4.026 GHz/unit   dboost    -5.37 dB/unit   central
+      i_tail  dpeak    -2.606 GHz/unit   dboost    -9.11 dB/unit   central
+      rs      dpeak    +2.760 GHz/unit   dboost    +9.02 dB/unit   central
+      cs      dpeak    +3.800 GHz/unit   dboost   +22.18 dB/unit   central
+      r_load  dpeak   -26.848 GHz/unit   dboost   -27.18 dB/unit   central
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  5  handoff GUARD-INVALID (T4.10_dc_gain_implausible) -- no baseline, probe skipped
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  6  base boost  4.02 peak 2.259 GHz
+      w_in    dpeak    -1.265 GHz/unit   dboost   -12.81 dB/unit   central
+      l_in    dpeak    -2.606 GHz/unit   dboost    -7.24 dB/unit   central
+      i_tail  dpeak    +0.000 GHz/unit   dboost   -10.85 dB/unit   central
+      rs      dpeak    +0.000 GHz/unit   dboost   +13.48 dB/unit   central
+      cs      dpeak    -1.265 GHz/unit   dboost   +24.48 dB/unit   central
+      r_load  dpeak    -5.521 GHz/unit   dboost   -33.23 dB/unit   one-sided
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec  7  handoff GUARD-INVALID (T4.10_dc_gain_implausible) -- no baseline, probe skipped
+
+88 measure_all spent (calibration, not a controller arm)
+wrote results/g32_peak_probe.json

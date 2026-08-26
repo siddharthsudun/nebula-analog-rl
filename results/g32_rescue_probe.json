@@ -1,0 +1,972 @@
+{
+ "mags": [
+  0.1,
+  0.25
+ ],
+ "k": 5,
+ "spec_seed": 2,
+ "model": "results/seq_clean40k.zip",
+ "n_measure_all": 129,
+ "complete": true,
+ "rows": [
+  {
+   "spec": 0,
+   "target_boost_db": 6.569672805495898,
+   "channel_loss_db": 10.387929147312986,
+   "base": {
+    "valid": true,
+    "boost_db": 4.843162989844577,
+    "peak_freq_ghz": 3.19277999,
+    "dc_gain_db": 0.14811216132091573,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "case1": false,
+   "tries": null
+  },
+  {
+   "spec": 1,
+   "target_boost_db": 9.885354443565681,
+   "channel_loss_db": 8.735327537080774,
+   "base": {
+    "valid": true,
+    "boost_db": 9.634191022625837,
+    "peak_freq_ghz": 1.90064491,
+    "dc_gain_db": 0.914177449067849,
+    "loose_pass": true,
+    "failing": []
+   },
+   "case1": false,
+   "tries": null
+  },
+  {
+   "spec": 2,
+   "target_boost_db": 8.600603155793923,
+   "channel_loss_db": 13.828484214494356,
+   "base": {
+    "valid": false,
+    "guard_check": "T2.5_mosfet_not_in_saturation",
+    "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+   },
+   "case1": true,
+   "tries": [
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1069V Vdsat=0.1171V headroom=-10.2mV (need >= 50mV); XM2: Vds=0.1069V Vdsat=0.1171V headroom=-10.2mV (need >= 50mV)"
+    },
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.17059582471847534,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.0884V Vdsat=0.1066V headroom=-18.3mV (need >= 50mV); XM2: Vds=0.0884V Vdsat=0.1066V headroom=-18.3mV (need >= 50mV)"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1815V Vdsat=0.1570V headroom=+24.5mV (need >= 50mV); XM2: Vds=0.1815V Vdsat=0.1570V headroom=+24.5mV (need >= 50mV)"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XMtp: Vds=0.3107V Vdsat=0.2673V headroom=+43.4mV (need >= 50mV); XMtn: Vds=0.3107V Vdsat=0.2673V headroom=+43.4mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1467V Vdsat=0.1561V headroom=-9.4mV (need >= 50mV); XM2: Vds=0.1467V Vdsat=0.1561V headroom=-9.4mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1625V Vdsat=0.1827V headroom=-20.2mV (need >= 50mV); XM2: Vds=0.1625V Vdsat=0.1827V headroom=-20.2mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1394V Vdsat=0.1093V headroom=+30.1mV (need >= 50mV); XM2: Vds=0.1394V Vdsat=0.1093V headroom=+30.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.1804850846529007,
+     "valid": false,
+     "guard_check": "T2.8_device_parameter_at_pdk_bound",
+     "reason": "design parameter 'l_in' = 1.5e-07 sits exactly on the SKY130 min bound (1.5e-07); the optimizer is against the process limit and the model may be extrapolating"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.0011965036392211914,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1381V Vdsat=0.1351V headroom=+2.9mV (need >= 50mV); XM2: Vds=0.1381V Vdsat=0.1351V headroom=+2.9mV (need >= 50mV)"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.0011965036392211914,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1381V Vdsat=0.1351V headroom=+2.9mV (need >= 50mV); XM2: Vds=0.1381V Vdsat=0.1351V headroom=+2.9mV (need >= 50mV)"
+    },
+    {
+     "axis": "i_tail",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 5.981238499442883,
+     "peak_freq_ghz": 1.79420147,
+     "dc_gain_db": 2.6812182879395383,
+     "loose_pass": true,
+     "failing": []
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV); XM2: Vds=0.1391V Vdsat=0.1349V headroom=+4.1mV (need >= 50mV)"
+    },
+    {
+     "axis": "r_load",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "4 device(s) not in saturation \u2014 XM1: Vds=0.0451V Vdsat=0.1893V headroom=-144.2mV (need >= 50mV); XM2: Vds=0.0451V Vdsat=0.1893V headroom=-144.2mV (need >= 50mV); XMtp: Vds=0.3130V Vdsat=0.2673V headro"
+    },
+    {
+     "axis": "r_load",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "4 device(s) not in saturation \u2014 XM1: Vds=0.0255V Vdsat=0.2292V headroom=-203.8mV (need >= 50mV); XM2: Vds=0.0255V Vdsat=0.2292V headroom=-203.8mV (need >= 50mV); XMtp: Vds=0.1985V Vdsat=0.2673V headro"
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 8.470045129936052,
+     "peak_freq_ghz": 2.13285113,
+     "dc_gain_db": 1.5491358027751512,
+     "loose_pass": true,
+     "failing": []
+    }
+   ]
+  },
+  {
+   "spec": 3,
+   "target_boost_db": 6.12740644019962,
+   "channel_loss_db": 8.441173018664546,
+   "base": {
+    "valid": false,
+    "guard_check": "T4.10_dc_gain_implausible",
+    "reason": "DC gain -1.84 dB is below 0 dB for a topology that should have gain"
+   },
+   "case1": true,
+   "tries": [
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.72 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.57 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.90 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XMtp: Vds=0.2772V Vdsat=0.2673V headroom=+9.9mV (need >= 50mV); XMtn: Vds=0.2772V Vdsat=0.2673V headroom=+9.9mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.92 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.97 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.58 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.12920676171779633,
+     "valid": false,
+     "guard_check": "T2.8_device_parameter_at_pdk_bound",
+     "reason": "design parameter 'l_in' = 1.5e-07 sits exactly on the SKY130 min bound (1.5e-07); the optimizer is against the process limit and the model may be extrapolating"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.07589799165725708,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.76 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.07589799165725708,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.76 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "i_tail",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.96 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "i_tail",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -2.15 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -2.74 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -3.90 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.81 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": true,
+     "boost_db": 2.0454046756123088,
+     "peak_freq_ghz": 3.382196,
+     "dc_gain_db": 1.0897178610999212,
+     "loose_pass": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band",
+      "eye_h"
+     ]
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.84 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.84 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.84 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.1751561313867569,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.84 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "r_load",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 3.0478905672385634,
+     "peak_freq_ghz": 3.01397201,
+     "dc_gain_db": 0.03586388549228962,
+     "loose_pass": false,
+     "failing": [
+      "peak_in_band",
+      "eye_h"
+     ]
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -4.62 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -12.25 dB is below 0 dB for a topology that should have gain"
+    }
+   ]
+  },
+  {
+   "spec": 4,
+   "target_boost_db": 6.649816207436229,
+   "channel_loss_db": 13.25946411900474,
+   "base": {
+    "valid": true,
+    "boost_db": 1.6966545811841063,
+    "peak_freq_ghz": 2.39342653,
+    "dc_gain_db": 1.9490309290477543,
+    "loose_pass": false,
+    "failing": [
+     "boost_range"
+    ]
+   },
+   "case1": false,
+   "tries": null
+  },
+  {
+   "spec": 5,
+   "target_boost_db": 8.373593976682567,
+   "channel_loss_db": 9.200498106442689,
+   "base": {
+    "valid": false,
+    "guard_check": "T4.10_dc_gain_implausible",
+    "reason": "DC gain -0.92 dB is below 0 dB for a topology that should have gain"
+   },
+   "case1": true,
+   "tries": [
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1386V Vdsat=0.0998V headroom=+38.7mV (need >= 50mV); XM2: Vds=0.1386V Vdsat=0.0998V headroom=+38.7mV (need >= 50mV)"
+    },
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.21461737155914307,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1097V Vdsat=0.0854V headroom=+24.3mV (need >= 50mV); XM2: Vds=0.1097V Vdsat=0.0854V headroom=+24.3mV (need >= 50mV)"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.78 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XMtp: Vds=0.3073V Vdsat=0.2673V headroom=+40.0mV (need >= 50mV); XMtn: Vds=0.3073V Vdsat=0.2673V headroom=+40.0mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1714V Vdsat=0.1421V headroom=+29.3mV (need >= 50mV); XM2: Vds=0.1714V Vdsat=0.1421V headroom=+29.3mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1867V Vdsat=0.1740V headroom=+12.7mV (need >= 50mV); XM2: Vds=0.1867V Vdsat=0.1740V headroom=+12.7mV (need >= 50mV)"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.08478176593780518,
+     "valid": false,
+     "guard_check": "T2.8_device_parameter_at_pdk_bound",
+     "reason": "design parameter 'l_in' = 1.5e-07 sits exactly on the SKY130 min bound (1.5e-07); the optimizer is against the process limit and the model may be extrapolating"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.08478176593780518,
+     "valid": false,
+     "guard_check": "T2.8_device_parameter_at_pdk_bound",
+     "reason": "design parameter 'l_in' = 1.5e-07 sits exactly on the SKY130 min bound (1.5e-07); the optimizer is against the process limit and the model may be extrapolating"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.028781354427337646,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1430V Vdsat=0.1190V headroom=+24.0mV (need >= 50mV); XM2: Vds=0.1430V Vdsat=0.1190V headroom=+24.0mV (need >= 50mV)"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.028781354427337646,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1430V Vdsat=0.1190V headroom=+24.0mV (need >= 50mV); XM2: Vds=0.1430V Vdsat=0.1190V headroom=+24.0mV (need >= 50mV)"
+    },
+    {
+     "axis": "i_tail",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 4.327146485780061,
+     "peak_freq_ghz": 2.68583703,
+     "dc_gain_db": 0.19980815733972962,
+     "loose_pass": false,
+     "failing": [
+      "peak_in_band"
+     ]
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.63 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.20377624034881592,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -2.30 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.11 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": true,
+     "boost_db": 0.25050579736347633,
+     "peak_freq_ghz": 1.5093219,
+     "dc_gain_db": 1.304721092490081,
+     "loose_pass": false,
+     "failing": [
+      "boost_range"
+     ]
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.92 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.92 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.92 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.92 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "r_load",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.0490V Vdsat=0.1535V headroom=-104.6mV (need >= 50mV); XM2: Vds=0.0490V Vdsat=0.1535V headroom=-104.6mV (need >= 50mV)"
+    },
+    {
+     "axis": "r_load",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T2.5_mosfet_not_in_saturation",
+     "reason": "4 device(s) not in saturation \u2014 XM1: Vds=0.0248V Vdsat=0.1894V headroom=-164.6mV (need >= 50mV); XM2: Vds=0.0248V Vdsat=0.1894V headroom=-164.6mV (need >= 50mV); XMtp: Vds=0.2058V Vdsat=0.2673V headro"
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.16 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -4.67 dB is below 0 dB for a topology that should have gain"
+    }
+   ]
+  },
+  {
+   "spec": 6,
+   "target_boost_db": 7.595784744828723,
+   "channel_loss_db": 13.354378388596162,
+   "base": {
+    "valid": true,
+    "boost_db": 4.020012619722631,
+    "peak_freq_ghz": 2.25938542,
+    "dc_gain_db": 2.7436018727860345,
+    "loose_pass": true,
+    "failing": []
+   },
+   "case1": false,
+   "tries": null
+  },
+  {
+   "spec": 7,
+   "target_boost_db": 7.536708039620767,
+   "channel_loss_db": 13.065475194192931,
+   "base": {
+    "valid": false,
+    "guard_check": "T4.10_dc_gain_implausible",
+    "reason": "DC gain -0.13 dB is below 0 dB for a topology that should have gain"
+   },
+   "case1": true,
+   "tries": [
+    {
+     "axis": "w_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 4.246641940004897,
+     "peak_freq_ghz": 2.68583703,
+     "dc_gain_db": 0.011334273157247849,
+     "loose_pass": false,
+     "failing": [
+      "peak_in_band"
+     ]
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.32 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "w_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.50 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.21 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.33 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.02 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "l_in",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.1587945967912674,
+     "valid": false,
+     "guard_check": "T2.8_device_parameter_at_pdk_bound",
+     "reason": "design parameter 'l_in' = 1.5e-07 sits exactly on the SKY130 min bound (1.5e-07); the optimizer is against the process limit and the model may be extrapolating"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.07 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "i_tail",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.1542491316795349,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.05 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "i_tail",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.21 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "i_tail",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.38 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.18 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -2.52 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "rs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 4.415358689196216,
+     "peak_freq_ghz": 2.84517796,
+     "dc_gain_db": 1.096325586941265,
+     "loose_pass": false,
+     "failing": [
+      "peak_in_band"
+     ]
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.13 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": 1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.13 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.1,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.13 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "cs",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.13 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "r_load",
+     "sign": 1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": true,
+     "boost_db": 3.793967963663416,
+     "peak_freq_ghz": 2.39342653,
+     "dc_gain_db": 1.5987310990417605,
+     "loose_pass": true,
+     "failing": []
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.1,
+     "moved": 0.09999999999999998,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -2.58 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "axis": "r_load",
+     "sign": -1.0,
+     "mag": 0.25,
+     "moved": 0.25,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -8.77 dB is below 0 dB for a topology that should have gain"
+    }
+   ]
+  }
+ ]
+}
