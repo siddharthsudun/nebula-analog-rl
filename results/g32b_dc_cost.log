@@ -1,0 +1,35 @@
+PEAK MOVEMENT PER dB SPENT | no new simulations; committed probe artifacts only
+  ln/dB_dc and ln/dB_bo are median per-design |d_ln_peak| / |d_(that quantity)|,
+  over the designs where the peak moved by at least one grid step. Higher is
+  cheaper. They are ratios of measured slopes, not a new experiment.
+
+BELOW THE BAND (G3.2a frozen set, select-seed 11, all 8)
+  axis        n  moved   d_ln_peak    d_boost   d_dc_dB   ln/dB_dc  ln/dB_bo   peak-sign
+  w_in        8      6      -0.288      +0.65     +3.49      0.512     0.160   MIXED
+  l_in        8      1      +0.000      -1.68     -1.07      0.407     0.254   fixed -
+  i_tail      8      6      +1.153      +5.56     +6.34      0.185     0.195   fixed +
+  rs          8      1      +0.000     +10.87    -11.57      1.023     1.252   fixed +
+  cs          8      8      -1.441     +17.57     +0.00   1749.060     0.115   MIXED
+  r_load      8      8      -1.153      -5.39    +12.32      0.091     0.249   fixed -
+
+BELOW THE BAND, minus design(s) 82 -- the near-peakless draw flagged at selection
+  axis        n  moved   d_ln_peak    d_boost   d_dc_dB   ln/dB_dc  ln/dB_bo   peak-sign
+  w_in        7      5      +0.000      +1.43     +5.25      0.359     0.114   MIXED
+  l_in        7      1      +0.000      -1.72     -1.42      0.407     0.254   fixed -
+  i_tail      7      5      +1.153      +5.88     +5.92      0.195     0.194   fixed +
+  rs          7      0      +0.000     +11.45    -11.32          -         -   never moved
+  cs          7      7      -1.729     +18.68     +0.00   1744.478     0.090   fixed -
+  r_load      7      7      -1.153      -5.43    +12.03      0.086     0.198   fixed -
+
+ABOVE THE BAND (G3.2 calibration, spec-seed 2)
+  axis        n  moved   d_ln_peak    d_boost   d_dc_dB   ln/dB_dc  ln/dB_bo   peak-sign
+  w_in        4      3      -0.288     -10.85     +2.15      0.306     0.065   MIXED
+  l_in        4      4      -1.153      -5.29     -2.14      0.662     0.272   fixed -
+  i_tail      4      1      +0.000      -3.80     -2.92      0.140     0.127   fixed -
+  rs          4      1      +0.000     +12.45    -12.35      0.121     0.128   fixed +
+  cs          4      4      -0.576     +21.73     +0.00   9416.653     0.053   MIXED
+  r_load      4      4      -2.305     -18.92    +12.08      0.227     0.105   fixed -
+
+  Read against G3.2b: r_load is the peak coordinate the (boost, peak) factorization
+  picks below the band, and it is the most DC-expensive axis there. That is why 5 of
+  6 non-entering designs died on T4.10_dc_gain_implausible rather than on boost.

@@ -1,0 +1,1289 @@
+{
+ "prereg": {
+  "probe_h": 0.05,
+  "step_cap": 0.35,
+  "entry_max": 3,
+  "advance_max": 3,
+  "strict_tol_db": 1.5,
+  "stop_abs_err_db": 0.25,
+  "backoff": 0.5,
+  "min_backoff": 0.125
+ },
+ "gain_floor": 0.5756462732485115,
+ "fallback_ln_gain": -1.153,
+ "source_set": "results/g32b_lowpeak_set.json",
+ "select_seed": 13,
+ "band_ghz": [
+  1.25,
+  2.5
+ ],
+ "aim_ghz": 1.7677669529663689,
+ "target_boost_db": 8.0,
+ "channel_loss_db": 12.0,
+ "boost_axis": "rs",
+ "peak_axis": "r_load",
+ "n_measure_all": 67,
+ "complete": true,
+ "rows": [
+  {
+   "draw": 8,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.96 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "phase": "entry",
+     "t": -0.175,
+     "moved": -0.17499999999999993,
+     "valid": true,
+     "boost_db": 8.33443942033354,
+     "peak_freq_ghz": 0.635821479,
+     "dc_gain_db": 1.0741446725911366,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "peak_in_band"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -6.70 dB is below 0 dB for a topology that should have gain"
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 7.843771886779635,
+    "peak_freq_ghz": 0.566598783,
+    "dc_gain_db": 3.3074884797076862,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.707790270070322,
+       "peak_freq_ghz": 0.534867068,
+       "dc_gain_db": 3.8503741617869016,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.979622835764593,
+       "peak_freq_ghz": 0.600213026,
+       "dc_gain_db": 2.7271910525603555,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": -1.1526639054258103,
+     "d_boost": -2.718325656942706,
+     "steps": 2
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 8.337289539908946,
+       "peak_freq_ghz": 0.566598783,
+       "dc_gain_db": 2.839601200107861,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.319305115443218,
+       "peak_freq_ghz": 0.566598783,
+       "dc_gain_db": 3.802896344091577,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": 0.0,
+     "d_boost": 10.179844244657277,
+     "steps": 0
+    }
+   },
+   "gain_source": "this design's own probe",
+   "entry_blocked_by": "T4.10_dc_gain_implausible",
+   "secant_gain": -0.6586650917015682,
+   "entry_evals": 3,
+   "entered": false,
+   "landing": {
+    "valid": true,
+    "boost_db": 8.33443942033354,
+    "peak_freq_ghz": 0.635821479,
+    "dc_gain_db": 1.0741446725911366,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "x_landing": [
+    0.7326514668471766,
+    0.4778900309019434,
+    0.12472133330591129,
+    0.6045798880373442,
+    0.7469364245619166,
+    0.5691468288332693
+   ],
+   "outcome": "did not enter the band"
+  },
+  {
+   "draw": 17,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.05506140469048801,
+     "moved": -0.055061404690488036,
+     "valid": true,
+     "boost_db": 0.38309434527505815,
+     "peak_freq_ghz": 0.951795494,
+     "dc_gain_db": 5.7997996489699855,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.005055511753570724,
+     "moved": -0.005055511753570774,
+     "valid": true,
+     "boost_db": 0.4253686314325549,
+     "peak_freq_ghz": 1.00826205,
+     "dc_gain_db": 5.752696691877064,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.04925311941139059,
+     "moved": -0.049253119411390545,
+     "valid": true,
+     "boost_db": 0.8444200322859805,
+     "peak_freq_ghz": 1.19856822,
+     "dc_gain_db": 5.234346211240557,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band"
+     ]
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 1.2864424192571278e-08,
+    "peak_freq_ghz": 0.00112217233,
+    "dc_gain_db": 6.190824202149687,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.0,
+       "peak_freq_ghz": 0.001,
+       "dc_gain_db": 6.255363140650891,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.3279417231298938,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 5.829295609442462,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": -133.70901223559432,
+     "d_boost": -6.5588342053093855,
+     "steps": 116
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.23785524005320546,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 5.572297284222042,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 0.0,
+       "peak_freq_ghz": 0.001,
+       "dc_gain_db": 6.862061794388263,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": 131.40368444702668,
+     "d_boost": 4.757104543775621,
+     "steps": 114
+    }
+   },
+   "gain_source": "this design's own probe",
+   "secant_gain": -3.510429194926145,
+   "entry_evals": 3,
+   "entered": false,
+   "landing": {
+    "valid": true,
+    "boost_db": 0.8444200322859805,
+    "peak_freq_ghz": 1.19856822,
+    "dc_gain_db": 5.234346211240557,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band"
+    ]
+   },
+   "x_landing": [
+    0.7631672813564926,
+    0.4820033348551256,
+    0.5343144694417364,
+    0.4648226294716957,
+    0.37487735071832295,
+    0.6428822258160625
+   ],
+   "outcome": "did not enter the band"
+  },
+  {
+   "draw": 19,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -3.22 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "phase": "entry",
+     "t": -0.175,
+     "moved": -0.17499999999999993,
+     "valid": true,
+     "boost_db": 11.736869148672575,
+     "peak_freq_ghz": 0.424743504,
+     "dc_gain_db": 0.039040422353235564,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "peak_in_band",
+      "eye_h",
+      "eye_v"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -8.58 dB is below 0 dB for a topology that should have gain"
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 11.436973864660702,
+    "peak_freq_ghz": 0.378501137,
+    "dc_gain_db": 2.3773245262998013,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 11.346737356762393,
+       "peak_freq_ghz": 0.357303614,
+       "dc_gain_db": 2.937355681771133,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 11.523976026615223,
+       "peak_freq_ghz": 0.378501137,
+       "dc_gain_db": 1.7748270427970672,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     },
+     "d_ln_peak": -0.5763319710828285,
+     "d_boost": -1.7723866985282994,
+     "steps": 1
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 11.869822444640887,
+       "peak_freq_ghz": 0.378501137,
+       "dc_gain_db": 1.9525039514743956,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 10.97902039504588,
+       "peak_freq_ghz": 0.378501137,
+       "dc_gain_db": 2.8261260579461145,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     },
+     "d_ln_peak": 0.0,
+     "d_boost": 8.908020495950055,
+     "steps": 0
+    }
+   },
+   "gain_source": "this design's own probe",
+   "entry_blocked_by": "T4.10_dc_gain_implausible",
+   "secant_gain": -0.658665085125202,
+   "entry_evals": 3,
+   "entered": false,
+   "landing": {
+    "valid": true,
+    "boost_db": 11.736869148672575,
+    "peak_freq_ghz": 0.424743504,
+    "dc_gain_db": 0.039040422353235564,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "x_landing": [
+    0.6476274821299767,
+    0.5243955743780132,
+    0.2837995297825423,
+    0.7090405589928502,
+    0.9604127136102141,
+    0.5333008830614439
+   ],
+   "outcome": "did not enter the band"
+  },
+  {
+   "draw": 20,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.2623743142572839,
+     "moved": -0.26237431425728386,
+     "valid": true,
+     "boost_db": 1.8291741588649506,
+     "peak_freq_ghz": 1.19856822,
+     "dc_gain_db": 6.5241096417278674,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.1965608920319468,
+     "moved": -0.19656089203194682,
+     "valid": true,
+     "boost_db": 3.430787776854523,
+     "peak_freq_ghz": 1.59886447,
+     "dc_gain_db": 3.4931056272129664,
+     "loose_pass": true,
+     "in_band": true,
+     "failing": []
+    },
+    {
+     "phase": "advance",
+     "t": 0.2735261976874256,
+     "moved": 0.2735261976874256,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -0.09 dB is below 0 dB for a topology that should have gain"
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 0.3418871735400444,
+    "peak_freq_ghz": 0.713501272,
+    "dc_gain_db": 9.281947727091847,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.15474534707204413,
+       "peak_freq_ghz": 0.566598783,
+       "dc_gain_db": 9.693112654989992,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.5674324030497431,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 8.83735773392308,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": -3.4579916996383067,
+     "d_boost": -4.126870559776986,
+     "steps": 6
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 0.9255444582892292,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 8.520655465318383,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 0.0,
+       "peak_freq_ghz": 0.001,
+       "dc_gain_db": 10.119754335805673,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": 3.45799170667582,
+     "d_boost": 11.673145694983697,
+     "steps": 3
+    }
+   },
+   "gain_source": "this design's own probe",
+   "secant_gain": -1.4660392188513593,
+   "entry_evals": 2,
+   "entered": true,
+   "landing": {
+    "valid": true,
+    "boost_db": 3.430787776854523,
+    "peak_freq_ghz": 1.59886447,
+    "dc_gain_db": 3.4931056272129664,
+    "loose_pass": true,
+    "in_band": true,
+    "failing": []
+   },
+   "x_landing": [
+    0.7698934412335314,
+    0.3181710023770149,
+    0.31330560295856147,
+    0.3576135166464367,
+    0.4788058593176858,
+    0.43433158280526074
+   ],
+   "landing_probe": {
+    "points": {
+     "plus": {
+      "moved": 0.04999999999999999,
+      "valid": true,
+      "boost_db": 4.233761331246216,
+      "peak_freq_ghz": 1.69371927,
+      "dc_gain_db": 2.7108773985698624,
+      "loose_pass": true,
+      "in_band": true,
+      "failing": []
+     },
+     "minus": {
+      "moved": 0.04999999999999999,
+      "valid": true,
+      "boost_db": 2.5632770186733547,
+      "peak_freq_ghz": 1.59886447,
+      "dc_gain_db": 4.356187695949223,
+      "loose_pass": false,
+      "in_band": true,
+      "failing": [
+       "boost_range"
+      ]
+     }
+    },
+    "d_ln_peak": 0.5763319127281706,
+    "d_boost": 16.704843125728615,
+    "steps": 1
+   },
+   "c2a_peak_sub_grid": false,
+   "reach_db": 10.730965430509752,
+   "c2b_reach_ok": true,
+   "boost_gap_db": 4.5692122231454775,
+   "advance_blocked_by": "T4.10_dc_gain_implausible",
+   "advance_evals": 1,
+   "final": {
+    "valid": true,
+    "boost_db": 3.430787776854523,
+    "peak_freq_ghz": 1.59886447,
+    "dc_gain_db": 3.4931056272129664,
+    "loose_pass": true,
+    "in_band": true,
+    "failing": []
+   },
+   "x_final": [
+    0.7698934412335314,
+    0.3181710023770149,
+    0.31330560295856147,
+    0.3576135166464367,
+    0.4788058593176858,
+    0.43433158280526074
+   ],
+   "final_err_db": 4.5692122231454775,
+   "c3_solved": false,
+   "outcome": "entered, not solved"
+  },
+  {
+   "draw": 40,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": true,
+     "boost_db": 4.077258802635765,
+     "peak_freq_ghz": 0.951795494,
+     "dc_gain_db": 1.9326518834927289,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "peak_in_band"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -14.06 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "phase": "entry",
+     "t": -0.175,
+     "moved": -0.175,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -2.75 dB is below 0 dB for a topology that should have gain"
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 3.121851696211068,
+    "peak_freq_ghz": 0.673542451,
+    "dc_gain_db": 7.04643418171501,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 2.9984785963882503,
+       "peak_freq_ghz": 0.635821479,
+       "dc_gain_db": 7.562592021033626,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.246736508191609,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 6.491497037141589,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": -1.1526638913420817,
+     "d_boost": -2.4825791180335854,
+     "steps": 2
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.9049716691159553,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 6.334145136867672,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 2.259331341055317,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 7.82649903272552,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": 0.0,
+     "d_boost": 16.456403280606388,
+     "steps": 0
+    }
+   },
+   "gain_source": "this design's own probe",
+   "secant_gain": -0.9879976291024419,
+   "entry_blocked_by": "T4.10_dc_gain_implausible",
+   "entry_evals": 3,
+   "entered": false,
+   "landing": {
+    "valid": true,
+    "boost_db": 4.077258802635765,
+    "peak_freq_ghz": 0.951795494,
+    "dc_gain_db": 1.9326518834927289,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "x_landing": [
+    0.437567009921941,
+    0.20246893446815994,
+    0.21944920584294103,
+    0.24060774536439256,
+    0.7386134668864597,
+    0.39409734473113245
+   ],
+   "outcome": "did not enter the band"
+  },
+  {
+   "draw": 41,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.29356148137430593,
+     "moved": -0.29356148137430593,
+     "valid": true,
+     "boost_db": 9.140823124997992,
+     "peak_freq_ghz": 1.3450001,
+     "dc_gain_db": 1.6986495164696704,
+     "loose_pass": true,
+     "in_band": true,
+     "failing": []
+    },
+    {
+     "phase": "advance",
+     "t": -0.11237671005364407,
+     "moved": -0.11237671005364402,
+     "valid": true,
+     "boost_db": 7.913250746260328,
+     "peak_freq_ghz": 1.3450001,
+     "dc_gain_db": 2.8803660749534132,
+     "loose_pass": true,
+     "in_band": true,
+     "failing": []
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 3.1841591150013344,
+    "peak_freq_ghz": 0.898491278,
+    "dc_gain_db": 3.8488310737234106,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "peak_in_band",
+     "hd3"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": false,
+       "guard_check": "T2.5_mosfet_not_in_saturation",
+       "reason": "2 device(s) not in saturation \u2014 XM1: Vds=0.1198V Vdsat=0.1251V headroom=-5.3mV (need >= 50mV); XM2: Vds=0.1198V Vdsat=0.1251V headroom=-5.3mV (need >= 50mV)"
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.620492748778269,
+       "peak_freq_ghz": 1.00826205,
+       "dc_gain_db": 4.130250864262485,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     },
+     "d_ln_peak": -2.3053277239286434,
+     "d_boost": -48.72667267553865,
+     "steps": 2
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.607726689622604,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 3.4233277234302744,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "peak_in_band",
+        "hd3"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 2.741020774952692,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 4.298975308139298,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3"
+       ]
+      }
+     },
+     "d_ln_peak": 0.5763319387643976,
+     "d_boost": 8.667059146699112,
+     "steps": 1
+    }
+   },
+   "gain_source": "this design's own probe",
+   "secant_gain": -1.3742687412876629,
+   "entry_evals": 1,
+   "entered": true,
+   "landing": {
+    "valid": true,
+    "boost_db": 9.140823124997992,
+    "peak_freq_ghz": 1.3450001,
+    "dc_gain_db": 1.6986495164696704,
+    "loose_pass": true,
+    "in_band": true,
+    "failing": []
+   },
+   "x_landing": [
+    0.8673316534099575,
+    0.3366232325883518,
+    0.5188449254889007,
+    0.7264913790241713,
+    0.5610264553936898,
+    0.5669291629135821
+   ],
+   "landing_probe": {
+    "points": {
+     "plus": {
+      "moved": 0.050000000000000044,
+      "valid": true,
+      "boost_db": 9.632478067351112,
+      "peak_freq_ghz": 1.3450001,
+      "dc_gain_db": 1.2247666322931543,
+      "loose_pass": true,
+      "in_band": true,
+      "failing": []
+     },
+     "minus": {
+      "moved": 0.050000000000000044,
+      "valid": true,
+      "boost_db": 8.617300523486898,
+      "peak_freq_ghz": 1.3450001,
+      "dc_gain_db": 2.2028337270624783,
+      "loose_pass": true,
+      "in_band": true,
+      "failing": []
+     }
+    },
+    "d_ln_peak": 0.0,
+    "d_boost": 10.151775438642128,
+    "steps": 0
+   },
+   "c2a_peak_sub_grid": true,
+   "reach_db": 7.375177337962831,
+   "c2b_reach_ok": true,
+   "boost_gap_db": -1.1408231249979917,
+   "advance_evals": 1,
+   "final": {
+    "valid": true,
+    "boost_db": 7.913250746260328,
+    "peak_freq_ghz": 1.3450001,
+    "dc_gain_db": 2.8803660749534132,
+    "loose_pass": true,
+    "in_band": true,
+    "failing": []
+   },
+   "x_final": [
+    0.8673316534099575,
+    0.3366232325883518,
+    0.5188449254889007,
+    0.6141146689705272,
+    0.5610264553936898,
+    0.5669291629135821
+   ],
+   "final_err_db": 0.08674925373967213,
+   "c3_solved": true,
+   "outcome": "entered and solved"
+  },
+  {
+   "draw": 48,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": true,
+     "boost_db": 2.2843301157295706,
+     "peak_freq_ghz": 0.713501272,
+     "dc_gain_db": 5.94490916886471,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band"
+     ]
+    },
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -3.02 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "phase": "entry",
+     "t": -0.175,
+     "moved": -0.175,
+     "valid": true,
+     "boost_db": 2.6999359467129116,
+     "peak_freq_ghz": 0.898491278,
+     "dc_gain_db": 2.6388503564121555,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band"
+     ]
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 1.5348975179993722,
+    "peak_freq_ghz": 0.504912451,
+    "dc_gain_db": 9.795952357276322,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 1.4294784031327215,
+       "peak_freq_ghz": 0.476635408,
+       "dc_gain_db": 10.127010787317538,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 1.6388714666621311,
+       "peak_freq_ghz": 0.534867068,
+       "dc_gain_db": 9.4094812505518,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_v"
+       ]
+      }
+     },
+     "d_ln_peak": -1.1526639018076938,
+     "d_boost": -2.093930635294095,
+     "steps": 2
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 2.433234850947091,
+       "peak_freq_ghz": 0.504912451,
+       "dc_gain_db": 8.97859892919723,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 0.5656554778740208,
+       "peak_freq_ghz": 0.449941989,
+       "dc_gain_db": 10.715325374252604,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     },
+     "d_ln_peak": 1.1526638876859296,
+     "d_boost": 18.675793730730703,
+     "steps": 2
+    }
+   },
+   "gain_source": "this design's own probe",
+   "secant_gain": -1.3173301669156052,
+   "entry_blocked_by": "T4.10_dc_gain_implausible",
+   "entry_evals": 3,
+   "entered": false,
+   "landing": {
+    "valid": true,
+    "boost_db": 2.6999359467129116,
+    "peak_freq_ghz": 0.898491278,
+    "dc_gain_db": 2.6388503564121555,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band"
+    ]
+   },
+   "x_landing": [
+    0.49344916528687754,
+    0.5293451237171175,
+    0.3917563908504196,
+    0.13818454550717563,
+    0.8178788581802757,
+    0.3408768009216458
+   ],
+   "outcome": "did not enter the band"
+  },
+  {
+   "draw": 56,
+   "steps": [
+    {
+     "phase": "entry",
+     "t": -0.35,
+     "moved": -0.35,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -4.38 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "phase": "entry",
+     "t": -0.175,
+     "moved": -0.17500000000000004,
+     "valid": false,
+     "guard_check": "T4.10_dc_gain_implausible",
+     "reason": "DC gain -1.08 dB is below 0 dB for a topology that should have gain"
+    },
+    {
+     "phase": "entry",
+     "t": -0.0875,
+     "moved": -0.08750000000000002,
+     "valid": true,
+     "boost_db": 15.55353107447399,
+     "peak_freq_ghz": 0.755830704,
+     "dc_gain_db": 0.1789686741256784,
+     "loose_pass": false,
+     "in_band": false,
+     "failing": [
+      "boost_range",
+      "peak_in_band",
+      "eye_h",
+      "eye_v"
+     ]
+    }
+   ],
+   "base": {
+    "valid": true,
+    "boost_db": 15.047772916982833,
+    "peak_freq_ghz": 0.673542451,
+    "dc_gain_db": 1.2690688120597247,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "probe": {
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 14.761592152449829,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 1.8294577165957095,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 15.337884130397084,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 0.6646720170596094,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     },
+     "d_ln_peak": -0.5763319537424465,
+     "d_boost": -5.762919779472545,
+     "steps": 1
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.043155488074650306,
+       "valid": true,
+       "boost_db": 15.379114101663626,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 0.9472363444211622,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 14.645954487553261,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 1.6588660797601125,
+       "loose_pass": false,
+       "in_band": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     },
+     "d_ln_peak": 0.0,
+     "d_boost": 7.870278276281971,
+     "steps": 0
+    }
+   },
+   "gain_source": "this design's own probe",
+   "entry_blocked_by": "T4.10_dc_gain_implausible",
+   "secant_gain": -1.3173301747654649,
+   "entry_evals": 3,
+   "entered": false,
+   "landing": {
+    "valid": true,
+    "boost_db": 15.55353107447399,
+    "peak_freq_ghz": 0.755830704,
+    "dc_gain_db": 0.1789686741256784,
+    "loose_pass": false,
+    "in_band": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "x_landing": [
+    0.8646042740184294,
+    0.17818783153517614,
+    0.3420671150398443,
+    0.9568445119253497,
+    0.784248837529599,
+    0.6146682624146792
+   ],
+   "outcome": "did not enter the band"
+  }
+ ]
+}

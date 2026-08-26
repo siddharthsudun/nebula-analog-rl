@@ -81,6 +81,7 @@ def slopes(a: dict) -> tuple[dict[str, list[dict]], list[str], dict[str, int]]:
                 span = pl["moved"] + mi["moved"]
                 dpk = (pl["peak_freq_ghz"] - mi["peak_freq_ghz"]) / span
                 dbo = (pl["boost_db"] - mi["boost_db"]) / span
+                ddc = (pl["dc_gain_db"] - mi["dc_gain_db"]) / span
                 dlpk = math.log(pl["peak_freq_ghz"] / mi["peak_freq_ghz"]) / span
                 steps = abs(round(math.log(pl["peak_freq_ghz"] / mi["peak_freq_ghz"], GRID)))
             elif len(usable) == 1 and not at_sweep_edge(base.get("peak_freq_ghz")):
@@ -89,14 +90,19 @@ def slopes(a: dict) -> tuple[dict[str, list[dict]], list[str], dict[str, int]]:
                 span = max(q["moved"], 1e-12)
                 dpk = sgn * (q["peak_freq_ghz"] - base["peak_freq_ghz"]) / span
                 dbo = sgn * (q["boost_db"] - base["boost_db"]) / span
+                ddc = sgn * (q["dc_gain_db"] - base["dc_gain_db"]) / span
                 dlpk = sgn * math.log(q["peak_freq_ghz"] / base["peak_freq_ghz"]) / span
                 steps = abs(round(math.log(q["peak_freq_ghz"] / base["peak_freq_ghz"], GRID)))
             else:
                 continue
             if steps == 0:
                 dropped["sub_grid"] += 1
+            # d_dc is carried alongside d_boost, computed by the same difference and the
+            # same one-sided fallback, because G3.2b found that DC gain -- not boost -- is
+            # what the peak axis actually spends below the band. Additive: no existing
+            # caller reads it, and g32_peak_report's own output is unchanged.
             per_dim[name].append({"spec": r["spec"], "d_peak": dpk, "d_boost": dbo,
-                                  "d_ln_peak": dlpk, "steps": steps,
+                                  "d_dc": ddc, "d_ln_peak": dlpk, "steps": steps,
                                   "sel": abs(dpk) / max(abs(dbo), 1e-9)})
     return per_dim, dims_seen, dropped
 

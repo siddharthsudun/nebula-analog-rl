@@ -1,0 +1,167 @@
+G3.2b (rs, r_load) PLANE | 8 designs from results/g32b_lowpeak_set.json | select-seed 13 | target 8.0 dB
+  band 1.25-2.50 GHz, aim 1.7678 GHz | entry<=3, advance<=3 evals | step cap 0.35
+  CALIBRATION-SET performance. Not comparable to any seed-3 benchmark number.
+
+  draw   8  peak 0.5666 -> 0.6358 GHz  NOT IN BAND after 3 eval(s)  blocked by T4.10_dc_gain_implausible
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  draw  17  peak 0.0011 -> 1.1986 GHz  NOT IN BAND after 3 eval(s)
+  draw  19  peak 0.3785 -> 0.4247 GHz  NOT IN BAND after 3 eval(s)  blocked by T4.10_dc_gain_implausible
+  draw  20  peak 0.7135 -> 1.5989 GHz IN BAND (2 ev) | boost   3.43 ->   3.43 (1 ev, err  4.57 dB) | rs at landing  +16.70 dB/unit, peak MOVED | not solved
+  draw  40  peak 0.6735 -> 0.9518 GHz  NOT IN BAND after 3 eval(s)  blocked by T4.10_dc_gain_implausible
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  draw  41  peak 0.8985 -> 1.3450 GHz IN BAND (1 ev) | boost   9.14 ->   7.91 (1 ev, err  0.09 dB) | rs at landing  +10.15 dB/unit, peak sub-grid | SOLVED
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  draw  48  peak 0.5049 -> 0.8985 GHz  NOT IN BAND after 3 eval(s)  blocked by T4.10_dc_gain_implausible
+  draw  56  peak 0.6735 -> 0.7558 GHz  NOT IN BAND after 3 eval(s)  blocked by T4.10_dc_gain_implausible
+
+67 measure_all spent (calibration, not a controller arm)
+wrote results/g32b_plane.json
+
+THE PRE-DECLARED CRITERION:
+  C1 ENTRY      2 of 8 entered peak_in_band within 3 evals   -> FAIL
+  C2 AUTHORITY  at landing: rs peak sub-grid on 1 of 2; boost gap inside measured
+                rs reach on 2 of 2                                   -> FAIL
+  C3 SOLVE      rs alone reached |err| <= 1.5 dB in band on 1 of 2       -> FAIL
+
+VERDICT: NOT a working repair plane on this criterion
+  Calibration-set performance. Do NOT quote these counts beside G3.2's or H1's seed-3
+  numbers -- the plane was fitted on these same eight designs.
