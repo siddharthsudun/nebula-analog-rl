@@ -1,0 +1,636 @@
+{
+ "prereg": {
+  "k": 5,
+  "r": 10,
+  "budget_measure_all": 20,
+  "t0": 0.05,
+  "expand": 2.0,
+  "t_max": 1.0,
+  "stop_abs_err_db": 0.25,
+  "invalid_backoff": 0.5
+ },
+ "spec_seed": 3,
+ "model": "results/seq_clean40k.zip",
+ "direction": {
+  "w_in": -1.0,
+  "l_in": -1.0,
+  "i_tail": -1.0,
+  "rs": 1.0,
+  "cs": 1.0,
+  "r_load": -1.0
+ },
+ "probe_source": "results/g3_probe_check.json",
+ "tol": 1.5,
+ "complete": true,
+ "rows": [
+  {
+   "spec": 0,
+   "target_boost_db": 5.513895002861746,
+   "channel_loss_db": 9.894484052768798,
+   "g3": {
+    "loose_solved_at": null,
+    "strict_solved_at": null,
+    "n_valid": 7,
+    "n_loose_pass": 0,
+    "best_boost_db": null,
+    "best_abs_err": null,
+    "best_design": null,
+    "all_valid_boosts": [
+     0.0,
+     1.0591706599555355,
+     4.172632183589589,
+     2.2407665323205106,
+     4.176288974389254,
+     5.432495612397677,
+     6.619824086540936
+    ],
+    "n_distinct_boosts": 7,
+    "stage1": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 5,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": [
+      0.0,
+      1.0591706599555355,
+      4.172632183589589,
+      2.2407665323205106,
+      4.176288974389254
+     ]
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 2,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": [
+      5.432495612397677,
+      6.619824086540936
+     ]
+    },
+    "handoff": {
+     "boost_db": 4.176288974389254,
+     "guard_valid": true,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": true,
+     "reason": "converged or budget exhausted",
+     "n_invalid": 0,
+     "steps": [
+      {
+       "t": 0.05,
+       "valid": true,
+       "boost_db": 5.432495612397677,
+       "abs_err": 0.0813993904640693,
+       "phase": "hypothesis"
+      },
+      {
+       "t": 0.1,
+       "valid": true,
+       "boost_db": 6.619824086540936,
+       "abs_err": 1.1059290836791895,
+       "phase": "expand"
+      }
+     ]
+    },
+    "n_solver_evals": 2,
+    "efficiency_db_per_eval": null,
+    "measure_all_spent": 12.0
+   }
+  },
+  {
+   "spec": 1,
+   "target_boost_db": 9.807646791238382,
+   "channel_loss_db": 12.657296288514942,
+   "g3": {
+    "loose_solved_at": 3,
+    "strict_solved_at": null,
+    "n_valid": 6,
+    "n_loose_pass": 2,
+    "best_boost_db": 7.416748076638395,
+    "best_abs_err": 2.3908987145999863,
+    "best_design": {
+     "w_in": 3.3847550777848476e-05,
+     "l_in": 3.4772803995570085e-07,
+     "i_tail": 0.0007248587242865388,
+     "rs": 1479.5807831842915,
+     "cs": 4.2570230118930837e-13,
+     "r_load": 2468.434322540043,
+     "w_dfe": 0.0
+    },
+    "all_valid_boosts": [
+     5.656849819972322,
+     9.637753909486266,
+     6.312793019653752,
+     7.416748076638395,
+     8.331054589422012,
+     9.885355360887264
+    ],
+    "n_distinct_boosts": 6,
+    "stage1": {
+     "loose_solved_at": 3,
+     "strict_solved_at": null,
+     "n_valid": 3,
+     "n_loose_pass": 1,
+     "best_boost_db": 6.312793019653752,
+     "best_abs_err": 3.49485377158463,
+     "best_design": {
+      "w_in": 3.7183655050753914e-05,
+      "l_in": 3.65078592300415e-07,
+      "i_tail": 0.0007442505180835724,
+      "rs": 1379.5599520206451,
+      "cs": 3.8206426525844224e-13,
+      "r_load": 2568.4551537036896,
+      "w_dfe": 0.0
+     },
+     "all_valid_boosts": [
+      5.656849819972322,
+      9.637753909486266,
+      6.312793019653752
+     ]
+    },
+    "stage2": {
+     "loose_solved_at": 1,
+     "strict_solved_at": null,
+     "n_valid": 3,
+     "n_loose_pass": 1,
+     "best_boost_db": 7.416748076638395,
+     "best_abs_err": 2.3908987145999863,
+     "best_design": {
+      "w_in": 3.3847550777848476e-05,
+      "l_in": 3.4772803995570085e-07,
+      "i_tail": 0.0007248587242865388,
+      "rs": 1479.5807831842915,
+      "cs": 4.2570230118930837e-13,
+      "r_load": 2468.434322540043,
+      "w_dfe": 0.0
+     },
+     "all_valid_boosts": [
+      7.416748076638395,
+      8.331054589422012,
+      9.885355360887264
+     ]
+    },
+    "handoff": {
+     "boost_db": 6.312793019653752,
+     "guard_valid": true,
+     "loose_pass": true
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": true,
+     "reason": "converged or budget exhausted",
+     "n_invalid": 0,
+     "steps": [
+      {
+       "t": 0.05,
+       "valid": true,
+       "boost_db": 7.416748076638395,
+       "abs_err": 2.3908987145999863,
+       "phase": "hypothesis"
+      },
+      {
+       "t": 0.1,
+       "valid": true,
+       "boost_db": 8.331054589422012,
+       "abs_err": 1.47659220181637,
+       "phase": "expand"
+      },
+      {
+       "t": 0.2,
+       "valid": true,
+       "boost_db": 9.885355360887264,
+       "abs_err": 0.07770856964888218,
+       "phase": "expand"
+      }
+     ]
+    },
+    "n_solver_evals": 3,
+    "efficiency_db_per_eval": 0.36798501899488123,
+    "measure_all_spent": 13.0
+   }
+  },
+  {
+   "spec": 2,
+   "target_boost_db": 5.564771853442395,
+   "channel_loss_db": 11.46501552189179,
+   "g3": {
+    "loose_solved_at": 2,
+    "strict_solved_at": null,
+    "n_valid": 7,
+    "n_loose_pass": 1,
+    "best_boost_db": 3.8492018351900272,
+    "best_abs_err": 1.715570018252368,
+    "best_design": {
+     "w_in": 3.2019407687319735e-05,
+     "l_in": 3.3643827512860295e-07,
+     "i_tail": 0.0007122746556997299,
+     "rs": 2019.1030651330948,
+     "cs": 1.0482105861085135e-13,
+     "r_load": 2450.2967834472656,
+     "w_dfe": 0.0
+    },
+    "all_valid_boosts": [
+     2.5694680962370473,
+     3.8492018351900272,
+     1.719994608479885,
+     3.09090647463921,
+     4.411075078478282,
+     6.865059335489018,
+     5.587091412531975
+    ],
+    "n_distinct_boosts": 7,
+    "stage1": {
+     "loose_solved_at": 2,
+     "strict_solved_at": null,
+     "n_valid": 3,
+     "n_loose_pass": 1,
+     "best_boost_db": 3.8492018351900272,
+     "best_abs_err": 1.715570018252368,
+     "best_design": {
+      "w_in": 3.2019407687319735e-05,
+      "l_in": 3.3643827512860295e-07,
+      "i_tail": 0.0007122746556997299,
+      "rs": 2019.1030651330948,
+      "cs": 1.0482105861085135e-13,
+      "r_load": 2450.2967834472656,
+      "w_dfe": 0.0
+     },
+     "all_valid_boosts": [
+      2.5694680962370473,
+      3.8492018351900272,
+      1.719994608479885
+     ]
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 4,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": [
+      3.09090647463921,
+      4.411075078478282,
+      6.865059335489018,
+      5.587091412531975
+     ]
+    },
+    "handoff": {
+     "boost_db": 1.719994608479885,
+     "guard_valid": true,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": true,
+     "reason": "converged or budget exhausted",
+     "n_invalid": 0,
+     "steps": [
+      {
+       "t": 0.05,
+       "valid": true,
+       "boost_db": 3.09090647463921,
+       "abs_err": 2.4738653788031852,
+       "phase": "hypothesis"
+      },
+      {
+       "t": 0.1,
+       "valid": true,
+       "boost_db": 4.411075078478282,
+       "abs_err": 1.1536967749641134,
+       "phase": "expand"
+      },
+      {
+       "t": 0.2,
+       "valid": true,
+       "boost_db": 6.865059335489018,
+       "abs_err": 1.300287482046623,
+       "phase": "expand"
+      },
+      {
+       "t": 0.14701321011608537,
+       "valid": true,
+       "boost_db": 5.587091412531975,
+       "abs_err": 0.0223195590895795,
+       "phase": "refine"
+      }
+     ]
+    },
+    "n_solver_evals": 4,
+    "efficiency_db_per_eval": 0.0,
+    "measure_all_spent": 14.0
+   }
+  },
+  {
+   "spec": 3,
+   "target_boost_db": 7.874307788845004,
+   "channel_loss_db": 9.277911317096628,
+   "g3": {
+    "loose_solved_at": null,
+    "strict_solved_at": null,
+    "n_valid": 0,
+    "n_loose_pass": 0,
+    "best_boost_db": null,
+    "best_abs_err": null,
+    "best_design": null,
+    "all_valid_boosts": [],
+    "n_distinct_boosts": 0,
+    "stage1": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "handoff": {
+     "boost_db": null,
+     "guard_valid": false,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": false,
+     "reason": "handoff invalid: no baseline boost to solve from",
+     "n_invalid": 0,
+     "steps": []
+    },
+    "n_solver_evals": 0,
+    "efficiency_db_per_eval": null,
+    "measure_all_spent": 10.0
+   }
+  },
+  {
+   "spec": 4,
+   "target_boost_db": 9.407462908455287,
+   "channel_loss_db": 8.909376159371227,
+   "g3": {
+    "loose_solved_at": null,
+    "strict_solved_at": null,
+    "n_valid": 0,
+    "n_loose_pass": 0,
+    "best_boost_db": null,
+    "best_abs_err": null,
+    "best_design": null,
+    "all_valid_boosts": [],
+    "n_distinct_boosts": 0,
+    "stage1": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "handoff": {
+     "boost_db": null,
+     "guard_valid": false,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": false,
+     "reason": "handoff invalid: no baseline boost to solve from",
+     "n_invalid": 0,
+     "steps": []
+    },
+    "n_solver_evals": 0,
+    "efficiency_db_per_eval": null,
+    "measure_all_spent": 10.0
+   }
+  },
+  {
+   "spec": 5,
+   "target_boost_db": 7.347369142973973,
+   "channel_loss_db": 12.13392146097091,
+   "g3": {
+    "loose_solved_at": null,
+    "strict_solved_at": null,
+    "n_valid": 0,
+    "n_loose_pass": 0,
+    "best_boost_db": null,
+    "best_abs_err": null,
+    "best_design": null,
+    "all_valid_boosts": [],
+    "n_distinct_boosts": 0,
+    "stage1": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "handoff": {
+     "boost_db": null,
+     "guard_valid": false,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": false,
+     "reason": "handoff invalid: no baseline boost to solve from",
+     "n_invalid": 0,
+     "steps": []
+    },
+    "n_solver_evals": 0,
+    "efficiency_db_per_eval": null,
+    "measure_all_spent": 10.0
+   }
+  },
+  {
+   "spec": 6,
+   "target_boost_db": 7.583768122485067,
+   "channel_loss_db": 12.694388571505126,
+   "g3": {
+    "loose_solved_at": null,
+    "strict_solved_at": null,
+    "n_valid": 4,
+    "n_loose_pass": 0,
+    "best_boost_db": null,
+    "best_abs_err": null,
+    "best_design": null,
+    "all_valid_boosts": [
+     0.9746874591724071,
+     4.683813765085148,
+     6.29390191862925,
+     7.667929883093367
+    ],
+    "n_distinct_boosts": 4,
+    "stage1": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 2,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": [
+      0.9746874591724071,
+      4.683813765085148
+     ]
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 2,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": [
+      6.29390191862925,
+      7.667929883093367
+     ]
+    },
+    "handoff": {
+     "boost_db": 4.683813765085148,
+     "guard_valid": true,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": true,
+     "reason": "converged or budget exhausted",
+     "n_invalid": 0,
+     "steps": [
+      {
+       "t": 0.05,
+       "valid": true,
+       "boost_db": 6.29390191862925,
+       "abs_err": 1.2898662038558166,
+       "phase": "hypothesis"
+      },
+      {
+       "t": 0.1,
+       "valid": true,
+       "boost_db": 7.667929883093367,
+       "abs_err": 0.08416176060830072,
+       "phase": "expand"
+      }
+     ]
+    },
+    "n_solver_evals": 2,
+    "efficiency_db_per_eval": null,
+    "measure_all_spent": 12.0
+   }
+  },
+  {
+   "spec": 7,
+   "target_boost_db": 9.427026723752961,
+   "channel_loss_db": 15.650138038688787,
+   "g3": {
+    "loose_solved_at": 1,
+    "strict_solved_at": null,
+    "n_valid": 1,
+    "n_loose_pass": 1,
+    "best_boost_db": 3.905415834854055,
+    "best_abs_err": 5.521610888898906,
+    "best_design": {
+     "w_in": 4.970964901388306e-05,
+     "l_in": 2.558042902499437e-07,
+     "i_tail": 0.0008619966804981232,
+     "rs": 2965.7238841056824,
+     "cs": 1.425190412438425e-13,
+     "r_load": 2832.3312282562256,
+     "w_dfe": 0.0
+    },
+    "all_valid_boosts": [
+     3.905415834854055
+    ],
+    "n_distinct_boosts": 1,
+    "stage1": {
+     "loose_solved_at": 1,
+     "strict_solved_at": null,
+     "n_valid": 1,
+     "n_loose_pass": 1,
+     "best_boost_db": 3.905415834854055,
+     "best_abs_err": 5.521610888898906,
+     "best_design": {
+      "w_in": 4.970964901388306e-05,
+      "l_in": 2.558042902499437e-07,
+      "i_tail": 0.0008619966804981232,
+      "rs": 2965.7238841056824,
+      "cs": 1.425190412438425e-13,
+      "r_load": 2832.3312282562256,
+      "w_dfe": 0.0
+     },
+     "all_valid_boosts": [
+      3.905415834854055
+     ]
+    },
+    "stage2": {
+     "loose_solved_at": null,
+     "strict_solved_at": null,
+     "n_valid": 0,
+     "n_loose_pass": 0,
+     "best_boost_db": null,
+     "best_abs_err": null,
+     "best_design": null,
+     "all_valid_boosts": []
+    },
+    "handoff": {
+     "boost_db": null,
+     "guard_valid": false,
+     "loose_pass": false
+    },
+    "solver": {
+     "direction_rejected": false,
+     "bracketed": false,
+     "reason": "handoff invalid: no baseline boost to solve from",
+     "n_invalid": 0,
+     "steps": []
+    },
+    "n_solver_evals": 0,
+    "efficiency_db_per_eval": null,
+    "measure_all_spent": 10.0
+   }
+  }
+ ]
+}
