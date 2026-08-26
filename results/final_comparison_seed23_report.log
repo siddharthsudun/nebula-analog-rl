@@ -1,0 +1,123 @@
+============================================================================================
+FINAL THREE-ARM COMPARISON   spec-seed 23   40 specs   COMPLETE
+  budget 20 measure_all per spec, every arm.  strict = hard_pass and |err| <= 1.5 dB
+============================================================================================
+
+PER SPEC   err = |achieved - requested|, over the whole arm; ev = stage-2 evaluations
+            handoff |  A  PPO -> H1        |  B  PPO -> G3.2      |  C  PPO -> G3.2 -> H1
+spec  tgt   boost   |   err   ev  solved   |   err   ev  solved   |   err   ev  solved   
+   0  9.16    4.43 |   1.32   10  strict |   0.19    2  strict |   0.19    2  strict 
+   1  5.77       - |   0.48   10  strict |   0.12    2  strict |   0.12    2  strict 
+   2  8.92       - |   2.38   10  loose  |   0.25    3  strict |   0.25    3  strict 
+   3  6.21       - |      -   10  -      |      -    3  -      |   0.35   10  strict 
+   4  9.30    3.87 |      -   10  -      |      -    3  -      |      -   10  -      
+   5  7.49       - |      -   10  -      |      -    6  -      |      -   10  -      
+   6  5.38       - |   1.89   10  loose  |      -    3  -      |      -   10  -      
+   7  6.81       - |   0.24   10  strict |   0.24    0  strict |   0.24    0  strict 
+   8  8.24    4.54 |   1.59   10  loose  |   0.17    2  strict |   0.17    2  strict 
+   9  8.75    9.74 |   2.68   10  loose  |      -    3  -      |      -   10  -      
+  10  5.11    4.94 |      -   10  -      |      -    3  -      |      -   10  -      
+  11  8.25       - |   2.53   10  loose  |   3.10   10  loose  |   3.10   10  loose  
+  12 10.63       - |      -   10  -      |      -    3  -      |      -   10  -      
+  13  9.97       - |   2.91   10  loose  |   0.88   10  strict |   0.88   10  strict 
+  14  8.75    7.42 |   0.66   10  strict |   0.20    2  strict |   0.20    2  strict 
+  15 10.08    5.90 |   4.18   10  loose  |   1.75   10  loose  |   1.75   10  loose  
+  16  8.81    5.42 |   3.15   10  loose  |   0.05    5  strict |   0.05    5  strict 
+  17  7.99    6.88 |   0.72   10  strict |   0.23    8  strict |   0.23    8  strict 
+  18  5.96    3.36 |   0.39   10  strict |   0.21    1  strict |   0.21    1  strict 
+  19  9.47    7.09 |   0.70   10  strict |   1.13   10  strict |   1.13   10  strict 
+  20  9.09       - |   0.31   10  strict |   0.20    1  strict |   0.20    1  strict 
+  21 10.83       - |   5.17   10  loose  |   4.09   10  loose  |   4.09   10  loose  
+  22  9.96    4.37 |   2.04   10  loose  |   1.02    8  strict |   0.52   10  strict 
+  23  9.68    3.57 |   3.74   10  loose  |   2.78    8  loose  |   2.78   10  loose  
+  24  5.66    4.27 |   1.45   10  strict |   0.02    3  strict |   0.02    3  strict 
+  25  6.99    4.81 |   0.36   10  strict |   0.01    2  strict |   0.01    2  strict 
+  26 10.95    7.57 |      -   10  -      |      -    3  -      |      -   10  -      
+  27  9.70       - |      -   10  -      |      -    5  -      |      -   10  -      
+  28  8.56    0.14 |      -   10  -      |   0.02    4  strict |   0.02    4  strict 
+  29  6.45    1.26 |      -   10  -      |      -    3  -      |      -   10  -      
+  30 10.61    4.22 |   3.43   10  loose  |   0.74   10  strict |   0.74   10  strict 
+  31  8.11       - |   4.11   10  loose  |   1.66   10  loose  |   1.66   10  loose  
+  32  8.02    2.76 |      -   10  -      |      -    3  -      |   4.54   10  loose  
+  33  5.79   10.24 |   0.41   10  strict |   0.16    5  strict |   0.16    5  strict 
+  34  7.80       - |      -   10  -      |      -    5  -      |      -   10  -      
+  35 10.80       - |   2.29   10  loose  |   0.84    8  strict |   0.84   10  strict 
+  36  9.70       - |   2.87   10  loose  |   0.68   10  strict |   0.68   10  strict 
+  37  9.48    4.49 |   3.08   10  loose  |   1.70   10  loose  |   1.70   10  loose  
+  38  5.22    1.86 |   0.69   10  strict |   0.06    1  strict |   0.06    1  strict 
+  39  6.75       - |   1.16   10  strict |   0.01    4  strict |   0.01    4  strict 
+
+============================================================================================
+PRIMARY OUTCOMES
+============================================================================================
+
+  arm                    median err    mean ev     max ev mean m_all  max m_all
+  A  PPO -> H1                1.886      10.00         10      20.00       20.0
+  B  PPO -> G3.2              0.231       5.05         10      15.05       20.0
+  C  PPO -> G3.2 -> H1        0.241       7.12         10      17.12       20.0
+
+  specs with NO hard_pass design at all (excluded from median err): A 11, B 12, C 10
+
+  TARGET-ERROR REDUCTION FROM THE PPO HANDOFF   (|err_handoff| - |err_final|, dB)
+    computed over the 23 of 40 specs with a guard-valid handoff; 17 excluded and never imputed
+    A  PPO -> H1           median  +1.902   improved 14/17   worsened 2
+    B  PPO -> G3.2         median  +3.296   improved 17/17   worsened 0
+    C  PPO -> G3.2 -> H1   median  +3.292   improved 18/18   worsened 0
+
+  MATCHED CHANCE LINE   k = min(distinct rounded boosts, loose passes), pooled
+  across stage 1 and ALL of stage 2 including any fallback portion.
+    arm                      strict   mean k  chance line   p(>=obs)
+    A  PPO -> H1              13/40     2.73      16.1/40     0.9560   on its line
+    B  PPO -> G3.2            22/40     3.50      19.4/40     0.1700   on its line
+    C  PPO -> G3.2 -> H1      23/40     3.67      20.7/40     0.2245   on its line
+    (pool of 26 demonstrably-achieved boosts, the same pool as every other arm)
+
+============================================================================================
+SECONDARY OUTCOMES -- descriptive. §4.1 fixed in advance that n = 40 cannot
+resolve a few-spec difference in solve count, and no claim is made from one.
+============================================================================================
+
+  arm                        strict      loose     mean k mean valid
+  A  PPO -> H1                13/40      29/40       2.73       7.50
+  B  PPO -> G3.2              22/40      28/40       3.50       5.62
+  C  PPO -> G3.2 -> H1        23/40      30/40       3.67       7.12
+
+  PAIRED, SPEC BY SPEC   (same specs, same handoff, so differences are the arms')
+    A vs B   on 27 specs:  B closer on 24, A closer on 2, tied 1   median diff +1.086 dB
+    A vs C   on 27 specs:  C closer on 24, A closer on 2, tied 1   median diff +1.130 dB
+    B vs C   on 28 specs:  C closer on 1, B closer on 0, tied 27   median diff +0.000 dB
+
+  BY TARGET TERCILE   cut at the 1/3 and 2/3 quantiles of THIS set's targets: 7.80, 9.30 dB
+    arm                    low tercile              mid tercile              high tercile
+    A  PPO -> H1           med  0.48  strict 8/14   med  1.99  strict 4/13   med  3.00  strict 1/13
+    B  PPO -> G3.2         med  0.09  strict 8/14   med  0.20  strict 8/13   med  1.07  strict 6/13
+    C  PPO -> G3.2 -> H1   med  0.12  strict 9/14   med  0.20  strict 8/13   med  1.00  strict 6/13
+
+============================================================================================
+ARM C -- THE HYBRID'S ACTUAL VALUE PROPOSITION
+============================================================================================
+
+  G3.2 reached its own 0.25 dB target, fallback never fired:  16/40
+  G3.2 stopped short and the fallback FIRED:                   15/40
+  G3.2 stopped short with no budget left to hand over:          9/40
+
+  the fallback received 2-7 evaluations (mean 5.5) out of the same 10-call pool
+
+  WHEN G3.2 FAILED, DID H1 RECOVER IT?
+    strict-recovered by the fallback:               1 of 15 fired
+    first hard_pass design found by the fallback:   2 of 15 fired
+    target-error improvement on the rest:  median +0.000 dB, improved 1, unchanged 2
+
+  WHY THE FALLBACK FIRED   (diagnostic only -- §3.2: never a control input)
+     5 x  2-D repair did not reach feasibility   wall_hit False  hard_pass: peak_in_band
+     3 x  2-D repair did not reach feasibility   wall_hit False  hard_pass: boost_range,peak_in_band
+     3 x  converged onto the feasibility wall    wall_hit True   guard: T4.10_dc_gain_implausible
+     2 x  2-D repair did not reach feasibility   wall_hit False  hard_pass: boost_range
+     1 x  2-D repair did not reach feasibility   wall_hit False  hard_pass: hd3
+     1 x  rescue ladder did not restore guard va wall_hit False  guard: T4.10_dc_gain_implausible
+
+  per-spec: 3(7ev), 4(7ev), 5(4ev), 6(7ev), 9(7ev), 10(7ev), 12(7ev), 22(2ev), 23(2ev), 26(7ev), 27(5ev), 29(7ev), 32(7ev), 34(5ev), 35(2ev)
+  fallback start point (amendment 1 §4): fewest failing checks x11, PPO handoff (nothing guard-valid) x1, best hard_pass design x3
+
+============================================================================================
+read results/final_comparison_seed23.json -- 885 simulations were run to produce it

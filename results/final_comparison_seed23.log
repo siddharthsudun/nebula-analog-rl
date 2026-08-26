@@ -1,0 +1,50 @@
+(stdout with ngspice per-simulation "Note: Transient op ..." lines removed; nothing else altered)
+FINAL COMPARISON | arms A+B+C | spec-seed 23, specs 0-39 | 20 measure_all ceiling
+  stage 1  PPO k=5 at 2.00 measure_all each = 10.00, charged to every arm
+  stage 2  up to 10 evaluations at 1.00 each; arm C splits these ONE pool
+  routing  G3.2 reached_target ? stop : hand the REMAINDER to CMA-ES
+
+  spec  0  tgt  9.16 | A 7.84   1.32  strict | B 8.97   0.19  strict | C 8.97   0.19  strict |  fb no (g32 reached target)
+  spec  1  tgt  5.77 | A 6.25   0.48  strict | B 5.66   0.12  strict | C 5.66   0.12  strict |  fb no (g32 reached target)
+  spec  2  tgt  8.92 | A 6.54   2.38  loose  | B 9.17   0.25  strict | C 9.17   0.25  strict |  fb no (g32 reached target)
+  spec  3  tgt  6.21 | A -      -     -      | B -      -     -      | C 5.86   0.35  strict |  fb 7 evals from fewest failing checks
+  spec  4  tgt  9.30 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 7 evals from fewest failing checks
+  spec  5  tgt  7.49 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 4 evals from fewest failing checks
+  spec  6  tgt  5.38 | A 7.27   1.89  loose  | B -      -     -      | C -      -     -      |  fb 7 evals from fewest failing checks
+  spec  7  tgt  6.81 | A 6.57   0.24  strict | B 6.57   0.24  strict | C 6.57   0.24  strict |  fb no (g32 reached target)
+  spec  8  tgt  8.24 | A 9.83   1.59  loose  | B 8.41   0.17  strict | C 8.41   0.17  strict |  fb no (g32 reached target)
+  spec  9  tgt  8.75 | A 11.43  2.68  loose  | B -      -     -      | C -      -     -      |  fb 7 evals from fewest failing checks
+  spec 10  tgt  5.11 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 7 evals from fewest failing checks
+  spec 11  tgt  8.25 | A 5.72   2.53  loose  | B 5.15   3.10  loose  | C 5.15   3.10  loose  |  fb no (no budget remained)
+  spec 12  tgt 10.63 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 7 evals from PPO handoff (nothing guard-valid)
+  spec 13  tgt  9.97 | A 7.06   2.91  loose  | B 9.09   0.88  strict | C 9.09   0.88  strict |  fb no (no budget remained)
+  spec 14  tgt  8.75 | A 8.08   0.66  strict | B 8.95   0.20  strict | C 8.95   0.20  strict |  fb no (g32 reached target)
+  spec 15  tgt 10.08 | A 5.90   4.18  loose  | B 8.33   1.75  loose  | C 8.33   1.75  loose  |  fb no (no budget remained)
+  spec 16  tgt  8.81 | A 5.66   3.15  loose  | B 8.86   0.05  strict | C 8.86   0.05  strict |  fb no (g32 reached target)
+  spec 17  tgt  7.99 | A 7.27   0.72  strict | B 7.76   0.23  strict | C 7.76   0.23  strict |  fb no (g32 reached target)
+  spec 18  tgt  5.96 | A 6.35   0.39  strict | B 5.75   0.21  strict | C 5.75   0.21  strict |  fb no (g32 reached target)
+  spec 19  tgt  9.47 | A 10.17  0.70  strict | B 8.34   1.13  strict | C 8.34   1.13  strict |  fb no (no budget remained)
+  spec 20  tgt  9.09 | A 9.40   0.31  strict | B 8.88   0.20  strict | C 8.88   0.20  strict |  fb no (g32 reached target)
+  spec 21  tgt 10.83 | A 5.66   5.17  loose  | B 6.74   4.09  loose  | C 6.74   4.09  loose  |  fb no (no budget remained)
+  spec 22  tgt  9.96 | A 7.92   2.04  loose  | B 8.94   1.02  strict | C 9.44   0.52  strict |  fb 2 evals from best hard_pass design
+  spec 23  tgt  9.68 | A 5.95   3.74  loose  | B 6.91   2.78  loose  | C 6.91   2.78  loose  |  fb 2 evals from best hard_pass design
+  spec 24  tgt  5.66 | A 7.11   1.45  strict | B 5.68   0.02  strict | C 5.68   0.02  strict |  fb no (g32 reached target)
+  spec 25  tgt  6.99 | A 7.35   0.36  strict | B 7.00   0.01  strict | C 7.00   0.01  strict |  fb no (g32 reached target)
+  spec 26  tgt 10.95 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 7 evals from fewest failing checks
+  spec 27  tgt  9.70 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 5 evals from fewest failing checks
+  spec 28  tgt  8.56 | A -      -     -      | B 8.54   0.02  strict | C 8.54   0.02  strict |  fb no (g32 reached target)
+  spec 29  tgt  6.45 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 7 evals from fewest failing checks
+  spec 30  tgt 10.61 | A 7.18   3.43  loose  | B 9.86   0.74  strict | C 9.86   0.74  strict |  fb no (no budget remained)
+  spec 31  tgt  8.11 | A 4.00   4.11  loose  | B 6.45   1.66  loose  | C 6.45   1.66  loose  |  fb no (no budget remained)
+  spec 32  tgt  8.02 | A -      -     -      | B -      -     -      | C 3.48   4.54  loose  |  fb 7 evals from fewest failing checks
+  spec 33  tgt  5.79 | A 6.19   0.41  strict | B 5.95   0.16  strict | C 5.95   0.16  strict |  fb no (g32 reached target)
+  spec 34  tgt  7.80 | A -      -     -      | B -      -     -      | C -      -     -      |  fb 5 evals from fewest failing checks
+  spec 35  tgt 10.80 | A 8.51   2.29  loose  | B 9.96   0.84  strict | C 9.96   0.84  strict |  fb 2 evals from best hard_pass design
+  spec 36  tgt  9.70 | A 6.83   2.87  loose  | B 9.01   0.68  strict | C 9.01   0.68  strict |  fb no (no budget remained)
+  spec 37  tgt  9.48 | A 6.39   3.08  loose  | B 7.78   1.70  loose  | C 7.78   1.70  loose  |  fb no (no budget remained)
+  spec 38  tgt  5.22 | A 4.53   0.69  strict | B 5.28   0.06  strict | C 5.28   0.06  strict |  fb no (g32 reached target)
+  spec 39  tgt  6.75 | A 7.91   1.16  strict | B 6.77   0.01  strict | C 6.77   0.01  strict |  fb no (g32 reached target)
+
+885 simulations actually run (stage 1 is shared across arms; each arm is still
+charged the full 10.00 measure_all it would have paid alone)
+wrote results/final_comparison_seed23.json
