@@ -1,0 +1,162 @@
+# Preregistration — final system comparison
+
+Written before the benchmark is built or run. Everything below is fixed at commit time;
+anything changed afterwards is an amendment and must be recorded as one, with the reason
+and the date, not edited in place.
+
+Nothing in this document alters the reward, the PPO hyperparameters, the design bounds,
+the guard, `hard_pass`, or the frozen `seq_clean40k` model. The G3.2 controller
+(`g32_repair.py`) and the H1 arm are used exactly as committed.
+
+---
+
+## 1. What is being compared
+
+Three arms, on the same held-out specs, under the same total budget.
+
+| arm | stage 1 | stage 2 |
+|---|---|---|
+| **A — PPO → H1** | PPO, k = 5 | H1 CMA-ES, up to 10 evaluations |
+| **B — PPO → G3.2** | PPO, k = 5 | G3.2 constrained refinement, up to 10 evaluations |
+| **C — PPO → G3.2 → H1** | PPO, k = 5 | G3.2 first; on stop-without-target, the **unused remainder** goes to H1 |
+
+Arm C is the system under test. Arms A and B are its two halves run alone, so that any
+difference can be attributed rather than assumed.
+
+## 2. Budget — §13 accounting, unchanged
+
+`measure_all` ceiling is **20 per spec**, as in every previous arm. Under §13 a PPO
+evaluation costs 2.00 and a search evaluation costs 1.00, so:
+
+```
+stage 1   PPO k=5            5 x 2.00 = 10.00
+stage 2   refinement         up to      10.00
+                             ---------------
+total                                   20.00
+```
+
+This is not a new allocation. It is what the frozen `g32_repair.py` already enforces
+(`PREREG["budget_measure_all"] = 20`, `PREREG["r"] = 10`), and what H1 already used. No
+controller constant changes to implement arm C.
+
+Arm C spends from **one** pool. If G3.2 stops after 4 evaluations, H1 receives 6 — not 10.
+A fallback that reached for a fresh 10 would be a 30-call system compared against 20-call
+systems, which is not a comparison.
+
+**Consequence, stated rather than hidden:** fallback-H1 is *not* the same as standalone H1.
+It starts from a different design and gets fewer evaluations. Arm C is therefore a claim
+about a **system under a fixed budget**, never a claim that H1 was improved. Arm A remains
+the standalone H1 baseline, and the existing seed-3 H1 results
+(`results/hybrid_audit_h1_seed3.json`) remain the historical baseline they already were.
+
+## 3. Routing rule
+
+```
+run G3.2
+    solver.reached_target ?
+        yes -> stop, return best valid design
+        no  -> budget remaining > 0 ?
+                   yes -> hand best valid design + remaining budget to H1/CMA-ES
+                   no  -> stop
+```
+
+That is the whole rule. There is **no threshold, no predictor, and no wall taxonomy in the
+control path.**
+
+### 3.1 Why the routing signal is `reached_target` and not `wall_hit`
+
+The proposed design routed on an observed hard wall. Checked against the frozen seed-3 run
+before adopting it, `wall_hit` does not carry that meaning:
+
+| spec | strict solved | `wall_hit` | `reached_target` |
+|---|---|---|---|
+| 15 | no | **True** | False |
+| 17 | **yes** | **True** | False |
+| 9, 10, 16 | no | **False** | False |
+
+`wall_hit` is set the first time *any* advance step lands outside the feasible set, whether
+or not the bisection then recovers from it. So it is a *touched-the-wall* flag, not a
+*stuck* flag. Routing on it would have sent a strict-solved spec (17) to the fallback and
+would **not** have sent three of the four failures (9, 10, 16). It is wrong on 4 of 10.
+
+`reached_target` is what the controller actually asserts about its own outcome, and it is
+an observable state of the run, not a count. Routing on it needs no wall definition at all,
+which removes the hidden-threshold problem at its root rather than managing it.
+
+### 3.2 Wall type is a diagnostic, never a control input
+
+`wall_hit`, `blocked_by` and `reason` are recorded per spec and reported in §5 as secondary
+outcomes. They explain *why* the fallback fired. They do not decide *whether* it fires.
+
+### 3.3 One consequence, recorded now
+
+`reached_target` requires `|boost - target| <= 0.25 dB` (`PREREG["stop_abs_err_db"]`), which
+is tighter than the 1.5 dB strict criterion. So a spec can be strict-solved and still route
+to the fallback — spec 17 is exactly this case. This is accepted, not corrected: the
+fallback can only add evaluations, best-of-run is kept across both stages, and tightening
+or loosening `stop_abs_err_db` to tidy this up would be tuning a frozen controller constant
+to suit a benchmark.
+
+## 4. Held-out set
+
+* **Spec seed: 23.** Seeds 0, 1, 2 and 3 appear in committed artifacts and are burned.
+  Seed 2 specs 0–7 calibrated G3.2's plane; seed 2 specs 8–23 were used by
+  `g32a_representative`; seed 3 specs 8–17 are G3.2's development slice. Seed 23 has been
+  used for nothing.
+* **n = 40** specs, `target_audit.make_specs(40, 23)`, all of them, in order. No spec is
+  dropped for any reason after the fact.
+* All three arms run on the **same 40 specs** (paired), so per-spec differences are
+  comparable.
+
+### 4.1 What n = 40 can and cannot resolve — stated in advance
+
+n = 40 is chosen for the primary endpoints, which have large effects and tight
+distributions (seed-3: median target error 0.07 vs 0.50 dB; stage-2 evaluations 4.1 vs
+10.0). It is **not** powered to resolve a small difference in strict solve count. The
+seed-3 result was 6/10 vs 5/10 — a difference of one spec — and n = 40 will not turn a
+few-point solve-rate gap into a defensible claim. Solve counts are reported as secondary
+and descriptive. **G3.2 is not to be described as superior to H1 on the strength of solve
+count in this comparison**, at this n or any n it is likely to reach here.
+
+## 5. Outcomes
+
+### Primary
+1. **Median absolute target error** `|achieved - requested|` over specs with at least one
+   guard-valid design.
+2. **`measure_all` spent** — mean and max, and stage-2 evaluations separately.
+3. **Target-error reduction from the PPO handoff**, per spec: `|err_handoff| - |err_final|`.
+4. **Per-method matched chance line**, `k = min(distinct rounded boosts, n_loose_pass)` —
+   mandatory, as in every previous comparison. For arms B and C, distinct designs are
+   pooled across stage 1 and *all* of stage 2 including any fallback portion.
+
+### Secondary
+5. Strict solves (`hard_pass` and `|err| <= 1.5 dB`).
+6. Loose solves (`hard_pass`, target unscored).
+7. Distinct designs *k*.
+8. Failure/wall type: `reason`, `blocked_by`, whether the fallback fired, evaluations it got.
+
+### 5.1 Outcome 3 is undefined for some specs, and is reported that way
+
+`err_handoff` requires a guard-valid handoff. On the seed-3 slice **3 of 10 handoffs were
+guard-invalid**. Rule, fixed here: outcome 3 is computed **only over specs with a
+guard-valid handoff**, and the number excluded is reported beside it in every table. It is
+never imputed, and a guard-invalid handoff is never scored as zero reduction.
+
+## 6. Standing constraints that apply to this run
+
+* No reward, PPO hyperparameter, design bound, guard or `hard_pass` change.
+* No retraining, no seed or spec cherry-picking, no change to the target distribution.
+* `l_in`'s lower bound is the process minimum and does not move.
+* If a check fires or an ambiguity appears, it is reported, not resolved by changing a
+  bound.
+* Per-spec incremental writes, so a crashed run is a partial result and not a lost one.
+* No arm's numbers are quoted beside another's unless both ran under this document.
+
+## 7. Open decisions, blocking the run
+
+Recorded here so they are answered before rather than during:
+
+1. **n = 40 and spec seed 23** — proposed above; changeable, but only before the run.
+2. Whether arm A should also be re-run on seed 23 (it must be, for a paired comparison) or
+   whether the existing seed-3 H1 numbers are considered sufficient. This document assumes
+   **re-run**.
