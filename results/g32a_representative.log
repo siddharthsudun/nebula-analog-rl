@@ -1,0 +1,664 @@
+G3.2a REPRESENTATIVENESS | PPO stage-1 (k=5) on spec-seed 2 specs 8-23
+  low-peak means guard-valid with 0.0011 < peak < 1.25 GHz -- the same rule the calibration
+  set was selected by
+
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 10  1 low-peak stage-1 design(s): 0.8985 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 11  3 low-peak stage-1 design(s): 0.3373 GHz, 0.7135 GHz, 0.8985 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 13  2 low-peak stage-1 design(s): 1.1986 GHz, 1.1986 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 14  2 low-peak stage-1 design(s): 0.5666 GHz, 1.0681 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 15  2 low-peak stage-1 design(s): 0.9518 GHz, 0.8985 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 16  3 low-peak stage-1 design(s): 0.3785 GHz, 0.6002 GHz, 1.0083 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 17  2 low-peak stage-1 design(s): 0.8985 GHz, 0.8482 GHz
+  spec 18  1 low-peak stage-1 design(s): 0.8007 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 20  2 low-peak stage-1 design(s): 0.5666 GHz, 0.9518 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  spec 21  1 low-peak stage-1 design(s): 1.1986 GHz
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+
+  46 guard-valid stage-1 designs across 16 specs; 19 of them sit below the band
+
+  where each population sits, in unit design coordinates:
+  axis     calibration set (n=8)  PPO low-peak (n=19)    inside
+  w_in     0.512 - 0.981          0.213 - 0.973          17/19
+  l_in     0.012 - 0.987          0.082 - 0.993          18/19  <-- repair coordinate
+  i_tail   0.005 - 0.760          0.069 - 0.759          19/19
+  rs       0.057 - 0.896          0.233 - 0.773          19/19  <-- repair coordinate
+  cs       0.436 - 0.866          0.289 - 1.000          16/19
+  r_load   0.249 - 0.980          0.467 - 0.982          18/19
+
+  jointly on the two repair coordinates (rs, l_in): 18 of 19 PPO low-peak designs
+  fall inside the calibration set's box
+  a design outside that box is not necessarily mis-served -- it means the probe did not
+  measure there, so the plane's behaviour at that point is an extrapolation the same way
+  the high-peak plane was below the band.
+
+80 measure_all spent (validity check, not a controller arm)
+wrote results/g32a_representative.json

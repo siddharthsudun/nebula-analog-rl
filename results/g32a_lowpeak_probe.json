@@ -1,0 +1,1663 @@
+{
+ "probe_h": 0.05,
+ "source_set": "results/g32a_lowpeak_set.json",
+ "spec_seed": 11,
+ "select_seed": 11,
+ "band_ghz": [
+  1.25,
+  2.5
+ ],
+ "channel_loss_db": 12.0,
+ "target_boost_db": 8.0,
+ "n_measure_all": 104,
+ "complete": true,
+ "rows": [
+  {
+   "spec": 25,
+   "selected": {
+    "draw": 25,
+    "x": [
+     0.7186342171882829,
+     0.8046280999180528,
+     0.7604156406201772,
+     0.26725757696269736,
+     0.7897405144935111,
+     0.2491706459204064
+    ],
+    "peak_freq_ghz": 1.19856822,
+    "boost_db": 7.419005484774099,
+    "dc_gain_db": 0.545014857488396,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ],
+    "design": {
+     "w_in": 2.7369598993402125e-05,
+     "l_in": 8.339338849303448e-07,
+     "i_tail": 0.0007723948585891683,
+     "rs": 1409.5621271172172,
+     "cs": 6.564726128741355e-13,
+     "r_load": 1320.9361650099913,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 7.419005484774099,
+    "peak_freq_ghz": 1.19856822,
+    "dc_gain_db": 0.545014857488396,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.982069703768489,
+       "peak_freq_ghz": 1.26967491,
+       "dc_gain_db": 0.8831936330448638,
+       "loose_pass": true,
+       "failing": []
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 6.770560478878175,
+       "peak_freq_ghz": 1.19856822,
+       "dc_gain_db": 0.2197512034526626,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.266947732480027,
+       "peak_freq_ghz": 1.19856822,
+       "dc_gain_db": 0.4718745637590567,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.578999954871758,
+       "peak_freq_ghz": 1.19856822,
+       "dc_gain_db": 0.6224783572795668,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.46974629307133,
+       "peak_freq_ghz": 1.19856822,
+       "dc_gain_db": 0.6486113556171912,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.353871663555328,
+       "peak_freq_ghz": 1.19856822,
+       "dc_gain_db": 0.44103937339623395,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": false,
+       "guard_check": "T4.10_dc_gain_implausible",
+       "reason": "DC gain -0.32 dB is below 0 dB for a topology that should have gain"
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 6.394969264970192,
+       "peak_freq_ghz": 1.19856822,
+       "dc_gain_db": 1.5283679120266154,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.7468679363577495,
+       "peak_freq_ghz": 1.06807857,
+       "dc_gain_db": 0.545097296807884,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 7.024379782306691,
+       "peak_freq_ghz": 1.3450001,
+       "dc_gain_db": 0.5449658374003823,
+       "loose_pass": true,
+       "failing": []
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 7.151400373480055,
+       "peak_freq_ghz": 1.06807857,
+       "dc_gain_db": 1.9839121136304456,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": false,
+       "guard_check": "T4.10_dc_gain_implausible",
+       "reason": "DC gain -1.21 dB is below 0 dB for a topology that should have gain"
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 65,
+   "selected": {
+    "draw": 65,
+    "x": [
+     0.8829032712488051,
+     0.2958443441484473,
+     0.37632881322022116,
+     0.7146723547095178,
+     0.7921459755036756,
+     0.6137939122560816
+    ],
+    "peak_freq_ghz": 0.713501272,
+    "boost_db": 13.471177788792893,
+    "dc_gain_db": 2.296971009103164,
+    "loose_pass": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ],
+    "design": {
+     "w_in": 5.8318526515172776e-05,
+     "l_in": 4.0146769252618015e-07,
+     "i_tail": 0.0004075123725592101,
+     "rs": 3601.894538076637,
+     "cs": 6.64892831378002e-13,
+     "r_load": 3107.5901700547997,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 13.471177788792893,
+    "peak_freq_ghz": 0.713501272,
+    "dc_gain_db": 2.296971009103164,
+    "loose_pass": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 13.392829384877377,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 2.3690774739685256,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 13.406882368739158,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.208585682612451,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 13.319911748408348,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.259834138227252,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 13.606237225457825,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.332101650700469,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 13.721159656476246,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 2.3865732945368943,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 13.133411452297537,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 2.184665183453022,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 13.968873787453763,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 1.8156250368066535,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 12.941012782734376,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.8086758375289183,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 14.22703756392197,
+       "peak_freq_ghz": 0.635821479,
+       "dc_gain_db": 2.2976087043722777,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 12.581875440668357,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 2.2965951554224353,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 13.179884919031478,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 2.9359717708723294,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 13.761623389292648,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 1.6013394303134847,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "eye_h"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 71,
+   "selected": {
+    "draw": 71,
+    "x": [
+     0.6171558193689677,
+     0.6291395780821006,
+     0.15154022588838334,
+     0.8335719579667151,
+     0.5534636282402833,
+     0.9617164147247778
+    ],
+    "peak_freq_ghz": 0.713501272,
+    "boost_db": 5.7461484190363,
+    "dc_gain_db": 3.0263914975115034,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ],
+    "design": {
+     "w_in": 1.7151876413057916e-05,
+     "l_in": 6.847686413697854e-07,
+     "i_tail": 0.00019396321459396417,
+     "rs": 4184.502594036904,
+     "cs": 1.8773118005871093e-13,
+     "r_load": 4812.410432151411,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 5.7461484190363,
+    "peak_freq_ghz": 0.713501272,
+    "dc_gain_db": 3.0263914975115034,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.844333364180027,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 3.2695857346311956,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.564980063394879,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.74477515266406,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.635408119618496,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.9563583782471965,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.862099389927185,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 3.0979078187306746,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 6.0569456199562435,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 3.296076452262204,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 5.277016260383048,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 2.6201682524022414,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 6.1197536493777385,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 2.676539006313235,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.355811303733986,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 3.391831058062329,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 6.657950044886444,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 3.0264570890639857,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.728457159712965,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 3.026352787926733,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.03828358527522224,
+       "valid": true,
+       "boost_db": 5.612168694725194,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 3.352429096011412,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.928717785947102,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 2.58021096272016,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 82,
+   "selected": {
+    "draw": 82,
+    "x": [
+     0.8312842753847366,
+     0.012143032630931305,
+     0.005259683233191148,
+     0.057116633877221434,
+     0.8655452041910493,
+     0.6337400524686158
+    ],
+    "peak_freq_ghz": 0.189543915,
+    "boost_db": 0.01791395610970703,
+    "dc_gain_db": 4.495321652264993,
+    "loose_pass": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "hd3",
+     "eye_h",
+     "eye_v"
+    ],
+    "design": {
+     "w_in": 4.597995593956968e-05,
+     "l_in": 1.603215777362916e-07,
+     "i_tail": 5.499669907153159e-05,
+     "rs": 379.87150599838503,
+     "cs": 9.809468511800882e-13,
+     "r_load": 3205.326257096217,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 0.01791395610970703,
+    "peak_freq_ghz": 0.189543915,
+    "dc_gain_db": 4.495321652264993,
+    "loose_pass": false,
+    "failing": [
+     "boost_range",
+     "peak_in_band",
+     "hd3",
+     "eye_h",
+     "eye_v"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.0024038364105107846,
+       "peak_freq_ghz": 0.112834482,
+       "dc_gain_db": 4.572774653465251,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.03989677337651365,
+       "peak_freq_ghz": 0.238687107,
+       "dc_gain_db": 4.4097011247688815,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_v"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 0.018929235885395634,
+       "peak_freq_ghz": 0.189543915,
+       "dc_gain_db": 4.610058220300372,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.012143032630931305,
+       "valid": false,
+       "guard_check": "T2.8_device_parameter_at_pdk_bound",
+       "reason": "design parameter 'l_in' = 1.5e-07 sits exactly on the SKY130 min bound (1.5e-07); the optimizer is against the process limit and the model may be extrapolating"
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 0.17584687592924908,
+       "peak_freq_ghz": 0.357303614,
+       "dc_gain_db": 8.446985538423188,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.005259683233191148,
+       "valid": true,
+       "boost_db": 0.00896581895876336,
+       "peak_freq_ghz": 0.159448526,
+       "dc_gain_db": 3.8433893194510316,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 0.5241041678254694,
+       "peak_freq_ghz": 0.357303614,
+       "dc_gain_db": 3.8757648329460936,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 0.0,
+       "peak_freq_ghz": 0.001,
+       "dc_gain_db": 5.16281103868638,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.11945536594471129,
+       "peak_freq_ghz": 0.267848067,
+       "dc_gain_db": 4.4953250156258555,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.0,
+       "peak_freq_ghz": 0.001,
+       "dc_gain_db": 4.49531974808425,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.004356248042884481,
+       "peak_freq_ghz": 0.126619734,
+       "dc_gain_db": 5.100396767842915,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_h",
+        "eye_v"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 0.04053216742706445,
+       "peak_freq_ghz": 0.238687107,
+       "dc_gain_db": 3.8392644718221054,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band",
+        "hd3",
+        "eye_v"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 86,
+   "selected": {
+    "draw": 86,
+    "x": [
+     0.9805004747710356,
+     0.4485289096159404,
+     0.1588964217597697,
+     0.5300742665991673,
+     0.5936426580925249,
+     0.6928345797219869
+    ],
+    "peak_freq_ghz": 0.713501272,
+    "boost_db": 3.9307019772961986,
+    "dc_gain_db": 4.48083872634442,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ],
+    "design": {
+     "w_in": 9.14115240090923e-05,
+     "l_in": 5.312495731735493e-07,
+     "i_tail": 0.00020095160067178122,
+     "rs": 2697.36390633592,
+     "cs": 2.322680976704737e-13,
+     "r_load": 3494.889440637736,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 3.9307019772961986,
+    "peak_freq_ghz": 0.713501272,
+    "dc_gain_db": 4.48083872634442,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.019499525228964365,
+       "valid": false,
+       "guard_check": "T2.8_device_parameter_at_pdk_bound",
+       "reason": "design parameter 'w_in' = 0.0001 sits exactly on the SKY130 max bound (0.0001); the optimizer is against the process limit and the model may be extrapolating"
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.435054781226958,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 4.394190019357792,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.869167703064991,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 4.451444677394595,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.995456543788772,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 4.513245689697782,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 4.3093155134552426,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 4.821799047935144,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 3.418763866228319,
+       "peak_freq_ghz": 0.635821479,
+       "dc_gain_db": 3.9620039414748143,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.507059189175083,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 3.909893662759906,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.3186348252732243,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 5.093057267922162,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.146312189913895,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 4.480880502364992,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 2.6642309725613442,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 4.4808144273462505,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.6319851518729926,
+       "peak_freq_ghz": 0.673542451,
+       "dc_gain_db": 5.060898673489415,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.244458878402725,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 3.857739762257608,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 88,
+   "selected": {
+    "draw": 88,
+    "x": [
+     0.511507690924592,
+     0.8102085063833623,
+     0.14027245188955628,
+     0.895541293157506,
+     0.43643803901454226,
+     0.8766693335889736
+    ],
+    "peak_freq_ghz": 0.848172305,
+    "boost_db": 3.480525937572412,
+    "dc_gain_db": 0.8417659794127684,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ],
+    "design": {
+     "w_in": 1.0544242413452321e-05,
+     "l_in": 8.386772304258578e-07,
+     "i_tail": 0.00018325882929507846,
+     "rs": 4488.15233647178,
+     "cs": 1.0098503469508036e-13,
+     "r_load": 4395.67973458597,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 3.480525937572412,
+    "peak_freq_ghz": 0.848172305,
+    "dc_gain_db": 0.8417659794127684,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.5964800453427266,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 1.1762104383695098,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": false,
+       "guard_check": "T1.2_solver_failure_text_in_output",
+       "reason": "RuntimeError: measure_all reported ok=False (simulation did not solve)"
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.3959456952938103,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 0.7659782693905753,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.567588466958994,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 0.9199004295266351,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.72462272163685,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 1.1936730747942477,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 3.1279422554197875,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 0.3644939715241069,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.789530034452203,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 0.5470527067095399,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.1611136415268177,
+       "peak_freq_ghz": 0.848172305,
+       "dc_gain_db": 1.1478268974035277,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 4.3849509245308615,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 0.841786855602859,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 2.5167359138825125,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 0.8417537045433743,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.292154298265297,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 1.3063654081379064,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.6731915486742106,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 0.34990230148381346,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 95,
+   "selected": {
+    "draw": 95,
+    "x": [
+     0.914282355952195,
+     0.9870613713099641,
+     0.5527754094492713,
+     0.14461198825897414,
+     0.8493861618042622,
+     0.39588237384078384
+    ],
+    "peak_freq_ghz": 0.800671387,
+    "boost_db": 4.623988207673203,
+    "dc_gain_db": 7.9698075551769785,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ],
+    "design": {
+     "w_in": 6.738522951268184e-05,
+     "l_in": 9.890021656134694e-07,
+     "i_tail": 0.0005751366389768077,
+     "rs": 808.5987424689733,
+     "cs": 9.004571195451934e-13,
+     "r_load": 2039.8236318198408,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 4.623988207673203,
+    "peak_freq_ghz": 0.800671387,
+    "dc_gain_db": 7.9698075551769785,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.6462246821430835,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 8.34098525113911,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.502950806540564,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 7.54246959752064,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.012938628690035925,
+       "valid": true,
+       "boost_db": 4.603232347016197,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 7.950415398102965,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.706819280831535,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 8.04567788705787,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.72711676272435,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 8.094115981647395,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.502931100943117,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 7.82307693893854,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 6.099807112067429,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 6.568216691884643,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 2.846566213062106,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 9.654476955103034,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 5.202649834001205,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 7.969858080966562,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.9540498524946974,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 7.969777988408748,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 4.339621214341404,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 8.916602022317031,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 4.917453530522303,
+       "peak_freq_ghz": 0.898491278,
+       "dc_gain_db": 6.890486318782361,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "spec": 106,
+   "selected": {
+    "draw": 106,
+    "x": [
+     0.901663836715572,
+     0.11333082089737045,
+     0.1954776931736154,
+     0.5655706595438732,
+     0.5653116131751389,
+     0.980102207748669
+    ],
+    "peak_freq_ghz": 0.755830704,
+    "boost_db": 3.4273947420802466,
+    "dc_gain_db": 7.153530289899122,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ],
+    "design": {
+     "w_in": 6.358104673528192e-05,
+     "l_in": 2.463311977627649e-07,
+     "i_tail": 0.00023570380851493464,
+     "rs": 2871.2962317649785,
+     "cs": 1.998936410991964e-13,
+     "r_load": 4902.500817968478,
+     "w_dfe": 0.0
+    }
+   },
+   "base": {
+    "valid": true,
+    "boost_db": 3.4273947420802466,
+    "peak_freq_ghz": 0.755830704,
+    "dc_gain_db": 7.153530289899122,
+    "loose_pass": false,
+    "failing": [
+     "peak_in_band"
+    ]
+   },
+   "dims": {
+    "w_in": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 2.8239579065142717,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 7.226364312757328,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.9244617485183158,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 7.067949584584453,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "l_in": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.4257872140379773,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 7.20442803276775,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.05,
+       "valid": true,
+       "boost_db": 3.3650804088301314,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 7.038652341746328,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "i_tail": {
+     "points": {
+      "plus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.6378126491229903,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 7.38842006372211,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.04999999999999999,
+       "valid": true,
+       "boost_db": 3.114302103545514,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 6.796843453732135,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "rs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.9834661260717894,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 6.606796182526693,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 2.8381768240830896,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 7.73831448775836,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "cs": {
+     "points": {
+      "plus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 4.781260403808672,
+       "peak_freq_ghz": 0.713501272,
+       "dc_gain_db": 7.15356582518896,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 2.0193609621859254,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 7.153509510108411,
+       "loose_pass": false,
+       "failing": [
+        "boost_range",
+        "peak_in_band"
+       ]
+      }
+     }
+    },
+    "r_load": {
+     "points": {
+      "plus": {
+       "moved": 0.019897792251331037,
+       "valid": true,
+       "boost_db": 3.3215109470508812,
+       "peak_freq_ghz": 0.755830704,
+       "dc_gain_db": 7.314774843711729,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      },
+      "minus": {
+       "moved": 0.050000000000000044,
+       "valid": true,
+       "boost_db": 3.7011122997951107,
+       "peak_freq_ghz": 0.800671387,
+       "dc_gain_db": 6.732122602733646,
+       "loose_pass": false,
+       "failing": [
+        "peak_in_band"
+       ]
+      }
+     }
+    }
+   }
+  }
+ ]
+}

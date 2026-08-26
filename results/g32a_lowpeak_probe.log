@@ -1,0 +1,14 @@
+G3.2a LOW-PEAK PROBE | 8 frozen designs from results/g32a_lowpeak_set.json | h=0.050 | band 1.25-2.50 GHz
+  methodology identical to g32_peak_probe; only the base points differ
+
+  draw  25  base peak 1.1986 GHz  boost   7.42  fails peak_in_band
+  draw  65  base peak 0.7135 GHz  boost  13.47  fails boost_range,peak_in_band,eye_h,eye_v
+  draw  71  base peak 0.7135 GHz  boost   5.75  fails peak_in_band
+  draw  82  base peak 0.1895 GHz  boost   0.02  fails boost_range,peak_in_band,hd3,eye_h,eye_v
+  draw  86  base peak 0.7135 GHz  boost   3.93  fails peak_in_band
+  draw  88  base peak 0.8482 GHz  boost   3.48  fails peak_in_band
+  draw  95  base peak 0.8007 GHz  boost   4.62  fails peak_in_band
+  draw 106  base peak 0.7558 GHz  boost   3.43  fails peak_in_band
+
+104 measure_all spent (calibration, not a controller arm)
+wrote results/g32a_lowpeak_probe.json

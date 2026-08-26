@@ -1,0 +1,53 @@
+G3.2a LOW-PEAK CALIBRATION REPORT
+  the two regimes below were measured by the same methodology and are read by the
+  same code; only where the base designs sit differs
+
+ABOVE THE BAND (G3.2's existing calibration, spec-seed 2) | 4 base designs | h=0.050 | 88 measure_all
+  base peaks 1.901 to 3.193 GHz   (band 1.25-2.50 GHz)
+  dropped: 4 guard-invalid, 1 at a sweep edge; 7 surviving slopes moved the peak
+  less than one 5.93% grid step -- upper bounds, not zeros
+  axis        n       dpeak      dboost  |dpk/dbo|    d_ln_peak   peak-sign
+  w_in        4      -0.633      -10.85      0.150       -0.288   MIXED (3/4 moved)
+  l_in        4      -3.144       -5.29      0.585       -1.153   fixed - (4/4 moved)
+  i_tail      4      +0.000       -3.80      0.000       +0.000   fixed - (1/4 moved)
+  rs          4      +0.000      +12.45      0.000       +0.000   fixed + (1/4 moved)
+  cs          4      -1.527      +21.73      0.128       -0.576   MIXED (4/4 moved)
+  r_load      4      -5.684      -18.92      0.233       -2.305   fixed - (4/4 moved)
+  plane chosen here: boost=rs (12.45 dB/unit)   peak=l_in (-1.153 ln/unit, -5.29 dB/unit)
+
+BELOW THE BAND (G3.2a's frozen set, select-seed 11) | 8 base designs | h=0.050 | 104 measure_all
+  base peaks 0.190 to 1.199 GHz   (band 1.25-2.50 GHz)
+  dropped: 5 guard-invalid, 2 at a sweep edge; 18 surviving slopes moved the peak
+  less than one 5.93% grid step -- upper bounds, not zeros
+  axis        n       dpeak      dboost  |dpk/dbo|    d_ln_peak   peak-sign
+  w_in        8      -0.200       +0.65      0.082       -0.288   MIXED (6/8 moved)
+  l_in        8      +0.000       -1.68      0.000       +0.000   fixed - (1/8 moved)
+  i_tail      8      +0.847       +5.56      0.137       +1.153   fixed + (6/8 moved)
+  rs          8      +0.000      +10.87      0.000       +0.000   fixed + (1/8 moved)
+  cs          8      -1.125      +17.57      0.083       -1.441   MIXED (8/8 moved)
+  r_load      8      -0.901       -5.39      0.194       -1.153   fixed - (8/8 moved)
+  plane chosen here: boost=rs (10.87 dB/unit)   peak=r_load (-1.153 ln/unit, -5.39 dB/unit)
+
+THE PRE-DECLARED RULE, applied to G3.2's coordinates (boost=rs, peak=l_in):
+  Q1  l_in peak sign below the band: fixed -      -> PASS
+  Q2  same sign as above the band (fixed -): yes           -> PASS
+  Q3  rs peak under one grid step on a majority: 7 of 8 -> PASS
+  Q4  (reported, NOT part of the rule) l_in log-gain: +0.000 below vs -1.153 above  -- ratio 0.00x
+  Q5  (reported, NOT part of the rule) constant-table null below the band:
+      design  25  probe picks boost=rs      peak=r_load    DIFFERS
+      design  65  probe picks boost=rs      peak=w_in      DIFFERS
+      design  71  probe picks boost=rs      peak=l_in      agrees
+      design  82  probe picks boost=l_in    peak=w_in      DIFFERS
+      design  86  probe picks boost=rs      peak=i_tail    DIFFERS
+      design  88  probe picks boost=rs      peak=r_load    DIFFERS
+      design  95  probe picks boost=rs      peak=r_load    DIFFERS
+      design 106  probe picks boost=rs      peak=i_tail    DIFFERS
+      one constant table matches the per-design probe on 7/8 for boost=rs and 1/8 for peak=l_in
+
+VERDICT: THE PLANE REMAINS USABLE BELOW THE BAND -- Q1, Q2 and Q3 all pass.
+  The controller needs the coordinate and the sign from the table and measures its
+  own gain by secant, so a 0.00x gain difference is inside what it already handles.
+
+  (This is the calibration primitive only. Whether uniform-random low-peak designs
+  represent the sub-region PPO's low-peak handoffs occupy is a separate validity
+  question -- g32a_representative.py.)
