@@ -249,3 +249,53 @@ deterministic given the spec index, so:
 >
 > **Any mismatch stops the experiment and is reported.** Seed 23 is not touched until this
 > gate passes, and the gate's output is committed beside the result.
+
+---
+
+# Amendment 2 — 26 Aug 2026, after the run
+
+Recorded after the held-out result. Nothing here changes an analysis or a criterion; it
+corrects one sentence that is no longer true, and records the decisions taken on the result.
+
+## 1. Correction to §4
+
+§4 says seed 23 "has been used for nothing". **That sentence is superseded.** The correct
+statement, which is the one to use anywhere the held-out set is described:
+
+> Seed 23 specifications were inspected once before the final run to verify the generated
+> specification distribution; no simulations, design selection, hyperparameter changes, or
+> protocol changes were performed as a result.
+
+Seed 23 is a legitimate held-out set — nothing was evaluated on it before the run — but it
+is **not** to be described as "completely untouched". Amendment 1 §3 carries the detail;
+`docs/REPRODUCE.md` §20.5 carries it independently of this document.
+
+## 2. Arm C is dropped from the final architecture
+
+Not from the record — the arm ran, its result stands and is reported. It is dropped as a
+*delivered component*, on its own numbers: 15 firings, 1 strict recovery, 2 first-feasible
+finds, +0.000 dB median improvement on the remaining 12, at +2.07 mean evaluations. On 9 of
+40 specs G3.2 had already spent the pool and there was nothing to hand over.
+
+The reason is structural rather than incidental: under a fixed budget, a G3.2 that is
+struggling is also a G3.2 that has spent the pool, so the fallback has least to give exactly
+where it is needed. Recorded as a property of *this budgeted implementation*, not as a claim
+that strategy-switching is a bad idea.
+
+## 3. Post-hoc tests, permanently labelled
+
+The paired comparison (B closer on 24 of 27, A on 2, tied 1, median +1.086 dB) is
+descriptive and was preregistered as primary outcome 1. A sign test (p = 1.05e-05) and a
+Wilcoxon signed-rank test (W = 15.0, p = 4.08e-06) were computed **after** the data and were
+**not** named in this document. They are post hoc and are to be labelled as such wherever
+they appear.
+
+**The preregistered inferential test is the matched chance line, and it is negative for all
+three arms.** No writeup may present a post-hoc test as the preregistered result, or use one
+to revive the strict-solve-count claim §4.1 ruled out in advance.
+
+## 4. The architecture is frozen
+
+No G3.3, no further axis, no router, no reward change, no retraining, no new benchmark
+criterion. The experimental line closes here. What follows is physical validation, the final
+delivered circuit, the demo, and the writeup — none of which may alter a number above.

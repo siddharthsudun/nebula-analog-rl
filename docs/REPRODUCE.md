@@ -756,3 +756,167 @@ parser, its ground-truth check, and this record.
 
 `results/surrogate_corpus_REALPART_BUG.npz` is kept on disk, untracked, as the evidence
 artifact for this section. **It is invalid and is not part of any reproducibility path.**
+
+---
+
+## 20. The G3 line and the final comparison — architecture frozen 26 Aug 2026
+
+Sections 1–19 end with H1 as the refinement arm. What followed asked a different question:
+**can a constraint-aware numerical method close the specification more precisely than a
+general-purpose optimizer, at the same budget?** It can. This section is the record of how
+that was established and where the line was stopped.
+
+### 20.1 The sequence, and what each step actually settled
+
+| step | what it did | what it settled |
+|---|---|---|
+| **G3** | six-dimensional composite `d_boost` descent | precision targeting walked the peak out of band on 4 of 4 bracketed specs — one composite direction cannot serve two constraints |
+| **G3.1** | one-dimensional bracketed advance | exact where it could start (0.01 and 0.07 dB in 3–4 evaluations against H1's 10) and unable to start on 5 of 8. A **starting-point** problem, not a search problem |
+| **G3.2** | measured `(rs, l_in)` plane; rescue ladder for guard-invalid handoffs; peak stepped in log space by secant, not by the table | both failure branches addressed. Seed-3 slice: 6/10 strict vs H1's 5/10 — promising, not superior |
+| **G3.2a** | probed a frozen low-peak calibration set on all six axes | `rs` survives as the boost coordinate below the band; `l_in` moves the peak on 4/4 **above** but 1 of 8 **below**; `r_load` takes over. A single global `(boost, peak)` pair does not generalize |
+| **G3.2b** | tested `(rs, r_load)` on a fresh independent set | 2/8 entered the band. On 5 of the 6 that did not, the blocker was `T4.10_dc_gain_implausible` — **boost was never the currency, DC gain was** |
+| **final** | three arms, 40 held-out specs, one 20-`measure_all` pool | below |
+
+G3.2a and G3.2b were **preregistered with pass/fail rules written before the data**, and
+both rules were reported as failing or vacuous rather than amended afterwards. G3.2a's Q1
+rested on the single design of eight where `l_in` moved the peak at all; the PASS it
+produced was reported as vacuous and rejected. That is why the line stopped at G3.2b
+rather than continuing into G3.3.
+
+### 20.2 The final comparison
+
+`docs/PREREG_FINAL_COMPARISON.md` + amendment 1, written and committed before the held-out
+set was simulated. 40 specs at spec-seed 23, three arms paired on the same specs, 20
+`measure_all` each, routing on `reached_target` with the fallback receiving only the unused
+remainder. `results/final_comparison_seed23.json`, 885 simulations.
+
+**The preregistered primary test is the matched chance line, and no arm beats its own:**
+
+```
+arm                    strict   mean k   chance line   p(>=obs)
+A  PPO -> H1            13/40     2.73      16.1/40      0.956
+B  PPO -> G3.2          22/40     3.50      19.4/40      0.170
+C  PPO -> G3.2 -> H1    23/40     3.67      20.7/40      0.224
+```
+
+B's raw strict count is nine specs above A's and it still does not survive: B produces more
+distinct designs among its loose passes, so its line is higher too. A is **below** its own
+line. **Strict solve count is not a result here and is not to be reported as one.**
+
+**What does separate is precision:**
+
+```
+median |achieved - requested|     A 1.886   B 0.231   C 0.241 dB
+stage-2 evaluations, mean         A 10.00   B  5.05   C  7.12   (B median 3.5)
+reduction from the PPO handoff    A +1.902 dB (improved 14/17, worsened 2)
+                                  B +3.296 dB (improved 17/17, worsened 0)
+by target tercile, median error   A 0.48 -> 1.99 -> 3.00
+                                  B 0.09 -> 0.20 -> 1.07
+```
+
+The coverage explanation that killed the section-8 result runs the **wrong way** here: A
+makes more evaluations (10 vs 5.05) and finds more guard-valid designs per spec (7.50 vs
+5.62), and still finishes further from target. The advantage also grows with target
+difficulty rather than concentrating in easy specs.
+
+### 20.3 The paired comparison, and exactly what statistical status it has
+
+On the 27 specs where **both** arms found a `hard_pass` design — same specs, same PPO
+handoff — B is closer on 24, A on 2, tied on 1, median paired difference **+1.086 dB**.
+
+That count is descriptive and preregistered. The tests below are **POST HOC**: they were
+computed after the data, were not named in the preregistration, and are recorded here as
+post hoc permanently.
+
+```
+sign test              p = 1.05e-05
+Wilcoxon signed-rank   W = 15.0,  p = 4.08e-06
+```
+
+They are reported because the effect is large and the direction was predicted, and they are
+labelled because a test chosen after seeing the data is a weaker object than one named
+before it. **The preregistered inferential test remains the chance line, and it is
+negative for every arm.** No writeup may present the sign test as the preregistered result
+or use it to revive a solve-count claim.
+
+### 20.4 Arm C is dropped from the final architecture
+
+```
+G3.2 reached its 0.25 dB target, no fallback         16/40
+fallback FIRED                                       15/40
+G3.2 stopped short with NO budget left to hand over    9/40
+```
+
+Of 15 firings the fallback strict-recovered **1** spec, found the first `hard_pass` design
+on 2, and changed nothing on the other 12 (median improvement +0.000 dB). C beats B on 1 of
+28 paired specs and ties on 27, for +2.07 mean evaluations.
+
+The reason is structural and worth stating rather than burying: **a G3.2 that is struggling
+is also a G3.2 that has spent the pool.** Under a fixed budget the fallback has least to
+give exactly where it is needed. This is a finding about *this budgeted implementation*,
+not a claim that strategy-switching is a bad idea.
+
+Why it fired, diagnostic only and never a control input: `peak_in_band` on 8 of 15,
+`T4.10_dc_gain_implausible` on 4 — G3.2a and G3.2b reappearing on fresh specs.
+
+### 20.5 The held-out set — disclosure
+
+**Seed 23 is not "completely untouched", and must not be described as such.**
+
+> Seed 23 specifications were inspected once before the final run to verify the generated
+> specification distribution; no simulations, design selection, hyperparameter changes, or
+> protocol changes were performed as a result.
+
+The inspection printed the first three `(target, channel)` pairs and the min/max of each
+column. Every constant in play was already frozen in committed code before seed 23 was
+named. Recorded in `docs/PREREG_FINAL_COMPARISON.md` amendment 1 §3 and repeated here so
+the research record carries it independently of the preregistration.
+
+### 20.6 Other caveats that travel with these numbers
+
+* **17 of 40 handoffs were guard-invalid**, so the handoff-reduction metric is computed
+  over 23 specs, never imputed, with the exclusion count printed beside it (§5.1 of the
+  preregistration). This is far higher than the seed-3 slice's 3 of 10.
+* **11 / 12 / 10 specs (A / B / C) produced no `hard_pass` design at all** and drop out of
+  the medians. The medians therefore run over different denominators, which is why the
+  paired 27-spec comparison is the number to read.
+* The fallback-start rule, the tercile cut and the arm-C recovery breakdown were all fixed
+  in amendment 1 **before** the run, not chosen to fit it.
+
+### 20.7 The architecture is frozen here
+
+No G3.3. No further axis. No router. No reward change. No retraining.
+
+The system as delivered is hierarchical: **PPO** learns the global feasibility landscape;
+**G3.2 constrained refinement** performs target-directed precision closure where it can;
+**SPICE + the guard** independently determine physical validity. **H1/CMA-ES is an external
+baseline, not a component.**
+
+The claim this record supports, in full and with nothing beyond it:
+
+> PPO efficiently learns the feasible CTLE design space but does not, by itself, demonstrate
+> target-conditioned design. Decomposing the task — PPO for global feasibility, a
+> constraint-aware numerical stage for specification closure — reduced median target error
+> from 1.886 dB to 0.231 dB on an untouched 40-spec test set while using roughly half the
+> refinement evaluations of the CMA-ES baseline. The improvement persisted even though the
+> baseline explored more distinct feasible designs, which rules out the coverage
+> explanation that accounted for the earlier section 8 result. **Strict solve counts did not
+> clear their matched chance line for any arm and are not claimed.**
+
+### 20.8 Reproducing this section
+
+```
+PYTHONPATH=src python -m eqrl.experiments.final_comparison --gate --spec-seed 3 \
+    --first 8 --specs 10 --arms ab          # must print GATE PASSED before anything else
+PYTHONPATH=src python -m eqrl.experiments.final_comparison --spec-seed 23 \
+    --first 0 --specs 40 --arms abc
+PYTHONPATH=src python -m eqrl.experiments.final_comparison_report
+```
+
+The gate re-runs arms A and B on the burned seed-3 development slice and diffs every
+outcome field against `results/g32_repair_smoke.json` and
+`results/hybrid_audit_h1_seed3.json`. It reproduced both 10/10. The two solvers are
+transcribed into `final_comparison.py` rather than imported — they live inside `main()` in
+their own files — precisely so those two frozen artifacts stay reproducible from
+**unmodified** code. `_check_constants()` refuses to run if any transcribed constant has
+moved in its source module.
