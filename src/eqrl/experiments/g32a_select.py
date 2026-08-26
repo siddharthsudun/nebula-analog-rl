@@ -75,7 +75,12 @@ SELECT_TARGET_DB = 8.0
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--out", default="results/g32a_lowpeak_set.json")
+    # Additive, defaults unchanged: G3.2b needs a SECOND independent low-peak set drawn by
+    # this exact rule, and a second copy of the rule would be a second thing to keep in
+    # sync. The default invocation still reproduces results/g32a_lowpeak_set.json.
+    p.add_argument("--seed", type=int, default=SELECT_SEED)
     args = p.parse_args()
+    seed = args.seed
 
     lo = DEFAULT_SPEC.peak_freq_lo_ghz
     guard = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False,
@@ -84,10 +89,10 @@ def main() -> None:
                                channel_loss_db=SELECT_CHANNEL_DB)
 
     print("G3.2a SELECT | seed %d | accept guard-valid with %.4f < peak < %.2f GHz | "
-          "take first %d in draw order" % (SELECT_SEED, SWEEP_FLOOR_GHZ, lo, N_SELECT),
+          "take first %d in draw order" % (seed, SWEEP_FLOOR_GHZ, lo, N_SELECT),
           flush=True)
 
-    rng = np.random.default_rng(SELECT_SEED)
+    rng = np.random.default_rng(seed)
     chosen, n_draw, n_valid = [], 0, 0
     while len(chosen) < N_SELECT and n_draw < MAX_DRAWS:
         x = rng.random(len(DIMS))
@@ -113,7 +118,7 @@ def main() -> None:
               % (len(chosen), n_draw, pk, m.boost_db, m.dc_gain_db), flush=True)
 
     Path(args.out).write_text(json.dumps(
-        {"select_seed": SELECT_SEED, "n_select": N_SELECT, "max_draws": MAX_DRAWS,
+        {"select_seed": seed, "n_select": N_SELECT, "max_draws": MAX_DRAWS,
          "sweep_floor_ghz": SWEEP_FLOOR_GHZ, "band_lo_ghz": lo,
          "select_channel_db": SELECT_CHANNEL_DB, "select_target_db": SELECT_TARGET_DB,
          "n_draws_used": n_draw, "n_guard_valid_seen": n_valid,

@@ -1,0 +1,62 @@
+G3.2a SELECT | seed 13 | accept guard-valid with 0.0011 < peak < 1.25 GHz | take first 8 in draw order
+  accepted #1 at draw   8: peak 0.5666 GHz  boost   7.84  dc   3.31
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  accepted #2 at draw  17: peak 0.0011 GHz  boost   0.00  dc   6.19
+  accepted #3 at draw  19: peak 0.3785 GHz  boost  11.44  dc   2.38
+  accepted #4 at draw  20: peak 0.7135 GHz  boost   0.34  dc   9.28
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  accepted #5 at draw  40: peak 0.6735 GHz  boost   3.12  dc   7.05
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  accepted #6 at draw  41: peak 0.8985 GHz  boost   3.18  dc   3.85
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  accepted #7 at draw  48: peak 0.5049 GHz  boost   1.53  dc   9.80
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+Note: Transient op started
+Note: Transient op finished successfully
+  accepted #8 at draw  56: peak 0.6735 GHz  boost  15.05  dc   1.27
+
+56 drawn, 17 guard-valid, 8 accepted below the band
+wrote results/g32b_lowpeak_set.json
