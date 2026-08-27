@@ -1034,6 +1034,35 @@ result is still post-hoc-supported, and a clean sweep does not upgrade either. I
 was never trained or scored at corners — every optimization in this repo ran at TT — so
 the corner result is an out-of-distribution measurement, and it reads like one.
 
+### 21.7 The frozen manifest, and the site
+
+`results/delivered_circuit.json` is the single file anything downstream quotes from. It is
+built by `eqrl.experiments.freeze_delivered`, which **measures nothing** — it reads the
+artifacts that already exist, checksums them, and refuses to run if the sweep is
+incomplete, if the flagship is not PVT-clean, or if the swept design is not the arm-B
+design for its spec. `--verify` rebuilds and diffs, exiting non-zero on drift.
+
+It carries: the six design values; the spec (seed 23, index 2, target and channel); the
+provenance (policy sha256 `8868965260d7d169…`, PPO stage-1 result, every G3.2 step with
+its boost, the budget spent); the measurement instrument including the AC grid the numbers
+were taken on; all 45 corners plus the per-metric worst case; and sha256 of every input.
+The delivered design is **frozen — no further optimization of this candidate.**
+
+One trap it records rather than leaves lying: the `.ac` line inside the exported netlist
+is `circuits.ctle`'s default viewing sweep, **not** the sweep that produced these numbers
+(`AC_DECADE_PTS = 40`, 1 MHz–100 GHz). `peak_freq_ghz` is quantised onto that grid, so
+re-running the exported deck as-is will not reproduce it exactly.
+
+The site (`web/`, mirrored to `site/` by `scripts/build_site.py`) was updated to this
+circuit: the PVT section, the metric ranges, the eye figure — regenerated at this spec's
+own 14.83 dB channel, not the old 12 dB — and the readout card. Its provenance line is
+now unambiguous, *PPO rollout → constrained G3.2 refinement → independently verified
+across 45 PVT corners*, and the page states in the same paragraph that the optimisation
+ran at TT only and that one candidate in twenty-two came back clean. The scope note
+records the two things the artifact does not establish: the policy alone does not
+demonstrate target-conditioned design, and strict solve counts do not clear their matched
+chance null.
+
 ### 21.6 Reproducing this section
 
 ```

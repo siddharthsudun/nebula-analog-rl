@@ -198,7 +198,7 @@
       <span class="tagline-sm mono">silicon eQualizer · nebula@bits goa · analog track</span>
     </div>
     <h1>An RL framework that sizes analog equalizers <em>on real silicon</em> — and checks that what it found is a circuit.</h1>
-    <p class="lede">SILQ sizes a PCIe-Gen2 CTLE (continuous-time linear equalizer) on the open SkyWater 130&nbsp;nm process, talking to ngspice in a closed loop. Every candidate is validated against its own DC operating point before the measurement is allowed to count. That layer is where the interesting result is: most designs that pass the published spec sheet turn out not to amplify anything.</p>
+    <p class="lede">SILQ sizes a PCIe-Gen2 CTLE (continuous-time linear equalizer) on the open SkyWater 130&nbsp;nm process, talking to ngspice in a closed loop. A reinforcement-learning policy searches the design space for feasible circuits; a constraint-aware numerical stage then closes the requested specification. Every candidate is validated against its own DC operating point before the measurement is allowed to count — and that layer is where the first result is: most designs that pass the published spec sheet turn out not to amplify anything.</p>
     <div class="context">
       <span>SKY130 · sky130_fd_pr</span>
       <span>ngspice (real transistors)</span>
@@ -307,40 +307,43 @@
   <section>
     <div class="wrap">
       <div class="eyebrow">Robustness</div>
-      <h2>The committed design passes all 45 PVT corners.</h2>
-      <p class="section-intro">The grid is the full one: 5 process corners (TT/SS/FF/SF/FS) &times; 3 voltages (VDD&nbsp;&plusmn;5%) &times; 3 temperatures (0/27/125&nbsp;&deg;C), with HD3 and input-referred noise simulated at every corner. The design in <code>results/solved_design.json</code> meets all eight hard specs at all 45, recorded in <code>results/solved_design_pvt.json</code>. Three corners previously reported as failures were a defect in our own noise measurement, not the circuit: ngspice's differential-output <code>.noise</code> returns a non-finite total at some corners while the AC and supply-current analyses at those same corners solve normally. Those corners now fall back to the single-ended measurement, converted by 1/&radic;2, a relation validated against the 42 corners where the exact form works (mean ratio 1.018, worst 1.073).</p>
+      <h2>The delivered circuit passes all 45 PVT corners.</h2>
+      <p class="section-intro">The grid is the full one: 5 process corners (TT/SS/FF/SF/FS) &times; 3 voltages (VDD&nbsp;&plusmn;5%) &times; 3 temperatures (0/27/125&nbsp;&deg;C), with HD3 and input-referred noise simulated at every corner — no fast approximations. The instrument is stricter than the one behind every other number on this page: each corner goes through the full guard layer, and each is scored against the circuit's <em>own</em> requested target with the &plusmn;1.5&nbsp;dB tolerance switched on, which adds a tenth check that the other results do not carry. Everything is in <code>results/delivered_circuit.json</code>.</p>
+      <p class="section-intro">The candidate was not hand-picked. All 22 designs that met the strict criterion on the held-out spec set were swept over all 45 corners under a rule written before any corner was simulated; <b>one of the 22 came back clean</b>, and that is the one below. The two dominant failure modes across the rest were DC gain and saturation headroom, concentrated at low supply and high temperature.</p>
       <div class="cols">
         <div class="card" style="padding:20px">
           <div class="pvt-wrap">
-            <table class="pvt" id="pvtgrid" aria-label="PVT corner grid: all 45 corners pass, from results/solved_design_pvt.json"></table>
+            <table class="pvt" id="pvtgrid" aria-label="PVT corner grid: all 45 corners pass, from results/delivered_circuit.json"></table>
           </div>
-          <div class="chart-note" style="padding-left:2px">Each cell = one corner, drawn from <code>results/solved_design_pvt.json</code>. All 45 pass.</div>
+          <div class="chart-note" style="padding-left:2px">Each cell = one corner, drawn from <code>results/delivered_circuit.json</code>. All 45 pass.</div>
         </div>
         <table class="spec" style="margin-top:0" aria-label="measured ranges across all 45 corners, versus spec">
           <thead><tr><th>Metric</th><th class="num">Across all 45 corners</th><th class="num">Spec</th></tr></thead>
           <tbody>
-            <tr><td>HF boost</td><td class="num">6.42–8.05 dB</td><td class="num">3–12</td></tr>
-            <tr><td>Peak freq</td><td class="num">1.27–1.51 GHz</td><td class="num">1.25–2.5</td></tr>
-            <tr><td>HD3 @100 MHz</td><td class="num">−53.1…−51.8 dB</td><td class="num">&lt; −30</td></tr>
-            <tr><td>Input noise</td><td class="num">703–1097 µV</td><td class="num">&lt; 1500</td></tr>
-            <tr><td>Power</td><td class="num">0.25–0.28 mW</td><td class="num">&lt; 15</td></tr>
-            <tr><td>Eye height</td><td class="num">0.62 UI</td><td class="num">&gt; 0.4</td></tr>
-            <tr><td>Eye opening</td><td class="num">246–302 mV</td><td class="num">&gt; 100</td></tr>
+            <tr><td>HF boost</td><td class="num">7.84–9.67 dB</td><td class="num">3–12</td></tr>
+            <tr><td><b>Target error</b></td><td class="num"><b>≤ 1.081 dB</b></td><td class="num">≤ 1.5</td></tr>
+            <tr><td>Peak freq</td><td class="num">1.345–1.794 GHz</td><td class="num">1.25–2.5</td></tr>
+            <tr><td>DC gain · binding</td><td class="num">1.04–1.55 dB</td><td class="num">&gt; 0</td></tr>
+            <tr><td>HD3 @100 MHz</td><td class="num">−61.9…−53.1 dB</td><td class="num">&lt; −30</td></tr>
+            <tr><td>Input noise</td><td class="num">544–719 µV</td><td class="num">&lt; 1500</td></tr>
+            <tr><td>Power</td><td class="num">1.78–2.00 mW</td><td class="num">&lt; 15</td></tr>
+            <tr><td>Eye height</td><td class="num">0.75–0.81 UI</td><td class="num">&gt; 0.4</td></tr>
+            <tr><td>Eye opening</td><td class="num">614–721 mV</td><td class="num">&gt; 100</td></tr>
             <tr><td>Area</td><td class="num">0.001 mm² · non-binding</td><td class="num">&lt; 0.05</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="caveat">The eye numbers above come out of a measured engine, not an assumption: the SPICE-extracted <b>complex</b> CTLE response is put in series with a minimum-phase PCIe-Gen2 channel (12&nbsp;dB loss at Nyquist) and a 1-tap DFE adapted to the first post-cursor, then a random 5&nbsp;Gb/s NRZ pattern is run through and folded. Area is listed for completeness and marked non-binding: the worst design anywhere in the action space is 0.0113&nbsp;mm² against a 0.05&nbsp;mm² budget, so this constraint cannot fail. Both <code>results/final_report.json</code> and <code>results/solved_design_pvt.json</code> have been regenerated on the current circuit and both report <code>all_pvt_pass: true</code> across all 45 corners.</p>
+      <p class="caveat">The requested target was <b>8.920&nbsp;dB</b> of boost over a <b>14.83&nbsp;dB</b> channel, and the worst corner of the 45 lands 1.081&nbsp;dB from it — inside the tolerance everywhere, not only at nominal. <b>DC gain is the binding constraint</b>, with 1.04&nbsp;dB of headroom above the floor at ss/1.89&nbsp;V/125&nbsp;°C; everything else clears by more than an order of magnitude. Area is marked non-binding because the worst design anywhere in the action space is 0.0113&nbsp;mm² against a 0.05&nbsp;mm² budget, so the constraint cannot fail. <b>What this is not:</b> the optimisation itself ran at TT only — nothing in SILQ was trained or scored at corners — so this is an out-of-distribution measurement of one generated candidate, not a claim that the framework produces PVT-robust designs in general. One in twenty-two did.</p>
     </div>
   </section>
   <section>
     <div class="wrap">
       <div class="eyebrow">What the equalizer actually does</div>
       <h2>A closed eye, opened.</h2>
-      <p class="section-intro">Left: a 5&nbsp;Gb/s NRZ signal after 12&nbsp;dB of PCIe-Gen2 channel loss &mdash; the eye is shut, and a receiver cannot reliably tell a one from a zero. Right: the same signal through the sized CTLE and a 1-tap DFE. Both panels are measured, not drawn: the SPICE-extracted complex CTLE response is placed in series with a minimum-phase channel model and a DFE adapted to the first post-cursor, then a random bit pattern is run through and folded per unit interval.</p>
+      <p class="section-intro">Left: a 5&nbsp;Gb/s NRZ signal after the 14.83&nbsp;dB of PCIe-Gen2 channel loss this circuit was asked to equalize &mdash; the eye is shut, and a receiver cannot reliably tell a one from a zero. Right: the same signal through the sized CTLE and a 1-tap DFE. Both panels are measured, not drawn: the SPICE-extracted complex CTLE response is placed in series with a minimum-phase channel model and a DFE adapted to the first post-cursor, then a random bit pattern is run through and folded per unit interval.</p>
       <div class="card" style="padding:18px">
-        <img src="eye.png" alt="Two eye diagrams. Left, channel only: eye height 69 mV, width 0.31 UI, effectively closed. Right, channel plus CTLE plus 1-tap DFE: height 276 mV, width 0.62 UI, clearly open." style="width:100%;height:auto;border-radius:8px;display:block;background:#fff">
-        <div class="chart-note" style="padding-left:2px;margin-top:10px">Channel only: <b>69&nbsp;mV / 0.31&nbsp;UI</b>. With the equalizer: <b>276&nbsp;mV / 0.62&nbsp;UI</b>. Specs are &gt;&nbsp;100&nbsp;mV and &gt;&nbsp;0.4&nbsp;UI. Regenerated from <code>results/solved_design.json</code>, the design characterised across all 45 PVT corners above.</div>
+        <img src="eye.png" alt="Two eye diagrams. Left, channel only: eye height 3 mV, width 0.12 UI, effectively closed. Right, channel plus CTLE plus 1-tap DFE: height 653 mV, width 0.75 UI, clearly open." style="width:100%;height:auto;border-radius:8px;display:block;background:#fff">
+        <div class="chart-note" style="padding-left:2px;margin-top:10px">Channel only: <b>3&nbsp;mV / 0.12&nbsp;UI</b>. With the equalizer: <b>653&nbsp;mV / 0.75&nbsp;UI</b>. Specs are &gt;&nbsp;100&nbsp;mV and &gt;&nbsp;0.4&nbsp;UI. Regenerated from <code>results/delivered_design.json</code>, the circuit characterised across all 45 PVT corners above.</div>
       </div>
     </div>
   </section>
@@ -350,17 +353,18 @@
     <div class="wrap">
       <div class="eyebrow">The artifact</div>
       <h2>A real, sized circuit — not a block diagram.</h2>
-      <p class="section-intro">This is the design the PVT recheck above characterizes: a 1-stage source-degenerated CTLE built from SKY130 <code>nfet_01v8</code> devices, exported as a netlist that runs in ngspice as-is. The values came out of an earlier training run whose checkpoint the current environment can no longer load — it expects a 14-dimensional observation where the environment now emits 18, and the circuit itself changed underneath it when the mirror was fixed. So the circuit is presented here, not a claim about the policy that produced it.</p>
+      <p class="section-intro">This is the design the PVT sweep above characterizes: a 1-stage source-degenerated CTLE built from SKY130 <code>nfet_01v8</code> devices, exported as a netlist that runs in ngspice as-is. Its provenance is one line and it is unambiguous — <b>PPO rollout &rarr; constrained G3.2 refinement &rarr; independently verified across 45 PVT corners</b>. The policy's rollout found a feasible circuit 2.38&nbsp;dB from the requested boost; the refinement stage then took three evaluations to walk it to 0.25&nbsp;dB, inside a 20-evaluation budget of which it spent 13. Nothing after that was hand-tuned: the values below are exactly what came out, checksummed in <code>results/delivered_circuit.json</code> against the policy that produced them.</p>
       <div class="cols">
         <div class="card readout">
-          <h3>Sized CTLE — <code>results/solved_design.json</code></h3>
+          <h3>Delivered CTLE — <code>results/delivered_circuit.json</code></h3>
           <div class="kv">
-            <span class="k">Input pair W / L</span><span class="v">5.43 / 0.15 µm</span>
-            <span class="k">Tail current</span><span class="v">100 µA</span>
-            <span class="k">Degeneration Rs</span><span class="v">4.89 kΩ</span>
-            <span class="k">Degeneration Cs</span><span class="v">132 fF</span>
-            <span class="k">Load R</span><span class="v">1.81 kΩ</span>
-            <span class="k">DFE tap</span><span class="v">0.345 UI</span>
+            <span class="k">Input pair W / L</span><span class="v">55.78 / 0.392 µm</span>
+            <span class="k">Tail current</span><span class="v">712.3 µA</span>
+            <span class="k">Degeneration Rs</span><span class="v">3.287 kΩ</span>
+            <span class="k">Degeneration Cs</span><span class="v">181.6 fF</span>
+            <span class="k">Load R</span><span class="v">2.450 kΩ</span>
+            <span class="k">Requested boost</span><span class="v">8.920 dB @ 14.83 dB ch.</span>
+            <span class="k">Measured (TT)</span><span class="v">9.166 dB · 1.599 GHz</span>
             <span class="k">Process</span><span class="v">SKY130 130 nm</span>
           </div>
         </div>
@@ -398,7 +402,7 @@
         <span class="pill">python -m eqrl.experiments.speedup</span>
         <span class="pill">python -m eqrl.experiments.characterize --design results/solved_design.json</span>
       </div>
-      <p class="caveat">Scope notes for review. The CTLE sizing, the AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE) and the 45-corner PVT sweep are simulated on SKY130. The channel is a minimum-phase PCIe-Gen2 model (12&nbsp;dB at Nyquist); the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail; the ±tolerance around a target is a training-reward shaping choice, kept separate from spec compliance. The baselines are random search, Bayesian optimization (Optuna TPE) and CMA-ES — there is no grid baseline. Area is measured but cannot fail against the 0.05&nbsp;mm² budget. The natural-language front-end parses a plain-English request into the framework's <code>Spec</code> object, with a keyword fallback when no API key is present; sizing from that spec needs a policy the repo does not currently have.</p>
+      <p class="caveat">Scope notes for review. The CTLE sizing, the AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE) and the 45-corner PVT sweep are simulated on SKY130. The channel is a minimum-phase PCIe-Gen2 model, at the loss each spec asks for — 14.83&nbsp;dB at Nyquist for the delivered circuit; the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail everywhere on this page <em>except</em> the delivered circuit, which is additionally scored against its requested target with a ±1.5&nbsp;dB tolerance. The baselines are random search, Bayesian optimization (Optuna TPE) and CMA-ES — there is no grid baseline. Area is measured but cannot fail against the 0.05&nbsp;mm² budget. The natural-language front-end parses a plain-English request into the framework's <code>Spec</code> object, with a keyword fallback when no API key is present. Two things the delivered circuit does <em>not</em> establish: the policy alone does not demonstrate target-conditioned design — closing the target is the refinement stage's job — and strict solve counts over the held-out spec set do not clear their matched chance null, so they are not claimed here.</p>
     </div>
   </section>
 </main>
@@ -469,7 +473,8 @@
   var yt=el("text",{x:14,y:padT+plotH/2,fill:faint,"font-size":11,"text-anchor":"middle","font-family":"ui-monospace,monospace",transform:"rotate(-90 14 "+(padT+plotH/2)+")"}); yt.textContent="valid designs / 30 samples"; svg.appendChild(yt);
 
   // ---- PVT grid ----
-  // From results/solved_design_pvt.json: all 45 corners meet all eight hard specs.
+  // From results/delivered_circuit.json: all 45 corners are guard-valid and meet the
+  // full requirement set, including the +/-1.5 dB check against the requested target.
   // Cell order is VDD (-5%, nom, +5%) x temperature (0, 27, 125 C), matching the
   // header rows below. 1 = passed.
   var verdicts = {

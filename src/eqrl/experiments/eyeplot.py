@@ -40,7 +40,7 @@ def render(design_path: str, out: str = "results/eye.png", loss_db: float = 12.0
     M = eq.samples_per_ui
     x = (np.arange(M) - M / 2) / M    # UI, centred
     for ax, res, title, col in [
-        (axes[0], raw, f"Channel only  ·  {loss_db:.0f} dB loss", "#c0603a"),
+        (axes[0], raw, f"Channel only  ·  {loss_db:.4g} dB loss", "#c0603a"),
         (axes[1], eq, "Channel + CTLE + 1-tap DFE (SILQ)", "#17b7a8"),
     ]:
         E = _centered(res)
