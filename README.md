@@ -21,8 +21,10 @@ that loop with an RL agent: the **environment** is a SPICE testbench of the equa
 the **action** is a set of device sizes, the **observation** is the measured performance
 (peaking, HD3, noise, power, area, eye), and the **reward** is how close we are to the
 target spec. The aim of learning a *policy* rather than solving one instance is that a
-policy can be pointed at a new spec without starting the search over. Whether this policy
-does that is a measurement, and it is not one we currently have.
+policy can be pointed at a new spec without starting the search over. We measured whether
+it does: the policy retargets to a new feasible design in a median of 4 evaluations, but
+hitting the *requested* boost precisely is done by a constraint-aware refinement stage
+downstream, not by the policy alone. Both the win and its boundary are reported below.
 
 ## Target specification (from the problem statement)
 
@@ -53,10 +55,14 @@ it we have executed is verification.
    number can reach a reward unvalidated. This is not decoration: **86% of the designs
    that pass all eight published specs are not valid circuits** — 24 of 28, measured
    twice with identical results (`results/pass_vs_valid.json`).
-2. **The PVT grid is real and it is not being flattered.** 5 process corners × VDD ±5% ×
-   {0, 27, 125} °C = 45 corners, with HD3 and input-referred noise simulated at each. The
-   design currently committed in `results/` fails 10 of them
-   (`results/legacy_design_recheck.json`).
+2. **The delivered circuit passes all 45 PVT corners, and it is not being flattered.** 5
+   process corners × VDD ±5% × {0, 27, 125} °C = 45 corners, with HD3 and input-referred
+   noise simulated at each, through the full guard layer and scored against the requested
+   target (`results/delivered_circuit.json`). It was not hand-picked: all 22 strict-passing
+   held-out candidates were swept under a rule written before any corner ran, and **1 of 22
+   came back clean** (`docs/REPRODUCE.md` §21). The optimisation ran at TT only, so the
+   corner result is an out-of-distribution measurement of one generated candidate, reported
+   as such.
 3. **The simulator loop is fast enough to train on.** 77.5 ms per AC evaluation against
    6370.5 ms for a fresh ngspice subprocess — a measured 82.2× (`results/speedup.json`).
 4. **LLM front-end (the bonus)** — natural-language spec → `Spec` object, with a keyword
@@ -122,40 +128,49 @@ python -m eqrl.agents.train --algo ppo --timesteps 20000
 
 ## Status
 
-Working, on real SKY130:
+**Delivered architecture (frozen 26 Aug 2026, `docs/REPRODUCE.md` §20–21):**
 
-- `sky130_fd_pr` transistor CTLE with a current-mirror tail. AC peaking, HD3 (transient +
-  FFT), input-referred noise (`.noise`), supply power, area and the channel + DFE eye are
-  all simulated. HD3 and noise are only simulated when `fast=False`, which is now the
-  default; with `fast=True` they are constants.
-- Guard layer, sealed: `measure_all` cannot be called from a reward path without passing
-  Tiers 1–4. Every rejection is logged by check, not just counted.
-- Resident libngspice server: **77.5 ms** per AC evaluation against **6370.5 ms** for a
-  fresh subprocess, a measured **82.2×** (`results/speedup.json`). The gain is throughput
-  per candidate: the SKY130 corner `.lib` parses once instead of every launch.
-- Full 45-corner PVT engine, HD3 and noise at every corner.
-- Test suite: **274 passed, 3 xfailed.**
+```
+spec  →  PPO global feasibility search  →  G3.2 constrained target refinement
+      →  independent guarded SPICE verification  →  sized netlist + measured specs
+```
 
-Not working, stated here because it changes how the rest of the repo reads:
+- **PPO learns the feasible design space.** The frozen policy `results/seq_clean40k.zip`
+  reaches a valid circuit in a median of **4 evaluations**, against **2,394** for the full
+  parameter sweep the poster names as the baseline. It supplies feasibility, not sizing
+  precision — on its own it does not hit a *requested* boost above a matched-chance null,
+  and that is reported as the boundary of the RL claim, not hidden.
+- **G3.2 closes the requested spec.** A constraint-aware numerical stage that refines the
+  PPO handoff. On a 40-spec held-out set it cut median target error from **1.886 dB
+  (PPO→CMA-ES baseline) to 0.231 dB** at roughly half the refinement budget, and the
+  coverage explanation that killed the earlier retargeting result runs the wrong way here
+  (`docs/REPRODUCE.md` §20.2). **Strict solve counts do not clear their matched chance line
+  for any arm and are not claimed.**
+- **The delivered circuit passes all 45 PVT corners** (`results/delivered_circuit.json`):
+  target 8.920 dB over a 14.83 dB channel, worst-corner error 1.081 dB, DC gain the binding
+  constraint. 1 of 22 held-out candidates was PVT-clean; optimisation ran at TT only.
 
-- **No trained policy runs against the current code.** Every checkpoint in `results/`
-  expects a 14-dimensional observation; the environment emits 18. The circuit changed
-  underneath them as well — the tail mirror was found in triode, delivering 326 µA of a
-  requested 1000 µA, and both the bias point and the mirror length were changed to fix it.
-  The last completed guarded run did not produce a policy that yields a valid design.
-- **The declared action space is 10.4% physically valid** — 26 of 250 uniform samples
-  (`results/space_validity.json`). Validity survives up to roughly 1 mA of tail current
-  and is zero across 90 samples above it, so most of the declared 0.05–20 mA range is
-  dead space (`results/itail_profile.json`).
-- **The design committed in `results/solved_design.json` fails 10 of 45 PVT corners**
-  (`results/legacy_design_recheck.json`). `results/final_report.json` still asserts
-  `all_pvt_pass: true` for another design of the same generation; it is stale, predates the
-  mirror fix, and has not been rechecked.
-- **`area` cannot fail as a constraint.** The worst design anywhere in the action space is
-  0.0113 mm² against a 0.05 mm² budget. It is measured, but it is not a live constraint.
+**Infrastructure, on real SKY130:**
 
-**See [`RESULTS.md`](RESULTS.md) for the measurements.** Roadmap and per-phase status in
-[`docs/ROADMAP.md`](docs/ROADMAP.md); `HANDOVER.md` is the working log.
+- Guard layer, sealed: 20 checks in 5 tiers (incl. anti-gaming Tier 5); `measure_all`
+  cannot reach a reward path without passing Tiers 1–4. Every rejection logged by check.
+- Resident libngspice server: **77.5 ms** per AC evaluation vs **6370.5 ms** for a fresh
+  subprocess, a measured **82.2×** (`results/speedup.json`).
+- Full 45-corner PVT engine, HD3 and noise at every corner. HD3/noise simulated when
+  `fast=False`, which is the default.
+- **86% of the designs that pass all eight published specs are not valid circuits** — 24 of
+  28, measured twice (`results/pass_vs_valid.json`). The guard is where that was found.
+- **The declared action space is 20.4% physically valid** — 51 of 250 uniform samples
+  (`results/space_validity.json`). The tail-current range was capped at 1 mA on measured
+  physics (nothing valid above it across 90 samples); no other range was narrowed.
+- `area` cannot fail as a constraint: worst design anywhere is 0.0113 mm² against a
+  0.05 mm² budget. Measured, not live.
+
+**How the record reads.** This repo kept its own retracted results in the git history
+rather than deleting them: an early 32/32 retargeting number was selection bias, an early
+reward was gamed, and a surrogate arm was cut on a pre-registered gate. The authoritative
+account of the delivered system is `docs/REPRODUCE.md`; `RESULTS.md` carries the standalone
+measurements and `HANDOVER.md` is the mid-project working log.
 
 ## References
 

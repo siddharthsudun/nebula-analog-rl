@@ -22,9 +22,10 @@ class Spec:
     peak_freq_lo_ghz: float = 1.25
     peak_freq_hi_ghz: float = 2.5
 
-    #: OPT-IN floor on the DC gain, in dB. `None` (the default) means `hard_pass` does
-    #: not look at DC gain at all, which is the behaviour every published number in this
-    #: repo was produced under.
+    #: Floor on the DC gain, in dB. Defaults to `0.0` (the DC-gain check is ON). Set to
+    #: `None` to make `hard_pass` ignore DC gain entirely — the behaviour the earliest
+    #: numbers in this repo (the 86% pass-vs-valid finding) were produced under, before the
+    #: floor was added to the spec. The delivered numbers are scored with the floor on.
     #:
     #: WHY IT EXISTS. `boost_db` is a RATIO — peak gain minus DC gain — so a design that
     #: ATTENUATES at DC inflates its boost for free, without the peak ever getting

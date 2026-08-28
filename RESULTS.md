@@ -12,6 +12,34 @@ measurements — `experiments/generalization.py` says so in its own docstring. T
 characterizations were the exception; `characterize.py` has always run `fast=False`.
 `fast=False` is now the default everywhere, and the measurements below were taken with it.
 
+## The delivered system
+
+Frozen 26 Aug 2026. The full record is `docs/REPRODUCE.md` §20–21; this is the summary.
+
+```
+spec  →  PPO global feasibility search  →  G3.2 constrained target refinement
+      →  independent guarded SPICE verification  →  sized netlist + measured specs
+```
+
+- **PPO is a strong feasibility solver.** Frozen policy `results/seq_clean40k.zip` reaches a
+  valid circuit in a median of **4 evaluations** vs **2,394** for the poster's parameter
+  sweep. It does **not**, on its own, hit a *requested* boost above a matched-chance null;
+  that is the refinement stage's job, and it is reported as the boundary of the RL claim.
+- **G3.2 closes the spec.** On a 40-spec held-out set (spec-seed 23, chosen and frozen
+  before it was simulated), PPO→G3.2 cut median target error from **1.886 dB** (the
+  PPO→CMA-ES baseline) to **0.231 dB** at roughly half the refinement budget. The coverage
+  explanation that retired the earlier retargeting result runs the wrong way here: the
+  baseline made more evaluations and found more distinct designs and still finished farther
+  from target (`docs/REPRODUCE.md` §20.2). **Strict solve counts do not clear their matched
+  chance line for any arm and are not claimed.**
+- **Delivered circuit: 45/45 PVT corners** (`results/delivered_circuit.json`). Target
+  8.920 dB over a 14.83 dB channel; worst-corner error 1.081 dB; DC gain the binding
+  constraint at 1.04 dB of margin. Chosen by a rule written before any corner was simulated;
+  **1 of 22** held-out candidates was PVT-clean. Optimisation ran at TT only, so this is an
+  out-of-distribution measurement of one generated candidate.
+
+The rest of this file is standalone measurements, each naming its artifact.
+
 ## Headline: 86% of the designs that pass all eight specs are not circuits
 
 CMA-ES was run over four (target boost, channel loss) specifications, 60 evaluations each,
@@ -82,25 +110,23 @@ clamped at 200 µm, so every design above roughly 10 mA was requesting a device 
 cannot model — and on the resident-server path that abort carries no exit code, so it read
 as a clean run that produced no numbers. Width is now drawn as parallel fingers.
 
-## The search space is 10.4% physically valid
+## The search space is 20.4% physically valid
 
 `experiments/space_validity.py` samples `ACTION_SPACE` uniformly — no agent, no trajectory
 — and runs each sample through the guard layer.
 
 ```
 250 uniform samples
-VALID: 26  (10.4%)
+VALID: 51  (20.4%)
 
-  156   T2.5_mosfet_not_in_saturation
-   46   T4.10_dc_gain_implausible
-   22   T1.2_solver_failure_text_in_output
-
-DC load drop demanded against a 1.8 V rail:
-  median over the whole box : 1.13 V
-  fraction needing > VDD    : 41.6%
+  107   T2.5_mosfet_not_in_saturation
+   54   T4.10_dc_gain_implausible
+   38   T1.2_solver_failure_text_in_output
 ```
 
-Artifact: `results/space_validity.json`.
+Artifact: `results/space_validity.json`. This is measured on the capped range (tail current
+≤ 1 mA); on the original 0.05–20 mA range the density was far lower, because nothing is
+valid above ~1 mA.
 
 Validity against tail current, 30 samples per point (`results/itail_profile.json`):
 
@@ -118,46 +144,49 @@ Validity against tail current, 30 samples per point (`results/itail_profile.json
 | 4.0 mA | 0 |
 
 There is a workable band up to about 1 mA and **nothing valid in 90 samples above it**. The
-declared upper bound is 20 mA, so most of that range is dead space. The mechanism is
-documented in `ctle.py`: more tail current means more Vgs on the input pair, which pulls
-the tail node down, which is exactly the headroom the mirror needs. Current and mirror
-headroom trade against each other, and past a few hundred µA the mirror loses.
+mechanism is documented in `ctle.py`: more tail current means more Vgs on the input pair,
+which pulls the tail node down, which is exactly the headroom the mirror needs. Current and
+mirror headroom trade against each other, and past a few hundred µA the mirror loses.
 
-No range in `ACTION_SPACE` has been narrowed. Narrowing it would change what every
-published number means, and a judge is entitled to ask whether the space was shrunk until
-the result appeared.
+The tail-current range **was capped at 1 mA** on this measured physics (originally
+0.05–20 mA). It is the one range that was narrowed, and it was narrowed because the region
+above it is empty, not to flatter a result — the cap is recorded in the commit history
+(`68d4760`). No other range in `ACTION_SPACE` was touched.
 
-## PVT: the committed design fails 10 of 45 corners
+## PVT: the delivered circuit passes all 45 corners
 
 The full grid is 5 process corners (TT/SS/FF/SF/FS) × 3 voltages (VDD ±5%) × 3
-temperatures (0/27/125 °C) = 45, with HD3 and input-referred noise simulated at every one.
-Re-checking the design in `results/solved_design.json` on the corrected circuit:
+temperatures (0/27/125 °C) = 45, with HD3 and input-referred noise simulated at every one,
+through the full guard layer and scored against the requested target. The delivered circuit
+(`results/delivered_circuit.json`, `docs/REPRODUCE.md` §21):
 
 ```
-all_pvt_pass : false
-passed       : 35 / 45
-failed       : 10 / 45   (3 SS, 4 SF, 3 FS)
+all_pvt_pass          : true
+passed                : 45 / 45
+worst-corner tgt err  : 1.081 dB   (fs / 1.71 V / 125 °C)
+binding constraint    : DC gain, 1.04 dB of margin
 ```
 
-The ten failures produce no usable measurement at all (`ok: false`) — the design does not
-solve at those corners, and a corner that cannot be measured cannot be counted as a pass.
-Across the 35 that do solve: boost 6.42–8.05 dB, peak 1.27–1.51 GHz, HD3 −53.1 to
-−51.8 dB, input noise 703–1097 µVrms, power 0.25–0.28 mW, eye 0.62 UI / 246–302 mV.
+It was **not** hand-picked: all 22 held-out candidates that met the strict criterion at TT
+were swept over all 45 corners under a rule written before any corner ran, and **1 of 22
+came back clean** — this one. The two dominant failure modes across the other 21 were DC
+gain and saturation headroom at low supply / high temperature. Optimisation ran at TT only,
+so this is an out-of-distribution measurement of one generated candidate, not a claim that
+the framework yields PVT-robust designs in general.
 
-Artifact: `results/legacy_design_recheck.json`.
+*(For provenance, an earlier legacy design — produced before the tail-mirror fix — fails
+10 of 45 corners; `results/legacy_design_recheck.json`. It is kept in the tree as a record,
+not as the delivered result.)*
 
 The eye is computed, not assumed: the SPICE-extracted **complex** CTLE response is put in
 series with a minimum-phase PCIe-Gen2 channel (skin + dielectric loss, 12 dB at Nyquist)
 and a 1-tap DFE adapted to the first post-cursor, then a random NRZ pattern is run through
 and folded. `src/eqrl/sim/eye.py`.
 
-**`results/final_report.json` still asserts `all_pvt_pass: true`, and it is stale.** It
-covers a different legacy design (`w_in` 11.83 µm, `rs` 5.00 kΩ, `cs` 222 fF, `r_load`
-1.17 kΩ) from the same generation: produced before the mirror was fixed, by a checkpoint
-that expects a 14-dimensional observation where the environment now emits 18. That design
-has not been rechecked on the corrected circuit. `final_report.json` is kept for the record
-and is not a result; it is the most concrete falsifiable object in the repo and should not
-survive to submission unqualified.
+*(Note: `results/final_report.json` is a stale legacy artifact from the honest-benchmark
+line and asserts `all_pvt_pass: true` for a different pre-mirror-fix design. It is not the
+delivered result — that is `results/delivered_circuit.json` — and is kept only for the
+record.)*
 
 ## Speed: 82.2× per evaluation
 
@@ -185,21 +214,20 @@ against a 0.05 mm² budget. Area should be reported as measured and non-binding,
 constraint that was met. Whether 0.05 mm² is the right budget is a spec question, not a
 modelling one.
 
-## What the RL leg does not yet show
+## What the RL leg does and does not show
 
-No policy in the repo can be run against the current code. Every checkpoint in `results/`
-expects a 14-dimensional observation; the environment emits 18. They were also trained on
-a different circuit (ideal-ish tail, `fast=True`, the old area model), so their numbers are
-not comparable to anything produced from here. The last completed guarded training run did
-not produce a policy that yields a valid design.
+**Does:** the frozen policy `results/seq_clean40k.zip` runs against the current code and is
+a strong feasibility solver — 26/32 loose solves on the held-out set, median 4 evaluations
+to the first feasible design, reproduced bit-for-bit from committed artifacts
+(`docs/REPRODUCE.md` §3).
 
-Two things are known about why. The search space is 10.4% valid, measured. And the penalty
-for a rejected design is a flat −5.0 by default, which is a fact about the code: a design
-that misses saturation by 10 mV scores exactly the same as one asking for 50 V across the
-load. With most candidates rejected, the reward is nearly constant everywhere, so the value
-function is flat and there is no gradient to descend. A shaped penalty that ranks "nearly
-valid" above "impossible" exists as an opt-in (`SequentialEqualizerEnv(invalid_shaping=True)`)
-and was not in use for the completed run.
+**Does not:** the policy does not, by itself, hit a *requested* boost above its matched
+chance line — on both spec seeds its strict solves sit on that line, and the unfiltered
+correlation between requested and achieved boost is +0.114 (`docs/REPRODUCE.md` §8). Precise
+targeting is the job of the downstream G3.2 refinement stage, and the two are kept separate
+on purpose. Whether the policy itself can be made to retarget (by pricing the target into
+the reward without sparsifying the terminal reward) is an open, untested question, not a
+settled negative.
 
 An earlier, naive formulation of the RL problem *lost* to Bayesian search. It is kept in
 the git history rather than deleted.
@@ -214,8 +242,8 @@ python -m eqrl.experiments.pass_vs_valid    # -> results/pass_vs_valid.json
 python -m eqrl.experiments.space_validity   # -> results/space_validity.json
 python -m eqrl.experiments.itail_profile    # -> results/itail_profile.json
 
-# full 45-corner PVT sign-off of a committed design
-python -m eqrl.experiments.characterize --design results/solved_design.json
+# the delivered circuit's 45-corner PVT sign-off (read the frozen record, no simulation)
+python -m eqrl.experiments.pvt_signoff --report-only
 ```
 
 See `SETUP.md` for environment setup and `docs/ROADMAP.md` for status.

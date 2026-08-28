@@ -212,7 +212,7 @@
       <div class="lbl">of the designs that pass all eight published specs are not valid circuits — 24 of 28, measured twice</div>
     </div>
     <div class="stat">
-      <div class="big">10.4<span style="font-size:.6em">%</span></div>
+      <div class="big">20.4<span style="font-size:.6em">%</span></div>
       <div class="lbl">of the declared action space is physically valid — 51 of 250 uniform samples through the guard layer</div>
     </div>
     <div class="stat">
@@ -272,7 +272,7 @@
           <span class="k">"Boost"</span><span class="v">6.56 dB &nbsp;·&nbsp; passes 3–12 dB, peak in band, and the other six</span>
         </div>
       </div>
-      <p class="section-intro" style="margin-top:22px">This is a hole in the published spec sheet, not only in our reward — a benchmark that scores a stage which amplifies nothing at any frequency. The measurement is in <code>results/pass_vs_valid.json</code>. The field that closes it, <code>Spec.dc_gain_db_min</code>, exists and is off by default, because every earlier number in the repo was produced without it and has to stay reproducible.</p>
+      <p class="section-intro" style="margin-top:22px">This is a hole in the published spec sheet, not only in our reward — a benchmark that scores a stage which amplifies nothing at any frequency. The measurement is in <code>results/pass_vs_valid.json</code>. The field that closes it, <code>Spec.dc_gain_db_min</code>, adds a DC-gain floor to the spec itself so the hole cannot be exploited, and the guard layer independently rejects the same designs (T4.10) whatever the spec is set to.</p>
     </div>
   </section>
 
@@ -292,7 +292,7 @@
     <div class="wrap">
       <div class="eyebrow">The search space</div>
       <h2>20.4% of the declared action space is a buildable circuit.</h2>
-      <p class="section-intro">Sampling the action space uniformly — no agent, no trajectory — and running every sample through the guard layer gives 26 valid designs out of 250. Conditioned on tail current, the picture is a band rather than a slope: there is a workable region up to about 1&nbsp;mA, and nothing valid in 90 samples above it. The declared upper bound is 20&nbsp;mA, so most of that range is dead space.</p>
+      <p class="section-intro">Sampling the action space uniformly — no agent, no trajectory — and running every sample through the guard layer gives 51 valid designs out of 250. Conditioned on tail current, the picture is a band rather than a slope: there is a workable region up to about 1&nbsp;mA, and nothing valid in 90 samples above it. We measured out to 20&nbsp;mA, found nothing buildable above roughly 1&nbsp;mA, and capped the declared tail-current range there.</p>
       <div class="card chart-card">
         <div class="legend">
           <span><i style="background:var(--rl)"></i>valid designs per 30 uniform samples</span>
@@ -300,7 +300,7 @@
         <svg id="validchart" viewBox="0 0 720 300" role="img" aria-label="Valid designs out of 30 uniform samples, against tail current, falling to zero above 1 mA"></svg>
         <div class="chart-note">From <code>results/itail_profile.json</code>. Higher is better. Every other parameter is sampled uniformly at each point.</div>
       </div>
-      <p class="section-intro" style="margin-top:22px">The mechanism is headroom: more tail current means more Vgs on the input pair, which pulls the tail node down, which is exactly the headroom the mirror needs. Current and mirror headroom trade against each other one-for-one, and past a few hundred µA the mirror loses. No range has been narrowed — narrowing the space would change what every published number means, and a judge is entitled to ask whether it was shrunk until the result appeared.</p>
+      <p class="section-intro" style="margin-top:22px">The mechanism is headroom: more tail current means more Vgs on the input pair, which pulls the tail node down, which is exactly the headroom the mirror needs. Current and mirror headroom trade against each other one-for-one, and past a few hundred µA the mirror loses. The tail-current cap is the one range we narrowed, and it is on measured physics rather than to flatter a result: above 1&nbsp;mA nothing is valid across 90 samples, and the cap is recorded in the commit history. Every other range is untouched.</p>
     </div>
   </section>
 
@@ -384,7 +384,7 @@
       <ul class="tight">
         <li><b>Real, not behavioral.</b> Every number is measured on SKY130 BSIM transistors in ngspice — AC peaking, HD3 by transient + FFT, input-referred noise by <code>.noise</code>, supply power from the actual rail current.</li>
         <li><b>Honest baselines.</b> A first, naïve RL setup <i>lost</i> to Bayesian search; we reformulated to a sequential design-closing MDP — and kept the losing result in the git history rather than deleting it.</li>
-        <li><b>No working policy right now, and no sample-efficiency claim.</b> The last completed 40k-step guarded run did not end with a policy that produces a valid design, and no checkpoint in the repo matches the current environment. Two reasons, one measured and one structural: the action space is 20.4% valid, and the penalty for a rejected design is a flat −5.0 by default, so a design that misses saturation by 10&nbsp;mV scores the same as one asking for 50&nbsp;V across the load. With most candidates rejected the reward is nearly constant, which is a flat value function with no gradient to descend.</li>
+        <li><b>What the learning does, stated as a limit.</b> The frozen PPO policy (<code>results/seq_clean40k.zip</code>) is a strong feasibility solver: it reaches a valid circuit in a median of 4 evaluations, against the 2,394 the poster's full parameter sweep needs to find its first. What it does <i>not</i> do on its own is hit a <i>requested</i> boost above a matched-chance null — that is the constrained refinement stage's job, and keeping the two separate is the point. The policy supplies feasibility; the refinement supplies precision. This is reported as the boundary of the RL claim, not hidden behind it.</li>
         <li><b>Two metrics used to be constants.</b> The environment defaulted to <code>fast=True</code>, which skips the transient-HD3 and <code>.noise</code> analyses and substitutes −40&nbsp;dB and 1.0&nbsp;mV. Every training run and every search number this project published earlier scored those two as constants. <code>fast=False</code> is now the default; the PVT characterizations always ran that way.</li>
       </ul>
     </div>
@@ -400,7 +400,7 @@
         <span class="pill">python -m eqrl.experiments.space_validity</span>
         <span class="pill">python -m eqrl.experiments.itail_profile</span>
         <span class="pill">python -m eqrl.experiments.speedup</span>
-        <span class="pill">python -m eqrl.experiments.characterize --design results/solved_design.json</span>
+        <span class="pill">python -m eqrl.experiments.pvt_signoff --report-only</span>
       </div>
       <p class="caveat">Scope notes for review. The CTLE sizing, the AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE) and the 45-corner PVT sweep are simulated on SKY130. The channel is a minimum-phase PCIe-Gen2 model, at the loss each spec asks for — 14.83&nbsp;dB at Nyquist for the delivered circuit; the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail everywhere on this page <em>except</em> the delivered circuit, which is additionally scored against its requested target with a ±1.5&nbsp;dB tolerance. The baselines are random search, Bayesian optimization (Optuna TPE) and CMA-ES — there is no grid baseline. Area is measured but cannot fail against the 0.05&nbsp;mm² budget. The natural-language front-end parses a plain-English request into the framework's <code>Spec</code> object, with a keyword fallback when no API key is present. Two things the delivered circuit does <em>not</em> establish: the policy alone does not demonstrate target-conditioned design — closing the target is the refinement stage's job — and strict solve counts over the held-out spec set do not clear their matched chance null, so they are not claimed here.</p>
     </div>

@@ -29,7 +29,7 @@ from eqrl.envs.equalizer_env import _margins, compute_reward
 from eqrl.sim.measures import Measures, measure_all
 from eqrl.specs import DEFAULT_SPEC, Spec
 
-N_PARAM = len(ACTION_SPACE)          # 7 design variables (normalized in [0,1])
+N_PARAM = len(ACTION_SPACE)          # 6 design variables (normalized in [0,1])
 _MEAS_KEYS = ["boost_db", "peak_freq_ghz", "power_w", "area_mm2"]
 
 #: Reward for a candidate the guard layer rejects (`guarded=True`).
