@@ -1,0 +1,132 @@
+{
+ "architecture": "PPO (global feasibility) -> G3.2 constrained refinement",
+ "spec": {
+  "target_boost_db": 6.0,
+  "channel_loss_db": 12.0,
+  "boost_tol_db": 1.5,
+  "spec_index": 0,
+  "requirement_set": "eqrl.specs.Spec defaults + this target/channel; dc_gain_db_min=0.0 and boost_target_tol_db both ON"
+ },
+ "provenance": {
+  "is_ai_generated": true,
+  "policy": "results/seq_clean40k.zip",
+  "ppo_produced_handoff": false,
+  "ppo_terminated_at_eval": 4,
+  "stage1": {
+   "n_evals": 4,
+   "n_valid": 4,
+   "best_boost_db": 4.171709686357431,
+   "best_abs_err_db": 1.8282903136425688
+  },
+  "g32_used": true,
+  "g32_start_source": "stage1 (free)",
+  "g32_steps": [
+   {
+    "phase": "advance",
+    "boost_db": 4.754558085220111,
+    "abs_err_db": 1.2454419147798887
+   },
+   {
+    "phase": "advance",
+    "boost_db": 5.296895344903007,
+    "abs_err_db": 0.7031046550969933
+   },
+   {
+    "phase": "advance",
+    "boost_db": 6.2776094635951605,
+    "abs_err_db": 0.2776094635951605
+   },
+   {
+    "phase": "refine",
+    "boost_db": 6.0127845163071925,
+    "abs_err_db": 0.012784516307192462
+   }
+  ],
+  "g32_reached_target": true,
+  "g32_reason": "target reached inside the feasible set",
+  "g32_rescue_used": 0,
+  "g32_repair_used": 0,
+  "fallback_invoked": false,
+  "hand_tuning": "none"
+ },
+ "cost": {
+  "stage1_evals": 5,
+  "stage2_evals": 4,
+  "budget_evals_unspent": 6,
+  "measure_all_spent": 14.0,
+  "measure_all_budget": 20,
+  "simulations_run": 10
+ },
+ "solver": {
+  "loose_solved_at": 4,
+  "strict_solved_at": 5,
+  "n_valid": 8,
+  "n_loose_pass": 5,
+  "n_evals": 8,
+  "n_distinct_boosts": 8,
+  "best_boost_db": 6.0127845163071925,
+  "best_abs_err": 0.012784516307192462,
+  "best_design": {
+   "w_in": 2.924998229166605e-05,
+   "l_in": 2.751576334238052e-07,
+   "i_tail": 0.0008120661795139313,
+   "rs": 3530.5947974320407,
+   "cs": 8.578196556851564e-14,
+   "r_load": 2719.758850336075,
+   "w_dfe": 0.0
+  },
+  "all_valid_boosts": [
+   0.0,
+   2.9451392162793386,
+   2.739345493927777,
+   4.171709686357431,
+   4.754558085220111,
+   5.296895344903007,
+   6.2776094635951605,
+   6.0127845163071925
+  ]
+ },
+ "design": {
+  "w_in": 2.924998229166605e-05,
+  "l_in": 2.751576334238052e-07,
+  "i_tail": 0.0008120661795139313,
+  "rs": 3530.5947974320407,
+  "cs": 8.578196556851564e-14,
+  "r_load": 2719.758850336075,
+  "w_dfe": 0.0
+ },
+ "netlist": "* CTLE  corner=tt vdd=1.8 temp=27.0C analysis=ac models=sky130\n.temp 27.0\n.param vdd=1.8\nVdd vdd 0 {vdd}\nVcm cm 0 1.296\nVinp inp cm AC 0.5 SIN(0 0.05 100e6)\nVinn inn cm AC -0.5 SIN(0 -0.05 100e6)\n.lib \"C:\\Users\\talk2.000\\pdk\\sky130A\\libs.tech\\ngspice\\sky130.lib.spice\" tt\nXM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L=0.2752 W=29.2500 nf=1 m=1\nXM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L=0.2752 W=29.2500 nf=1 m=1\nIref vdd nbias 0.0004060330897569657\nXMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=64.9653 nf=1 m=1\nXMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=64.9653 nf=1 m=1\nXMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=64.9653 nf=1 m=1\nRs sp sn 3530.5947974320407\nCs sp sn 8.578196556851564e-14\nRlp vdd outp 2719.758850336075\nRln vdd outn 2719.758850336075\nClp outp 0 3e-14\nCln outn 0 3e-14\n.ac dec 50 1e6 10e9\n.end\n",
+ "verification": {
+  "guard_valid": true,
+  "guard_check": null,
+  "passed": true,
+  "checks": {
+   "boost_range": true,
+   "peak_in_band": true,
+   "hd3": true,
+   "noise": true,
+   "power": true,
+   "area": true,
+   "eye_h": true,
+   "eye_v": true,
+   "dc_gain": true,
+   "boost_target": true
+  },
+  "failing": [],
+  "measures": {
+   "dc_gain_db": 1.3203328578247542,
+   "peak_gain_db": 7.333117374131946,
+   "boost_db": 6.0127845163071925,
+   "peak_freq_ghz": 2.13285113,
+   "hd3_db": -49.434300314542725,
+   "noise_vrms": 0.000785624814,
+   "power_w": 0.002153241108,
+   "area_mm2": 0.0009768110623176467,
+   "eye_h_ui": 0.625,
+   "eye_v_mv": 761.0895853150491,
+   "ok": true
+  },
+  "abs_err_db": 0.012784516307192462
+ },
+ "status": "solved"
+}

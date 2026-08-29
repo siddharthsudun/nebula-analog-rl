@@ -372,6 +372,91 @@ def pick_fallback_x0(xs, s1trace, x_f, rec_f, target):
     return np.asarray(xs[-1], dtype=np.float64), "PPO handoff (nothing guard-valid)"
 
 
+# --------------------------------------------------------------------------------------
+# Stage 1 and the evaluation both arms share.
+#
+# These were closures inside main() until the public entry point (eqrl.pipeline) needed
+# them. They are lifted here VERBATIM -- same bodies, same constants, same order -- so the
+# benchmark and the shipped demo run one implementation rather than two transcriptions of
+# it. `main()` binds them below exactly where the closures used to sit, and
+# `--gate` re-proves the whole path against the frozen artifacts.
+# --------------------------------------------------------------------------------------
+class Evaluation:
+    """The guarded evaluation both frozen arms record, plus its simulation counter.
+
+    One instance per run. `guards` is memoised per channel loss because building an
+    evaluator is the expensive part, exactly as the closure did.
+    """
+
+    def __init__(self) -> None:
+        self.guards: dict[float, object] = {}
+        self.n_sim = 0
+
+    def guard_for(self, channel: float):
+        if channel not in self.guards:
+            self.guards[channel] = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False,
+                                                   channel_loss_db=channel)
+        return self.guards[channel]
+
+    def make_eval(self, channel: float):
+        """One evaluation, recording the UNION of what both frozen arms record.
+
+        The guard, hard_pass and the CMA-ES objective are byte-identical to
+        hybrid_audit.evaluate; peak_freq_ghz and `failing` are what g32_repair.evaluate
+        additionally needs. Recording a field neither solver reads changes no decision.
+        """
+        def evaluate(x, target):
+            self.n_sim += 1
+            dv = decode_action(np.asarray(x))
+            spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target,
+                                       channel_loss_db=channel)
+            try:
+                v = self.guard_for(channel).evaluate(dv, vdd=spec.vdd_nominal)
+            except Exception as e:
+                return None, REJECT_SCORE, "exception:%s" % repr(e)[:80]
+            if not v.is_valid:
+                return None, REJECT_SCORE, str(getattr(v.check, "value", v.check))
+            m = v.unwrap()
+            ok, checks = hard_pass(m, spec)
+            score = sum(1.0 for c in checks.values() if c) - abs(m.boost_db - target) / 3.0
+            rec = {"boost_db": float(m.boost_db), "peak_freq_ghz": float(m.peak_freq_ghz),
+                   "dc_gain_db": float(m.dc_gain_db), "loose_pass": bool(ok),
+                   "failing": [c for c, good in checks.items() if not good],
+                   "design": dataclasses.asdict(dv)}
+            return rec, float(score), None
+        return evaluate
+
+
+def stage1_rollout(evaluate, model, env, i, target, channel, k):
+    """g32_repair.stage1 and hybrid_audit.stage1 are the same rollout; this is it.
+
+    k evaluations, NO reset on `terminated`, env seeded at 1000 + spec index. Returns
+    the designs as well as the measurements, because G3.2 needs the coordinates.
+    """
+    env.reset(seed=1000 + i)
+    env._target, env._channel = target, channel
+    obs = env._obs(env._measure(env._x))
+    xs = [np.array(env._x, dtype=np.float64)]
+    trace = [evaluate(env._x, target)[0]]
+    term_at = None
+    while len(trace) < k:
+        a, _ = model.predict(obs, deterministic=True)
+        obs, _rw, term, _tr, _inf = env.step(a)
+        xs.append(np.array(env._x, dtype=np.float64))
+        trace.append(evaluate(env._x, target)[0])
+        if term and term_at is None:
+            term_at = len(trace)
+    return xs, trace, term_at
+
+
+def load_policy(model_path: str, *, seed: int = 123):
+    """The (model, env) pair stage 1 rolls out in. Seed 123 is the frozen benchmark's."""
+    from stable_baselines3 import PPO
+    from eqrl.envs.sequential_env import SequentialEqualizerEnv
+    return PPO.load(model_path), SequentialEqualizerEnv(fast=False, seed=seed,
+                                                        guarded=False)
+
+
 def main() -> None:
     _check_constants()
     p = argparse.ArgumentParser()
@@ -403,69 +488,12 @@ def main() -> None:
     specs = list(enumerate(make_specs(args.first + args.specs, args.spec_seed)))
     specs = specs[args.first:args.first + args.specs]
 
-    guards: dict[float, object] = {}
-    n_sim = 0
-
-    def guard_for(channel: float):
-        if channel not in guards:
-            guards[channel] = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False,
-                                              channel_loss_db=channel)
-        return guards[channel]
-
-    def make_eval(channel: float):
-        """One evaluation, recording the UNION of what both frozen arms record.
-
-        The guard, hard_pass and the CMA-ES objective are byte-identical to
-        hybrid_audit.evaluate; peak_freq_ghz and `failing` are what g32_repair.evaluate
-        additionally needs. Recording a field neither solver reads changes no decision.
-        """
-        def evaluate(x, target):
-            nonlocal n_sim
-            n_sim += 1
-            dv = decode_action(np.asarray(x))
-            spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target,
-                                       channel_loss_db=channel)
-            try:
-                v = guard_for(channel).evaluate(dv, vdd=spec.vdd_nominal)
-            except Exception as e:
-                return None, REJECT_SCORE, "exception:%s" % repr(e)[:80]
-            if not v.is_valid:
-                return None, REJECT_SCORE, str(getattr(v.check, "value", v.check))
-            m = v.unwrap()
-            ok, checks = hard_pass(m, spec)
-            score = sum(1.0 for c in checks.values() if c) - abs(m.boost_db - target) / 3.0
-            rec = {"boost_db": float(m.boost_db), "peak_freq_ghz": float(m.peak_freq_ghz),
-                   "dc_gain_db": float(m.dc_gain_db), "loose_pass": bool(ok),
-                   "failing": [c for c, good in checks.items() if not good],
-                   "design": dataclasses.asdict(dv)}
-            return rec, float(score), None
-        return evaluate
-
-    from stable_baselines3 import PPO
-    from eqrl.envs.sequential_env import SequentialEqualizerEnv
-    model = PPO.load(args.model)
-    env = SequentialEqualizerEnv(fast=False, seed=123, guarded=False)
+    ev = Evaluation()
+    make_eval = ev.make_eval
+    model, env = load_policy(args.model)
 
     def stage1(evaluate, i, target, channel):
-        """g32_repair.stage1 and hybrid_audit.stage1 are the same rollout; this is it.
-
-        k evaluations, NO reset on `terminated`, env seeded at 1000 + spec index. Returns
-        the designs as well as the measurements, because G3.2 needs the coordinates.
-        """
-        env.reset(seed=1000 + i)
-        env._target, env._channel = target, channel
-        obs = env._obs(env._measure(env._x))
-        xs = [np.array(env._x, dtype=np.float64)]
-        trace = [evaluate(env._x, target)[0]]
-        term_at = None
-        while len(trace) < k:
-            a, _ = model.predict(obs, deterministic=True)
-            obs, _rw, term, _tr, _inf = env.step(a)
-            xs.append(np.array(env._x, dtype=np.float64))
-            trace.append(evaluate(env._x, target)[0])
-            if term and term_at is None:
-                term_at = len(trace)
-        return xs, trace, term_at
+        return stage1_rollout(evaluate, model, env, i, target, channel, k)
 
     print("FINAL COMPARISON | arms %s | spec-seed %d, specs %d-%d | %d measure_all ceiling"
           % ("+".join(a.upper() for a in arms), args.spec_seed, args.first,
@@ -569,12 +597,12 @@ def main() -> None:
              "first": args.first, "specs": args.specs, "tol": tol,
              "base_seed": args.seed, "model": args.model, "plane": plane,
              "ladder": ladder, "gate": bool(args.gate),
-             "n_simulations_run": n_sim, "complete": len(rows) == len(specs),
+             "n_simulations_run": ev.n_sim, "complete": len(rows) == len(specs),
              "rows": rows}, indent=1))
 
     print("\n%d simulations actually run (stage 1 is shared across arms; each arm is "
           "still\ncharged the full %.2f measure_all it would have paid alone)"
-          % (n_sim, k * PREREG["ppo_measure_all_per_eval"]), flush=True)
+          % (ev.n_sim, k * PREREG["ppo_measure_all_per_eval"]), flush=True)
     print("wrote", out, flush=True)
 
     if args.gate:

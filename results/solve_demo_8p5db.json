@@ -1,0 +1,164 @@
+{
+ "architecture": "PPO (global feasibility) -> G3.2 constrained refinement",
+ "spec": {
+  "target_boost_db": 8.5,
+  "channel_loss_db": 12.0,
+  "boost_tol_db": 1.5,
+  "spec_index": 0,
+  "requirement_set": "eqrl.specs.Spec defaults + this target/channel; dc_gain_db_min=0.0 and boost_target_tol_db both ON"
+ },
+ "provenance": {
+  "is_ai_generated": true,
+  "policy": "results/seq_clean40k.zip",
+  "ppo_produced_handoff": false,
+  "ppo_terminated_at_eval": 3,
+  "stage1": {
+   "n_evals": 4,
+   "n_valid": 4,
+   "best_boost_db": 5.77013560638664,
+   "best_abs_err_db": 2.7298643936133598
+  },
+  "g32_used": true,
+  "g32_start_source": "stage1 (free)",
+  "g32_steps": [
+   {
+    "phase": "advance",
+    "boost_db": 6.353578983721179,
+    "abs_err_db": 2.146421016278821
+   },
+   {
+    "phase": "advance",
+    "boost_db": 6.896736537463536,
+    "abs_err_db": 1.6032634625364643
+   },
+   {
+    "phase": "advance",
+    "boost_db": null,
+    "abs_err_db": null
+   },
+   {
+    "phase": "refine",
+    "boost_db": 7.404272335081289,
+    "abs_err_db": 1.0957276649187113
+   },
+   {
+    "phase": "refine",
+    "boost_db": 7.645942243165131,
+    "abs_err_db": 0.8540577568348686
+   },
+   {
+    "phase": "refine",
+    "boost_db": 7.763949709334666,
+    "abs_err_db": 0.7360502906653341
+   },
+   {
+    "phase": "refine",
+    "boost_db": null,
+    "abs_err_db": null
+   },
+   {
+    "phase": "refine",
+    "boost_db": 7.79316117261103,
+    "abs_err_db": 0.7068388273889701
+   },
+   {
+    "phase": "refine",
+    "boost_db": null,
+    "abs_err_db": null
+   },
+   {
+    "phase": "refine",
+    "boost_db": null,
+    "abs_err_db": null
+   }
+  ],
+  "g32_reached_target": false,
+  "g32_reason": "converged onto the feasibility wall",
+  "g32_rescue_used": 0,
+  "g32_repair_used": 0,
+  "fallback_invoked": false,
+  "hand_tuning": "none"
+ },
+ "cost": {
+  "stage1_evals": 5,
+  "stage2_evals": 10,
+  "budget_evals_unspent": 0,
+  "measure_all_spent": 20.0,
+  "measure_all_budget": 20,
+  "simulations_run": 16
+ },
+ "solver": {
+  "loose_solved_at": 3,
+  "strict_solved_at": 7,
+  "n_valid": 10,
+  "n_loose_pass": 7,
+  "n_evals": 10,
+  "n_distinct_boosts": 10,
+  "best_boost_db": 7.79316117261103,
+  "best_abs_err": 0.7068388273889701,
+  "best_design": {
+   "w_in": 2.0531643086219032e-05,
+   "l_in": 3.254315070807933e-07,
+   "i_tail": 0.0006384850054979325,
+   "rs": 3734.14036154747,
+   "cs": 9.282759225275787e-14,
+   "r_load": 2450.206243991852,
+   "w_dfe": 0.0
+  },
+  "all_valid_boosts": [
+   0.0,
+   2.741854504525527,
+   5.77013560638664,
+   3.8591781975433697,
+   6.353578983721179,
+   6.896736537463536,
+   7.404272335081289,
+   7.645942243165131,
+   7.763949709334666,
+   7.79316117261103
+  ]
+ },
+ "design": {
+  "w_in": 2.0531643086219032e-05,
+  "l_in": 3.254315070807933e-07,
+  "i_tail": 0.0006384850054979325,
+  "rs": 3734.14036154747,
+  "cs": 9.282759225275787e-14,
+  "r_load": 2450.206243991852,
+  "w_dfe": 0.0
+ },
+ "netlist": "* CTLE  corner=tt vdd=1.8 temp=27.0C analysis=ac models=sky130\n.temp 27.0\n.param vdd=1.8\nVdd vdd 0 {vdd}\nVcm cm 0 1.296\nVinp inp cm AC 0.5 SIN(0 0.05 100e6)\nVinn inn cm AC -0.5 SIN(0 -0.05 100e6)\n.lib \"C:\\Users\\talk2.000\\pdk\\sky130A\\libs.tech\\ngspice\\sky130.lib.spice\" tt\nXM1 outp inp sp 0 sky130_fd_pr__nfet_01v8 L=0.3254 W=20.5316 nf=1 m=1\nXM2 outn inn sn 0 sky130_fd_pr__nfet_01v8 L=0.3254 W=20.5316 nf=1 m=1\nIref vdd nbias 0.00031924250274896623\nXMref nbias nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=51.0788 nf=1 m=1\nXMtp sp nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=51.0788 nf=1 m=1\nXMtn sn nbias 0 0 sky130_fd_pr__nfet_01v8 L=2.0 W=51.0788 nf=1 m=1\nRs sp sn 3734.14036154747\nCs sp sn 9.282759225275787e-14\nRlp vdd outp 2450.206243991852\nRln vdd outn 2450.206243991852\nClp outp 0 3e-14\nCln outn 0 3e-14\n.ac dec 50 1e6 10e9\n.end\n",
+ "verification": {
+  "guard_valid": true,
+  "guard_check": null,
+  "passed": true,
+  "checks": {
+   "boost_range": true,
+   "peak_in_band": true,
+   "hd3": true,
+   "noise": true,
+   "power": true,
+   "area": true,
+   "eye_h": true,
+   "eye_v": true,
+   "dc_gain": true,
+   "boost_target": true
+  },
+  "failing": [],
+  "measures": {
+   "dc_gain_db": 0.005402588434509502,
+   "peak_gain_db": 7.798563761045539,
+   "boost_db": 7.79316117261103,
+   "peak_freq_ghz": 2.13285113,
+   "hd3_db": -61.0370958985575,
+   "noise_vrms": 0.000750448055,
+   "power_w": 0.0016923673206,
+   "area_mm2": 0.0008932328635249578,
+   "eye_h_ui": 0.625,
+   "eye_v_mv": 726.2193399733595,
+   "ok": true
+  },
+  "abs_err_db": 0.7068388273889701
+ },
+ "status": "solved"
+}

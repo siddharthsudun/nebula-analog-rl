@@ -1,0 +1,300 @@
+"""SILQ's delivered architecture as one callable: a target specification in, a verified
+circuit out.
+
+    target specification
+        |
+    frozen seq_clean40k PPO          global feasibility search        (k evaluations)
+        |
+    G3.2 constrained refinement      specification closure            (up to r evaluations)
+        |
+    independent guarded SPICE verification
+        |
+    final circuit + resulting specs
+
+WHY THIS MODULE EXISTS. `results/delivered_circuit.json` was produced by arm B of
+`experiments/final_comparison.py`, but the public entry point `eqrl.solve` ran PPO alone
+and then fell back to a fixed hand-verified design. The polished system and the executable
+demo therefore described two different architectures, and the demo could not reproduce the
+delivered circuit. This module is the one place that architecture lives, and `eqrl.solve`
+is now a thin front end over it.
+
+NOTHING HERE IS A NEW CONTROLLER. Stage 1, the guarded evaluation, and G3.2 are IMPORTED
+from `experiments.final_comparison` -- the same functions arm B runs, under the same
+constants, checked by the same `_check_constants()` guard, and re-proved against the frozen
+artifacts by that module's `--gate`. A second transcription of G3.2 would be a second
+controller with the same name, which is exactly what the frozen record must not acquire.
+Changes no reward, PPO hyperparameter, design bound, guard, hard_pass, controller constant,
+frozen model or benchmark criterion.
+
+THE VERIFICATION STEP IS NOT THE SEARCH'S OWN OPINION. G3.2 stops on the nine-check
+`loose_pass` plus a target-error test; this module then re-measures the design it returned
+through a FRESH evaluator on all ten checks -- the nine plus `boost_target` -- which is the
+criterion `results/delivered_circuit.json` was held to. It is a second, independent
+measurement, so `verification.boost_db` reproducing `solver.best_boost_db` is evidence the
+result is real and not a cached number.
+
+    from eqrl.pipeline import design
+    r = design(target_boost_db=8.92, channel_loss_db=14.83)
+    r["status"], r["design"], r["verification"]["measures"]["boost_db"]
+
+Importing this module pulls in `experiments.final_comparison`, which performs the ngspice /
+PDK environment bootstrap every experiment module performs at import. That import is
+deliberately deferred to call time so that `import eqrl.pipeline` stays cheap and works on a
+machine with no PDK -- CI imports this file and never calls it.
+"""
+from __future__ import annotations
+
+import dataclasses
+from typing import Any
+
+import numpy as np
+
+from eqrl.circuits.ctle import DesignVars, netlist
+from eqrl.specs import DEFAULT_SPEC, Spec, hard_pass
+
+#: The policy the delivered circuit was produced by. Frozen; see RESULTS.md section 20.
+POLICY = "results/seq_clean40k.zip"
+
+#: The two probe artifacts G3.2 reads its move plane and rescue order from. Both are
+#: committed results, not tunables -- G3.2 is not G3.2 without them.
+PEAK_PROBE = "results/g32_peak_probe.json"
+RESCUE_PROBE = "results/g32_rescue_probe.json"
+
+#: Labels for `status`, so a caller never has to parse prose to find out what produced the
+#: circuit it is holding.
+SOLVED = "solved"                 #: PPO -> G3.2 closed the target and verification agrees
+CLOSED_NOT_VERIFIED = "closed_but_failed_verification"
+UNSOLVED = "unsolved"             #: the architecture ran and did not reach the target
+FALLBACK = "fallback_fixed_design_not_ai"   #: see `design(..., allow_fallback=True)`
+
+
+def _plain(o: Any) -> Any:
+    """Coerce numpy scalars to built-ins so a result survives `json.dumps`.
+
+    `hard_pass` compares numpy floats and so returns numpy booleans, and `json` refuses
+    those: `np.float64` subclasses `float` and serialises fine, `np.bool_` does not
+    subclass `bool` and raises. This changes no value, only its Python type, and it runs
+    once on the finished result rather than being sprinkled through the code that
+    produces it.
+    """
+    if isinstance(o, dict):
+        return {k: _plain(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_plain(v) for v in o]
+    if isinstance(o, np.bool_):
+        return bool(o)
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    return o
+
+
+def _fc():
+    """Import the benchmark module (and its env bootstrap) at call time, not import time."""
+    from eqrl.experiments import final_comparison as fc
+    return fc
+
+
+def spec_for(target_boost_db: float, channel_loss_db: float, tol: float) -> Spec:
+    """The requirement set the result is verified against.
+
+    DEFAULT_SPEC plus this run's target and channel, with `boost_target_tol_db` ON. That
+    tenth check is what `results/delivered_circuit.json` was scored on, and what makes
+    "meets the specification" mean the REQUESTED boost rather than anywhere in 3-12 dB.
+    `dc_gain_db_min` is already 0.0 in DEFAULT_SPEC and is left alone.
+    """
+    return dataclasses.replace(DEFAULT_SPEC, target_boost_db=target_boost_db,
+                               channel_loss_db=channel_loss_db,
+                               boost_target_tol_db=tol)
+
+
+def verify(dv: DesignVars, spec: Spec) -> dict[str, Any]:
+    """Re-measure one design through a fresh guarded evaluator on all ten checks.
+
+    Independent of the search: a new evaluator, a new measurement, no cached record. The
+    guard runs first, so a design that is not a real circuit fails here even if every
+    number it reported looked good.
+    """
+    from eqrl.evaluator import build_evaluator
+
+    ev = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False,
+                         channel_loss_db=spec.channel_loss_db)
+    verdict = ev.evaluate(dv, vdd=spec.vdd_nominal)
+    if not verdict.is_valid:
+        return {"guard_valid": False,
+                "guard_check": str(getattr(verdict.check, "value", verdict.check)),
+                "passed": False, "checks": None, "measures": None}
+    m = verdict.unwrap()
+    ok, checks = hard_pass(m, spec)
+    return {"guard_valid": True, "guard_check": None, "passed": bool(ok),
+            "checks": checks, "failing": [c for c, good in checks.items() if not good],
+            "measures": m.as_dict(),
+            "abs_err_db": abs(m.boost_db - spec.target_boost_db)}
+
+
+def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
+           *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
+           peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
+           allow_fallback: bool = False) -> dict[str, Any]:
+    """Run the delivered architecture for one specification.
+
+    `spec_index` seeds stage 1's environment (`1000 + spec_index`), exactly as the
+    benchmark does. It is the only knob that changes which circuit comes out for a given
+    target, and it is recorded in the result so any run is reproducible.
+
+    `allow_fallback` is OFF by default and is not part of the architecture. When on, and
+    only when PPO -> G3.2 produced nothing guard-valid at all, the fixed
+    `baselines.robust.robust_design()` is returned with `status` set to
+    `fallback_fixed_design_not_ai` and `provenance.is_ai_generated` False. That design
+    ignores the requested target -- it is a product-robustness escape hatch, never an
+    answer the framework searched for, and the labelling exists so it can never be
+    mistaken for one.
+    """
+    fc = _fc()
+    fc._check_constants()
+    k, r = fc.PREREG["k"], fc.PREREG["r"]
+    tol = fc.PREREG["tol"] if tol is None else tol
+
+    plane = fc.plane_from_probe(peak_probe)
+    ladder = fc.rescue_order_from_probe(rescue_probe)
+
+    ev = fc.Evaluation()
+    evaluate = ev.make_eval(channel_loss_db)
+    policy, env = fc.load_policy(model)
+
+    # ---- stage 1: the frozen PPO policy, k evaluations -------------------------------
+    xs, s1, term_at = fc.stage1_rollout(evaluate, policy, env, spec_index,
+                                        target_boost_db, channel_loss_db, k)
+    s1_only = [e for e in s1 if e]
+    stage1 = fc.summarize(s1_only, target_boost_db, tol)
+
+    # ---- stage 2: G3.2 constrained refinement, up to r evaluations --------------------
+    g2, info, _x_f, _rec_f, left = fc.g32_solve(evaluate, xs, s1, target_boost_db,
+                                                plane, ladder, r)
+    arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
+
+    result: dict[str, Any] = {
+        "architecture": "PPO (global feasibility) -> G3.2 constrained refinement",
+        "spec": {"target_boost_db": target_boost_db, "channel_loss_db": channel_loss_db,
+                 "boost_tol_db": tol, "spec_index": spec_index,
+                 "requirement_set": "eqrl.specs.Spec defaults + this target/channel; "
+                                    "dc_gain_db_min=0.0 and boost_target_tol_db both ON"},
+        "provenance": {
+            "is_ai_generated": True,
+            "policy": model,
+            "ppo_produced_handoff": s1[-1] is not None,
+            "ppo_terminated_at_eval": term_at,
+            "stage1": {"n_evals": stage1["n_evals"], "n_valid": stage1["n_valid"],
+                       "best_boost_db": stage1["best_boost_db"],
+                       "best_abs_err_db": stage1["best_abs_err"]},
+            "g32_used": True,
+            "g32_start_source": info["start_source"],
+            "g32_steps": [{"phase": s["phase"], "boost_db": s["boost_db"],
+                           "abs_err_db": s["abs_err"]} for s in info["steps"]],
+            "g32_reached_target": bool(info["reached_target"]),
+            "g32_reason": info["reason"],
+            "g32_rescue_used": info["rescue_used"],
+            "g32_repair_used": info["repair_used"],
+            "fallback_invoked": False,
+            "hand_tuning": "none",
+        },
+        "cost": {
+            "stage1_evals": k,
+            "stage2_evals": len(info["steps"]),
+            "budget_evals_unspent": int(left),
+            "measure_all_spent": (k * fc.PREREG["ppo_measure_all_per_eval"]
+                                  + len(info["steps"])
+                                  * fc.PREREG["search_measure_all_per_eval"]),
+            "measure_all_budget": fc.PREREG["budget_measure_all"],
+            "simulations_run": ev.n_sim,
+        },
+        "solver": arm_b,
+        "design": arm_b["best_design"],
+        "netlist": None,
+        "verification": None,
+        "status": UNSOLVED,
+    }
+
+    # ---- independent verification -----------------------------------------------------
+    if arm_b["best_design"] is not None:
+        dv = DesignVars(**arm_b["best_design"])
+        spec = spec_for(target_boost_db, channel_loss_db, tol)
+        v = verify(dv, spec)
+        result["verification"] = v
+        result["cost"]["simulations_run"] = ev.n_sim + 1
+        result["netlist"] = netlist(dv, vdd=spec.vdd_nominal, temp_c=27.0, corner="tt",
+                                    analysis="ac", models="sky130")
+        result["status"] = SOLVED if v["passed"] else CLOSED_NOT_VERIFIED
+        return _plain(result)
+
+    # ---- nothing guard-valid came out of the architecture -----------------------------
+    if allow_fallback:
+        from eqrl.baselines.robust import robust_design
+
+        dv = robust_design()
+        spec = spec_for(target_boost_db, channel_loss_db, tol)
+        v = verify(dv, spec)
+        result["design"] = dataclasses.asdict(dv)
+        result["verification"] = v
+        result["netlist"] = netlist(dv, vdd=spec.vdd_nominal, temp_c=27.0, corner="tt",
+                                    analysis="ac", models="sky130")
+        result["status"] = FALLBACK
+        result["provenance"].update({
+            "is_ai_generated": False,
+            "fallback_invoked": True,
+            "fallback_source": "eqrl.baselines.robust.robust_design",
+            "fallback_note": "A FIXED, HAND-VERIFIED design. It does not read the "
+                             "requested target and was not searched for by PPO or G3.2. "
+                             "It is not an output of the SILQ architecture and must "
+                             "never be reported as one.",
+        })
+    return _plain(result)
+
+
+def describe(r: dict[str, Any]) -> str:
+    """A human-readable rendering of one result, for the CLI and for reports."""
+    d = r["design"]
+    p, c = r["provenance"], r["cost"]
+    out = []
+    if r["status"] == FALLBACK:
+        out.append("  !! FIXED FALLBACK DESIGN -- NOT generated by PPO or G3.2 !!")
+        out.append("     The architecture returned nothing guard-valid for this spec.")
+    else:
+        out.append("  architecture  PPO (%d evals) -> G3.2 (%d evals)%s"
+                   % (c["stage1_evals"], c["stage2_evals"],
+                      "" if p["g32_reached_target"] else "  [target NOT reached]"))
+        out.append("  provenance    policy %s, started from %s, %s"
+                   % (p["policy"], p["g32_start_source"], p["g32_reason"]))
+    if d is None:
+        out.append("\n  no design: the architecture produced nothing guard-valid.")
+        return "\n".join(out)
+    out.append("")
+    out.append("    W/L        %.2f / %.4f um" % (d["w_in"] * 1e6, d["l_in"] * 1e6))
+    out.append("    I_tail     %.1f uA" % (d["i_tail"] * 1e6))
+    out.append("    Rs / Cs    %.2f kOhm / %.1f fF" % (d["rs"] / 1e3, d["cs"] * 1e15))
+    out.append("    R_load     %.1f Ohm" % d["r_load"])
+    v = r["verification"]
+    if v and v["measures"]:
+        m = v["measures"]
+        out.append("")
+        out.append("    boost      %.3f dB @ %.3f GHz   (requested %.3f +/- %.2f)"
+                   % (m["boost_db"], m["peak_freq_ghz"], r["spec"]["target_boost_db"],
+                      r["spec"]["boost_tol_db"]))
+        out.append("    dc gain    %.3f dB" % m["dc_gain_db"])
+        out.append("    HD3        %.1f dB      noise %.0f uVrms"
+                   % (m["hd3_db"], m["noise_vrms"] * 1e6))
+        out.append("    power      %.3f mW     area  %.6f mm^2"
+                   % (m["power_w"] * 1e3, m["area_mm2"]))
+        out.append("    eye        %.3f UI / %.0f mV" % (m["eye_h_ui"], m["eye_v_mv"]))
+    out.append("")
+    if v is None:
+        out.append("  verification  not run")
+    elif not v["guard_valid"]:
+        out.append("  verification  GUARD REJECTED: %s" % v["guard_check"])
+    elif v["passed"]:
+        out.append("  verification  ALL TEN CHECKS PASS (independent re-measurement)")
+    else:
+        out.append("  verification  FAILS: %s" % ", ".join(v["failing"]))
+    out.append("  status        %s" % r["status"])
+    return "\n".join(out)
