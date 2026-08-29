@@ -12,7 +12,7 @@ import json
 import time
 from pathlib import Path
 
-from eqrl.envs.sequential_env import SequentialEqualizerEnv
+from eqrl.envs.sequential_env import TARGET_PRICE_REF_DB, SequentialEqualizerEnv
 from eqrl.specs import DEFAULT_SPEC
 
 
@@ -107,6 +107,14 @@ def main() -> None:
     p.add_argument("--boost-tol", type=float, default=None,
                    help="dB tolerance on hitting the target boost; makes it a scored "
                         "check and a reward margin (default: off, target unscored)")
+    #: The clean version of the same question. --boost-tol prices the target AND gates
+    #: termination on it, so its measured failure is uninterpretable. This prices it on
+    #: the identical [-2, +1] clip and leaves termination on feasibility alone. Mutually
+    #: exclusive with --boost-tol; the env raises if both are given. Strict success stays
+    #: external, in target_audit. See docs/PREREG_TARGET_CONDITIONED.md.
+    p.add_argument("--target-weight", type=float, default=None,
+                   help="weight of the dense target-error term on the per-step score; "
+                        "does NOT gate termination (default: off, target unscored)")
     #: Parallelism. libngspice is a process singleton -- one resident simulator per
     #: process -- so the only way to evaluate candidates concurrently is separate
     #: processes, which is exactly what SubprocVecEnv gives. Measured single-env
@@ -152,7 +160,7 @@ def main() -> None:
                 target_range=(args.target_lo, args.target_hi),
                 channel_range=(args.channel_lo, args.channel_hi),
                 anchor_design=anchor, anchor_noise=args.anchor_noise,
-                boost_tol=args.boost_tol)
+                boost_tol=args.boost_tol, target_weight=args.target_weight)
         return _init
 
     if args.n_envs > 1:
@@ -210,6 +218,8 @@ def main() -> None:
         "anchor_baseline": args.anchor_baseline,
         "anchor_noise": args.anchor_noise,
         "boost_tol": args.boost_tol,
+        "target_weight": args.target_weight,
+        "target_price_ref_db": TARGET_PRICE_REF_DB if args.target_weight else None,
     }, indent=2))
     print(f"saved -> {args.out}  (total sims: {n_sims}, "
           f"invalid: {n_invalid}, wall: {mins:.1f} min)")

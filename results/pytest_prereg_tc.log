@@ -1,0 +1,27 @@
+        """Run a netlist with a `.control ... .endc` block that writes CSV via `wrdata`.
+    
+        `control` is the body of the control block (without the `.control`/`.endc` lines).
+        It must `wrdata $OUT ...`; `$OUT` is substituted with a temp file path.
+        Returns {"data": ndarray} loaded from that file.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "out.data"
+            deck = netlist.replace(".end", "").rstrip()
+            deck += f"\n.control\n{control.replace('$OUT', str(out))}\n.endc\n.end\n"
+            cir = Path(d) / "deck.cir"
+            cir.write_text(deck)
+            try:
+                proc = subprocess.run(
+                    ["ngspice", "-b", str(cir)],
+                    capture_output=True, text=True, timeout=timeout,
+                )
+            except FileNotFoundError:
+>               raise NgspiceError("ngspice not found — `brew install ngspice`") from None
+E               eqrl.sim.ngspice_runner.NgspiceError: ngspice not found — `brew install ngspice`
+
+src\eqrl\sim\ngspice_runner.py:42: NgspiceError
+=========================== short test summary info ===========================
+FAILED tests/test_server_resident.py::TestAgreesWithSubprocess::test_dc_gain_and_boost_match
+1 failed, 333 passed, 18 skipped, 1 xfailed in 775.64s (0:12:55)
+
+[exited with code 0]

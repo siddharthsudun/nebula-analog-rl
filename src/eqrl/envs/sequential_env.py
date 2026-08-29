@@ -114,7 +114,16 @@ def shaped_invalid_reward(verdict, base: float = INVALID_REWARD,
     return float(base - max(span, 0.0) * severity)
 
 
-def _shaped(m: Measures, spec: Spec) -> tuple[float, bool]:
+# Reference error for the opt-in dense target term, in dB. The term is worth its full
+# weight at a perfect hit and crosses zero here, so this fixes the SLOPE, not a pass/fail
+# line -- nothing anywhere gates on it. It is deliberately the same 1.5 dB the strict
+# success test uses, so the priced gradient and the externally applied criterion agree
+# about what "close" means. Frozen: see docs/PREREG_TARGET_CONDITIONED.md.
+TARGET_PRICE_REF_DB = 1.5
+
+
+def _shaped(m: Measures, spec: Spec,
+            target_weight: float | None = None) -> tuple[float, bool]:
     """Dense score + all-pass flag. `passed` == the HARD specs (specs.hard_pass), which
     is feasible.
 
@@ -127,12 +136,29 @@ def _shaped(m: Measures, spec: Spec) -> tuple[float, bool]:
     When the tolerance IS set, `_margins` carries a `boost_target` term that gets the same
     [-2, +1] clip as every other spec -- up to 3 points, the same as any other check -- and
     `passed` gates on it like any other. The soft term is dropped in that case rather than
-    added to it, so the target is priced once, not twice."""
+    added to it, so the target is priced once, not twice.
+
+    `target_weight` is the third, OPT-IN option and it exists to separate two things the
+    second one welded together. Setting the tolerance prices the target AND makes
+    termination conditional on hitting it, because `terminated = passed` and the new margin
+    joins the `all(v >= 0)`. So the measured failure of that run cannot distinguish "paying
+    for the target does not teach retargeting" from "we sparsified the terminal reward". A
+    weight prices the target on exactly the same [-2, +1] clip, and stops there: it is added
+    to the score after `passed` has already been decided from the feasibility margins alone,
+    so termination is untouched and the only thing that changed is the price. The strict
+    success test stays external, in target_audit.
+
+    All three paths are mutually exclusive and the target is priced at most once. With
+    `target_weight=None` -- the default -- this function is exactly what it was."""
     if not m.ok:
         return -5.0, False
     mg = _margins(m, spec)
     passed = all(v >= 0 for v in mg.values())
     base = float(sum(np.clip(v, -2.0, 1.0) for v in mg.values()))
+    if target_weight is not None:
+        err = abs(m.boost_db - spec.target_boost_db)
+        t = (TARGET_PRICE_REF_DB - err) / TARGET_PRICE_REF_DB
+        return base + target_weight * float(np.clip(t, -2.0, 1.0)), passed
     if spec.boost_target_tol_db is not None:
         return base, passed
     soft = 0.5 * (1.0 - min(abs(m.boost_db - spec.target_boost_db) / 3.0, 1.0))
@@ -151,7 +177,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
                  guarded: bool = False, invalid_reward: float = INVALID_REWARD,
                  feasible_decode: bool = False, invalid_shaping: bool = False,
                  anchor_design: DesignVars | None = None, anchor_noise: float = 0.0,
-                 boost_tol: float | None = None):
+                 boost_tol: float | None = None, target_weight: float | None = None):
         super().__init__()
         # OPT-IN. Sets Spec.boost_target_tol_db on the per-episode spec, which makes
         # hitting the randomized target a scored check AND a reward margin. Off by
@@ -160,6 +186,23 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         if boost_tol is not None and (boost_tol <= 0.0 or not np.isfinite(boost_tol)):
             raise ValueError("boost_tol must be a finite positive number, or None")
         self.boost_tol = None if boost_tol is None else float(boost_tol)
+        # OPT-IN. Prices the requested target as a dense, continuous term on the per-step
+        # score WITHOUT letting it gate termination; see _shaped. Off by default, so the
+        # reward path and every artifact that predates it are unchanged.
+        #
+        # Mutually exclusive with `boost_tol` on purpose. Setting both would price the
+        # target twice and put it back inside `passed`, which is the exact confound this
+        # flag exists to remove -- and the resulting run would answer neither question.
+        if target_weight is not None:
+            if boost_tol is not None:
+                raise ValueError(
+                    "target_weight and boost_tol are mutually exclusive: boost_tol gates "
+                    "termination on the target, which is the confound target_weight "
+                    "exists to isolate. Set one or the other, never both."
+                )
+            if target_weight <= 0.0 or not np.isfinite(target_weight):
+                raise ValueError("target_weight must be a finite positive number, or None")
+        self.target_weight = None if target_weight is None else float(target_weight)
         # OPT-IN. Projects R_load onto what the supply can drive; see
         # ctle.project_feasible. Changes what the search space means, so default off.
         self.feasible_decode = feasible_decode
@@ -281,7 +324,8 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
         # A rejected reset has no trustworthy score. Starting the improvement baseline
         # at the invalid penalty lets the first valid action collect a fake recovery
         # bonus even though the agent never produced a real design at reset.
-        self._score = _shaped(m, self._spec())[0] if m.ok else None
+        self._score = (_shaped(m, self._spec(), self.target_weight)[0]
+                       if m.ok else None)
         return self._obs(m), {"target_boost": self._target}
 
     def step(self, action):
@@ -294,7 +338,7 @@ class SequentialEqualizerEnv(gym.Env):  # type: ignore[misc]
             self._x = np.clip(self._anchor_x + delta, 0.0, 1.0)
         m = self._measure(self._x)
         spec = self._spec()
-        score, passed = _shaped(m, spec)
+        score, passed = _shaped(m, spec, self.target_weight)
         # If reset was rejected, there is no trustworthy prior score to compare against.
         # Do not manufacture an improvement bonus when the first valid candidate arrives.
         reward = (score - self._score) - 0.05 if self._score is not None else -0.05
