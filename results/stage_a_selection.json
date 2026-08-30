@@ -1,0 +1,25 @@
+{
+  "rule": "PREREG_TARGET_CONDITIONED.md section 5: lower median |achieved - requested| dB over the best loose-passing design per spec on dev seed 3; ties broken by strict solves; still tied -> W=1.0",
+  "dev_spec_seed": 3,
+  "candidates": {
+    "1.0": {
+      "n_specs": 32,
+      "loose": 29,
+      "strict": 17,
+      "n_with_best": 29,
+      "median_abs_err": 1.281604163575242,
+      "mean_abs_err": 1.5242231433656432
+    },
+    "3.0": {
+      "n_specs": 32,
+      "loose": 24,
+      "strict": 15,
+      "n_with_best": 24,
+      "median_abs_err": 1.1158695290202418,
+      "mean_abs_err": 1.2805275119321258
+    }
+  },
+  "selected_weight": 3.0,
+  "selected_model": "results/seq_tc_w3.zip",
+  "tie_broken_on_strict": false
+}

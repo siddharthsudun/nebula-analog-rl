@@ -1,0 +1,30 @@
+{
+  "model": "results\\seq_tc_w3.zip",
+  "timesteps": 40000,
+  "n_sims": 44191,
+  "n_invalid": 20168,
+  "wall_minutes": 446.8,
+  "seed": 0,
+  "fast": true,
+  "guarded": true,
+  "shaped_invalid": false,
+  "pvt": false,
+  "horizon": 20,
+  "n_envs": 8,
+  "step_size": 0.18,
+  "target_range": [
+    5.0,
+    11.0
+  ],
+  "channel_range": [
+    8.0,
+    16.0
+  ],
+  "resumed_from": null,
+  "feasible_decode": false,
+  "anchor_baseline": false,
+  "anchor_noise": 0.0,
+  "boost_tol": null,
+  "target_weight": 3.0,
+  "target_price_ref_db": 1.5
+}

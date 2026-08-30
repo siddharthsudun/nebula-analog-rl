@@ -1,0 +1,56 @@
+{
+ "spec_seed": 20260915,
+ "budget": 20,
+ "tol": 1.5,
+ "n_specs": 32,
+ "permutations": 5000,
+ "measure_all_per_eval": {
+  "ppo": 2.0,
+  "search": 1.0
+ },
+ "arms": {
+  "PPO-restart": {
+   "loose": 24,
+   "strict": 18,
+   "n_specs": 32,
+   "loose_median": 4.0,
+   "strict_median": 4.0,
+   "mean_valid_evals": 10.84375,
+   "mean_distinct_boosts": 10.4375,
+   "sim_matched": {
+    "evals": 10,
+    "measure_all": 20.0,
+    "loose": 24,
+    "strict": 16
+   },
+   "tracking_all_valid": {
+    "n": 31,
+    "corr": 0.907630393341101,
+    "null_mean": 0.6324487227152672,
+    "null_ci": [
+     0.4104299212740112,
+     0.8233464285991855
+    ],
+    "p_one_sided": 0.0004,
+    "median_abs_err_db": 0.501599396629306,
+    "within_tol": 29
+   },
+   "tracking_loose_pass": {
+    "n": 24,
+    "corr": 0.7560781409099465,
+    "null_ci": [
+     -0.39615080687590903,
+     0.39734487719314177
+    ],
+    "p_one_sided": 0.0,
+    "median_abs_err_db": 0.9223246895685269
+   },
+   "chance_matched": {
+    "observed": 18,
+    "expected": 16.659431053556492,
+    "mean_distinct_k": 3.125,
+    "p_one_sided": 0.307
+   }
+  }
+ }
+}
