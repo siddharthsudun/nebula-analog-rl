@@ -1,0 +1,174 @@
+{
+  "probe": "results/g32_peak_probe.json",
+  "spec_seed": 2,
+  "probe_h": 0.05,
+  "frozen_plane": {
+    "boost_axis": "rs",
+    "peak_axis": "l_in",
+    "d_boost_db_per_unit": 12.454385847686456,
+    "boost_axis_d_peak_ghz_per_unit": 0.0,
+    "boost_axis_peak_under_resolution_on": "3 of 4 specs",
+    "d_peak_ghz_per_unit": -3.143996950000001,
+    "d_ln_peak_per_unit": -1.1526639022851284,
+    "peak_axis_d_boost_db_per_unit": -5.287655146126827,
+    "band_ghz": [
+      1.25,
+      2.5
+    ],
+    "peak_aim_ghz": 1.7677669529663689,
+    "grid_step_pct": 5.9253725177288885,
+    "source": "results/g32_peak_probe.json",
+    "n_specs_measured": 4,
+    "spec_seed": 2
+  },
+  "gate_pass": true,
+  "violations": [],
+  "spread": {
+    "d_boost_db_per_unit": {
+      "n": 4,
+      "frozen": 12.454385847686456,
+      "min": 9.021068700280212,
+      "median": 12.454385847686464,
+      "max": 17.398898835348604,
+      "median_abs_rel_dev": 0.1790724742344129,
+      "max_abs_rel_dev": 0.39700978017961813,
+      "sign_flips_vs_frozen": 0
+    },
+    "boost_axis_d_peak_ghz_per_unit": {
+      "n": 4,
+      "frozen": 0.0,
+      "min": 0.0,
+      "median": 0.0,
+      "max": 2.7603438999999987,
+      "median_abs_rel_dev": null,
+      "max_abs_rel_dev": null,
+      "sign_flips_vs_frozen": 0
+    },
+    "d_peak_ghz_per_unit": {
+      "n": 4,
+      "frozen": -3.143996950000001,
+      "min": -4.025686799999997,
+      "median": -3.14399695,
+      "max": -2.1920178000000003,
+      "median_abs_rel_dev": 0.22581650405226977,
+      "max_abs_rel_dev": 0.3027926442485894,
+      "sign_flips_vs_frozen": 0
+    },
+    "d_ln_peak_per_unit": {
+      "n": 4,
+      "frozen": -1.1526639022851284,
+      "min": -1.7289958551899778,
+      "median": -1.152663902285128,
+      "max": -1.152663891716359,
+      "median_abs_rel_dev": 5.369783825617503e-09,
+      "max_abs_rel_dev": 0.5000000015288804,
+      "sign_flips_vs_frozen": 0
+    },
+    "peak_axis_d_boost_db_per_unit": {
+      "n": 4,
+      "frozen": -5.287655146126827,
+      "min": -7.239531060491584,
+      "median": -5.287655146126825,
+      "max": -2.433007556941983,
+      "median_abs_rel_dev": 0.19258119284317476,
+      "max_abs_rel_dev": 0.5398702279735196,
+      "sign_flips_vs_frozen": 0
+    }
+  },
+  "per_spec": [
+    {
+      "spec": 0,
+      "spent": 4,
+      "measured": [
+        "d_boost_db_per_unit",
+        "boost_axis_d_peak_ghz_per_unit",
+        "d_peak_ghz_per_unit",
+        "d_ln_peak_per_unit",
+        "peak_axis_d_boost_db_per_unit"
+      ],
+      "fellback": [],
+      "notes": {
+        "boost_axis": [
+          "plus: guard rejected"
+        ],
+        "peak_axis": []
+      },
+      "plane": {
+        "d_boost_db_per_unit": 11.427227617462174,
+        "boost_axis_d_peak_ghz_per_unit": 0.0,
+        "d_peak_ghz_per_unit": -3.6822399000000003,
+        "d_ln_peak_per_unit": -1.152663891716359,
+        "peak_axis_d_boost_db_per_unit": -2.433007556941983
+      }
+    },
+    {
+      "spec": 1,
+      "spent": 4,
+      "measured": [
+        "d_boost_db_per_unit",
+        "boost_axis_d_peak_ghz_per_unit",
+        "d_peak_ghz_per_unit",
+        "d_ln_peak_per_unit",
+        "peak_axis_d_boost_db_per_unit"
+      ],
+      "fellback": [],
+      "notes": {
+        "boost_axis": [],
+        "peak_axis": []
+      },
+      "plane": {
+        "d_boost_db_per_unit": 17.398898835348604,
+        "boost_axis_d_peak_ghz_per_unit": 0.0,
+        "d_peak_ghz_per_unit": -2.1920178000000003,
+        "d_ln_peak_per_unit": -1.1526639004747858,
+        "peak_axis_d_boost_db_per_unit": -5.202925189722672
+      }
+    },
+    {
+      "spec": 4,
+      "spent": 4,
+      "measured": [
+        "d_boost_db_per_unit",
+        "boost_axis_d_peak_ghz_per_unit",
+        "d_peak_ghz_per_unit",
+        "d_ln_peak_per_unit",
+        "peak_axis_d_boost_db_per_unit"
+      ],
+      "fellback": [],
+      "notes": {
+        "boost_axis": [],
+        "peak_axis": []
+      },
+      "plane": {
+        "d_boost_db_per_unit": 9.021068700280212,
+        "boost_axis_d_peak_ghz_per_unit": 2.7603438999999987,
+        "d_peak_ghz_per_unit": -4.025686799999997,
+        "d_ln_peak_per_unit": -1.7289958551899778,
+        "peak_axis_d_boost_db_per_unit": -5.372385102530979
+      }
+    },
+    {
+      "spec": 6,
+      "spent": 4,
+      "measured": [
+        "d_boost_db_per_unit",
+        "boost_axis_d_peak_ghz_per_unit",
+        "d_peak_ghz_per_unit",
+        "d_ln_peak_per_unit",
+        "peak_axis_d_boost_db_per_unit"
+      ],
+      "fellback": [],
+      "notes": {
+        "boost_axis": [],
+        "peak_axis": []
+      },
+      "plane": {
+        "d_boost_db_per_unit": 13.481544077910751,
+        "boost_axis_d_peak_ghz_per_unit": 0.0,
+        "d_peak_ghz_per_unit": -2.6057539999999992,
+        "d_ln_peak_per_unit": -1.15266390409547,
+        "peak_axis_d_boost_db_per_unit": -7.239531060491584
+      }
+    }
+  ]
+}
