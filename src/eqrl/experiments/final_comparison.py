@@ -505,8 +505,21 @@ def main() -> None:
           % (r, PREREG["search_measure_all_per_eval"]), flush=True)
     print("  routing  G3.2 reached_target ? stop : hand the REMAINDER to CMA-ES", flush=True)
     if args.gate:
-        print("\n  *** EQUIVALENCE GATE: seed 3 specs 8-17, diffed against the frozen "
-              "artifacts.\n      Seed 23 is not touched by this mode. ***", flush=True)
+        # Report the slice that is ACTUALLY about to run. This banner used to name the
+        # default slice unconditionally, so `--gate --spec-seed 7` announced seed 3 while
+        # running seed 7 -- a log that misdescribes its own provenance. `gate()` would
+        # still have caught it (the frozen artifacts are seed 3), but only after the run,
+        # as a wall of confusing per-spec diffs.
+        held_out = p.get_default("spec_seed")
+        against = " and ".join(path for a, path in (("a", args.gate_a), ("b", args.gate_b))
+                               if a in arms) or "(no arm selected)"
+        print("\n  *** EQUIVALENCE GATE: spec-seed %d, specs %d-%d, diffed against %s."
+              % (args.spec_seed, args.first, args.first + len(specs) - 1, against),
+              flush=True)
+        print("      %s ***"
+              % ("The held-out seed %d is not touched by this mode." % held_out
+                 if args.spec_seed != held_out else
+                 "WARNING: this IS held-out seed %d." % held_out), flush=True)
     print(flush=True)
 
     rows = []
