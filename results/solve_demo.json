@@ -50,12 +50,22 @@
   "hand_tuning": "none"
  },
  "cost": {
+  "optimizer_evals": 9,
   "stage1_evals": 5,
   "stage2_evals": 4,
   "budget_evals_unspent": 6,
-  "measure_all_spent": 14.0,
+  "measure_all_search": 15,
+  "measure_all_stage1": 11,
+  "measure_all_stage2": 4,
+  "measure_all_verification": 1,
+  "measure_all_total": 16,
   "measure_all_budget": 20,
-  "simulations_run": 10
+  "spice_analyses_search": 60,
+  "spice_analyses_verification": 4,
+  "spice_analyses_total": 64,
+  "measure_all_charged_by_prereg": 14.0,
+  "measure_all_uncharged_by_prereg": 1.0,
+  "counting_method": "counted at measures.measure_all and NgspiceServer._analysis (REPRODUCE.md section 13), not derived from a per-evaluation factor"
  },
  "solver": {
   "loose_solved_at": 2,

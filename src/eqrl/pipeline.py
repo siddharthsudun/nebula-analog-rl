@@ -133,6 +133,71 @@ def verify(dv: DesignVars, spec: Spec) -> dict[str, Any]:
             "abs_err_db": abs(m.boost_db - spec.target_boost_db)}
 
 
+def _cost(fc, k: int, info: dict, left: int, c1: dict, c2: dict) -> dict[str, Any]:
+    """The run's simulator cost in all three units REPRODUCE.md section 13 distinguishes.
+
+    `c1` and `c2` are counted, not derived. Verification is added later by `design`,
+    because it is a genuinely separate measurement and merging it into the search cost
+    would overstate what the search spent.
+
+    WHY THE CHARGED AND MEASURED NUMBERS DIFFER, which is a finding rather than a bug in
+    this function. The benchmark charges stage 1 at `k * ppo_measure_all_per_eval`
+    (5 x 2.00 = 10), the factor section 13 measured for `env.step` plus guarded verify.
+    The rollout actually spends 11: `stage1_rollout` calls `env.reset(seed=...)`, which
+    measures, and then re-measures the SAME unchanged design through `env._measure(env._x)`
+    to build the first observation. That extra measurement is real simulator work the
+    charge does not count, so it is reported here rather than absorbed. Changing it would
+    mean editing the frozen `stage1_rollout` and re-running the benchmark record, which is
+    not this task's call to make.
+    """
+    steps = len(info["steps"])
+    charged = (k * fc.PREREG["ppo_measure_all_per_eval"]
+               + steps * fc.PREREG["search_measure_all_per_eval"])
+    search_m = c1["measure_all"] + c2["measure_all"]
+    return {
+        # Unit 1 -- optimizer evaluations. What `--budget` counts, and what "median 4
+        # simulations to first solve" has always meant.
+        "optimizer_evals": k + steps,
+        "stage1_evals": k,
+        "stage2_evals": steps,
+        "budget_evals_unspent": int(left),
+
+        # Unit 2 -- measure_all calls, counted at `measures.measure_all`.
+        "measure_all_search": search_m,
+        "measure_all_stage1": c1["measure_all"],
+        "measure_all_stage2": c2["measure_all"],
+        "measure_all_verification": 0,          # filled in once verification has run
+        "measure_all_total": search_m,
+        "measure_all_budget": fc.PREREG["budget_measure_all"],
+
+        # Unit 3 -- SPICE analyses inside libngspice, counted at `NgspiceServer._analysis`.
+        "spice_analyses_search": c1["analysis"] + c2["analysis"],
+        "spice_analyses_verification": 0,
+        "spice_analyses_total": c1["analysis"] + c2["analysis"],
+
+        # The benchmark's accounting, kept so this run stays comparable to the frozen
+        # record, with the measured shortfall stated instead of hidden.
+        "measure_all_charged_by_prereg": charged,
+        "measure_all_uncharged_by_prereg": search_m - charged,
+        "counting_method":
+            "counted at measures.measure_all and NgspiceServer._analysis "
+            "(REPRODUCE.md section 13), not derived from a per-evaluation factor",
+    }
+
+
+def _add_verification_cost(cost: dict[str, Any], c3: dict) -> None:
+    """Fold the independent verification's measured cost into the run's totals.
+
+    Kept separate from the search figures on purpose: verification is the second, fresh
+    measurement that makes `verification.boost_db` evidence rather than a cached number,
+    and charging it to the search budget would misstate what the search spent.
+    """
+    cost["measure_all_verification"] = c3["measure_all"]
+    cost["measure_all_total"] = cost["measure_all_search"] + c3["measure_all"]
+    cost["spice_analyses_verification"] = c3["analysis"]
+    cost["spice_analyses_total"] = cost["spice_analyses_search"] + c3["analysis"]
+
+
 def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
            *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
            peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
@@ -163,15 +228,24 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     evaluate = ev.make_eval(channel_loss_db)
     policy, env = fc.load_policy(model)
 
+    # Cost is COUNTED at the two chokepoints REPRODUCE.md section 13 defines, never
+    # derived from a per-evaluation factor. The factor is what went wrong before: this
+    # module reported `ev.n_sim`, which counts `evaluate()` calls and is neither of
+    # section 13's units, and charged stage 1 at k x 2.00 measure_all, which the
+    # measurement below shows is one short of what the rollout actually spends.
+    from eqrl.simcount import counting
+
     # ---- stage 1: the frozen PPO policy, k evaluations -------------------------------
-    xs, s1, term_at = fc.stage1_rollout(evaluate, policy, env, spec_index,
-                                        target_boost_db, channel_loss_db, k)
+    with counting() as c1:
+        xs, s1, term_at = fc.stage1_rollout(evaluate, policy, env, spec_index,
+                                            target_boost_db, channel_loss_db, k)
     s1_only = [e for e in s1 if e]
     stage1 = fc.summarize(s1_only, target_boost_db, tol)
 
     # ---- stage 2: G3.2 constrained refinement, up to r evaluations --------------------
-    g2, info, _x_f, _rec_f, left = fc.g32_solve(evaluate, xs, s1, target_boost_db,
-                                                plane, ladder, r)
+    with counting() as c2:
+        g2, info, _x_f, _rec_f, left = fc.g32_solve(evaluate, xs, s1, target_boost_db,
+                                                    plane, ladder, r)
     arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
 
     result: dict[str, Any] = {
@@ -199,16 +273,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             "fallback_invoked": False,
             "hand_tuning": "none",
         },
-        "cost": {
-            "stage1_evals": k,
-            "stage2_evals": len(info["steps"]),
-            "budget_evals_unspent": int(left),
-            "measure_all_spent": (k * fc.PREREG["ppo_measure_all_per_eval"]
-                                  + len(info["steps"])
-                                  * fc.PREREG["search_measure_all_per_eval"]),
-            "measure_all_budget": fc.PREREG["budget_measure_all"],
-            "simulations_run": ev.n_sim,
-        },
+        "cost": _cost(fc, k, info, left, c1, c2),
         "solver": arm_b,
         "design": arm_b["best_design"],
         "netlist": None,
@@ -220,9 +285,10 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     if arm_b["best_design"] is not None:
         dv = DesignVars(**arm_b["best_design"])
         spec = spec_for(target_boost_db, channel_loss_db, tol)
-        v = verify(dv, spec)
+        with counting() as c3:
+            v = verify(dv, spec)
         result["verification"] = v
-        result["cost"]["simulations_run"] = ev.n_sim + 1
+        _add_verification_cost(result["cost"], c3)
         result["netlist"] = netlist(dv, vdd=spec.vdd_nominal, temp_c=27.0, corner="tt",
                                     analysis="ac", models="sky130")
         result["status"] = SOLVED if v["passed"] else CLOSED_NOT_VERIFIED
@@ -234,7 +300,9 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
 
         dv = robust_design()
         spec = spec_for(target_boost_db, channel_loss_db, tol)
-        v = verify(dv, spec)
+        with counting() as c3:
+            v = verify(dv, spec)
+        _add_verification_cost(result["cost"], c3)
         result["design"] = dataclasses.asdict(dv)
         result["verification"] = v
         result["netlist"] = netlist(dv, vdd=spec.vdd_nominal, temp_c=27.0, corner="tt",
@@ -266,6 +334,13 @@ def describe(r: dict[str, Any]) -> str:
                       "" if p["g32_reached_target"] else "  [target NOT reached]"))
         out.append("  provenance    policy %s, started from %s, %s"
                    % (p["policy"], p["g32_start_source"], p["g32_reason"]))
+        # Counted, not derived, and in all three units -- printing one number called
+        # "simulations" is what made this line misleading before.
+        out.append("  cost          %d optimizer evals = %d measure_all "
+                   "(%d search + %d verification) = %d SPICE analyses"
+                   % (c["optimizer_evals"], c["measure_all_total"],
+                      c["measure_all_search"], c["measure_all_verification"],
+                      c["spice_analyses_total"]))
     if d is None:
         out.append("\n  no design: the architecture produced nothing guard-valid.")
         return "\n".join(out)

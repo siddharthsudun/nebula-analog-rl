@@ -139,12 +139,37 @@ class TestTheArchitectureIsTheNormalPath:
                       "is_ai_generated", "hand_tuning"):
             assert field in p, field
 
-    def test_cost_is_reported_in_both_units(self, stub):
+    def test_cost_is_reported_in_all_three_units(self, stub):
+        """Optimizer evaluations, measure_all calls and SPICE analyses are different
+        numbers (REPRODUCE.md section 13), so a cost block that reports one of them
+        without saying which is the defect this replaced."""
         stub(best_design=AI_DESIGN)
         c = pipeline.design(8.92, 14.83)["cost"]
+        assert c["optimizer_evals"] == 5 + 3
         assert c["stage1_evals"] == 5 and c["stage2_evals"] == 3
-        assert c["measure_all_spent"] == 5 * 2.0 + 3 * 1.0
         assert c["measure_all_budget"] == 20
+        # The benchmark's charge is still derived, and still reported as a charge.
+        assert c["measure_all_charged_by_prereg"] == 5 * 2.0 + 3 * 1.0
+        # The measured entries are counted, so under a stubbed solver that runs no
+        # simulation they are legitimately zero -- but they must be present and
+        # internally consistent, never silently absent.
+        for key in ("measure_all_search", "measure_all_verification", "measure_all_total",
+                    "spice_analyses_search", "spice_analyses_verification",
+                    "spice_analyses_total"):
+            assert key in c, key
+        assert c["measure_all_total"] == (c["measure_all_search"]
+                                          + c["measure_all_verification"])
+        assert c["spice_analyses_total"] == (c["spice_analyses_search"]
+                                             + c["spice_analyses_verification"])
+
+    def test_the_old_ambiguous_cost_keys_are_gone(self, stub):
+        """`simulations_run` counted `evaluate()` calls -- neither of section 13's units --
+        and `measure_all_spent` was a derived charge presented as a spend. Both names
+        invited exactly the misreading section 13 exists to prevent."""
+        stub(best_design=AI_DESIGN)
+        c = pipeline.design(8.92, 14.83)["cost"]
+        assert "simulations_run" not in c
+        assert "measure_all_spent" not in c
 
     def test_closing_but_failing_verification_is_its_own_status(self, stub):
         """A design G3.2 was happy with but the independent re-measure rejects."""
@@ -318,8 +343,40 @@ class TestEndToEndReproducesTheDeliveredCircuit:
     def test_it_emits_a_schematic_that_names_real_sky130_devices(self, run):
         assert "sky130_fd_pr__nfet_01v8" in run["netlist"]
 
-    def test_the_budget_was_not_exceeded(self, run):
-        assert run["cost"]["measure_all_spent"] <= run["cost"]["measure_all_budget"]
+    def test_the_budget_was_not_exceeded_in_the_unit_the_budget_is_denominated_in(
+            self, run):
+        """The 20-measure_all ceiling is a charge, so it is checked against the charge.
+
+        The MEASURED search cost is a separate number and is deliberately not asserted to
+        be under the ceiling: `stage1_rollout` spends one measure_all the charge does not
+        count, so a run that exhausts its budget really does spend 21. That gap is
+        reported by `measure_all_uncharged_by_prereg` and pinned by the test below.
+        """
+        c = run["cost"]
+        assert c["measure_all_charged_by_prereg"] <= c["measure_all_budget"]
+
+    def test_the_reported_cost_equals_the_independently_measured_cost(self, manifest):
+        """Anti-drift: re-run the entry point inside an outer counter and require the
+        cost block to agree with it exactly.
+
+        This is what makes the numbers in `results/solve_demo*.json` claims rather than
+        assertions. `counting()` nests, so the outer counter sees every measurement the
+        inner per-phase counters see, and any future code path that measures without
+        being counted makes this fail.
+        """
+        from eqrl.simcount import counting
+
+        s = manifest["spec"]
+        with counting() as outer:
+            r = pipeline.design(s["target_boost_db"], s["channel_loss_db"],
+                                spec_index=s["spec_index"])
+        c = r["cost"]
+        assert c["measure_all_total"] == outer["measure_all"]
+        assert c["spice_analyses_total"] == outer["analysis"]
+        assert c["measure_all_total"] == (c["measure_all_stage1"] + c["measure_all_stage2"]
+                                          + c["measure_all_verification"])
+        assert c["measure_all_uncharged_by_prereg"] == (
+            c["measure_all_search"] - c["measure_all_charged_by_prereg"])
 
     def test_a_real_result_is_json_serialisable(self, run):
         """The stubbed version of this cannot fail; only a real `hard_pass` returns the
