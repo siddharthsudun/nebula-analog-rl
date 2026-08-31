@@ -9,7 +9,10 @@ afterwards without something failing.
 from __future__ import annotations
 
 import json
+import os
 import statistics
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -117,12 +120,43 @@ class TestTheInternalValidityGate:
         assert not ok and "absent" in bad[0]
 
     def test_it_covers_every_field_the_final_comparison_gate_covers(self):
-        from eqrl.experiments import final_comparison as fc
-        src = Path(fc.__file__).read_text(encoding="utf-8")
+        """Read as source text, not imported: `final_comparison` performs the Windows
+        ngspice bootstrap at import and is unimportable on the PDK-free CI runner. This
+        assertion is about code, not environment."""
+        src = (ROOT / "src/eqrl/experiments/final_comparison.py").read_text(
+            encoding="utf-8")
         block = src[src.index("def gate("):]
         listed = block[block.index("FIELDS = ["):block.index("SOLVER = [")]
         for field in GATE_FIELDS:
             assert '"%s"' % field in listed, field
+
+
+class TestItCollectsWithoutASimulator:
+    """CI runs `tests/` with no PDK, no SKY130 and no Windows environment. The verdict and
+    the prereg-drift checks above are the ones that most need to run there -- they are what
+    stops the criterion moving after the data -- so the module holding them must import
+    with nothing installed.
+
+    This failed once, for real: the first push imported `final_comparison` at module level,
+    whose `os.environ["USERPROFILE"]` bootstrap does not exist on Linux, and the whole file
+    died at collection with exit code 2.
+    """
+
+    def test_the_module_imports_with_no_windows_environment(self):
+        """Checked in a subprocess with USERPROFILE removed, which is what the runner has.
+        In-process the answer would be a lie: another test may already have imported
+        `final_comparison`, leaving it cached in `sys.modules`."""
+        env = {k: v for k, v in os.environ.items() if k != "USERPROFILE"}
+        env["PYTHONPATH"] = str(ROOT / "src")
+        r = subprocess.run(
+            [sys.executable, "-c",
+             "import eqrl.experiments.g32_selfcal_bench as m; "
+             "assert m.verdict and m.validity_gate and m.CAL_BUDGET; "
+             "import sys; "
+             "assert 'eqrl.experiments.final_comparison' not in sys.modules, "
+             "'imported at module level again'"],
+            env=env, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr[-2000:]
 
 
 class TestTheCriterionIsActuallyPreregistered:

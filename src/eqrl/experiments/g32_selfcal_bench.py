@@ -36,13 +36,16 @@ from pathlib import Path
 
 import numpy as np
 
-from eqrl.experiments.final_comparison import (PREREG, Evaluation, _check_constants,
-                                               g32_solve, load_policy, stage1_rollout,
-                                               summarize)
 from eqrl.experiments.g32_peak_report import plane_from_probe
-from eqrl.experiments.g32_rescue_probe import rescue_order_from_probe
 from eqrl.experiments.g32_selfcal import PROBE_H, calibrate_plane
-from eqrl.experiments.target_audit import make_specs
+
+# `final_comparison`, `target_audit` and `g32_rescue_probe` each perform the Windows
+# ngspice/PDK bootstrap at import time -- `os.environ["USERPROFILE"]`, which does not exist
+# on Linux. They are imported inside the functions that need them, the way `eqrl.pipeline`
+# already does it, so that `verdict`, `validity_gate` and the preregistered constants stay
+# importable with no PDK and no simulator. That is not a tidiness point: those are exactly
+# the checks CI has to be able to run, since they are what stop the criterion being edited
+# after the fact.
 
 #: The five fields `final_comparison.gate` diffs. The frozen arm in THIS harness has to
 #: reproduce the committed artifact on all of them, or the harness -- not the hypothesis --
@@ -63,6 +66,8 @@ def run_arm(evaluate, xs, s1, target, plane, ladder, budget, tol, k) -> dict:
     `xs` and `s1` are copied because two arms share them. `g32_solve` only reads them, but
     a comparison whose two halves alias each other is not one worth defending.
     """
+    from eqrl.experiments.final_comparison import PREREG, g32_solve, summarize
+
     g2, info, _x_f, _rec_f, _left = g32_solve(
         evaluate, [np.array(x, dtype=np.float64) for x in xs], list(s1), target, plane,
         ladder, budget)
@@ -135,6 +140,11 @@ def verdict(rows) -> dict:
 
 
 def main() -> None:
+    from eqrl.experiments.final_comparison import (PREREG, Evaluation, _check_constants,
+                                                   load_policy, stage1_rollout)
+    from eqrl.experiments.g32_rescue_probe import rescue_order_from_probe
+    from eqrl.experiments.target_audit import make_specs
+
     _check_constants()
     p = argparse.ArgumentParser()
     p.add_argument("--model", default="results/seq_clean40k.zip")
