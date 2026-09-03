@@ -47,3 +47,7 @@ pytest==9.1.1
 # LLM wrapper (bonus). src/eqrl/llm/spec_parser.py falls back to a keyword heuristic when
 # the package or ANTHROPIC_API_KEY is missing, so a fresh install does not need it.
 #   pip install anthropic==0.122.0
+
+# Local dashboard (server.py, dashboard/). Local-only dev tooling, not part of RESULTS.md
+# or the deployed site (web/, site/) -- nothing in src/ or scripts/smoke_test.py imports these.
+#   pip install fastapi==0.141.1 uvicorn==0.52.4
