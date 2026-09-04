@@ -116,6 +116,12 @@ jobs:
               "eqrl.envs.equalizer_env", "eqrl.envs.sequential_env", "eqrl.envs.pvt",
               "eqrl.agents.train", "eqrl.agents.train_sequential", "eqrl.agents.tracking",
               "eqrl.baselines.sweep", "eqrl.llm.spec_parser", "eqrl.solve",
+              # eqrl.solve imports this lazily, inside a try/except, so that a rendering
+              # bug can never fail a sizing run that already has its design on disk. That
+              # is the right behaviour there and the wrong one for CI -- without this
+              # line a broken renderer would be invisible until a demo. Pure string
+              # formatting over the design vector; no PDK, no simulator.
+              "eqrl.schematic",
               # eqrl.pipeline defers its import of experiments.final_comparison (and that
               # module's ngspice/PDK env bootstrap) to call time. Importing it here is what
               # keeps that deferral honest: if it ever becomes a module-scope import, this

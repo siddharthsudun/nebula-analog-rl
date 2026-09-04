@@ -7,6 +7,8 @@ the toughest infra step easier to debug.
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +19,46 @@ import numpy as np
 
 class NgspiceError(RuntimeError):
     pass
+
+
+def _ngspice_exe() -> str:
+    """Locate the ngspice batch binary, per platform.
+
+    PATH is the normal answer and is tried first. On Windows the conda-forge ngspice
+    package is routinely installed into a prefix that is NOT on PATH -- the same prefix
+    `eqrl.sim.server._locate_libngspice` searches for `ngspice.dll` -- so look there too
+    rather than reporting the binary missing when it is sitting right next to the
+    shared library the resident server is already using.
+
+    Returns a path (or the bare name, if PATH will resolve it); never raises. The caller
+    turns a genuine miss into an NgspiceError with an installation hint, because a
+    FileNotFoundError from `subprocess` names only "ngspice" and tells the reader
+    nothing about how to fix it.
+    """
+    found = shutil.which("ngspice")
+    if found:
+        return found
+
+    if sys.platform == "win32":
+        for d in (Path(os.environ.get("EQRL_NGSPICE_PREFIX", "")) / "Library" / "bin",
+                  Path.home() / "eqrl-ngspice" / "Library" / "bin",
+                  Path(os.environ.get("CONDA_PREFIX", "")) / "Library" / "bin"):
+            exe = d / "ngspice.exe"
+            if exe.exists():
+                return str(exe)
+
+    return "ngspice"
+
+
+#: Platform-correct installation hint. This used to say `brew install ngspice`
+#: unconditionally, which is wrong advice on the two platforms where the project is
+#: actually verified by hand (SETUP.md covers Windows and macOS), and is the first
+#: thing a new reader sees when their environment is not set up.
+_INSTALL_HINT = {
+    "darwin": "brew install ngspice",
+    "win32": "conda install -c conda-forge ngspice, or see SETUP.md "
+             '"Windows (native)"; set EQRL_NGSPICE_PREFIX if it is installed elsewhere',
+}.get(sys.platform, "install ngspice from your package manager (e.g. apt install ngspice)")
 
 
 def run(netlist: str, *, control: str, timeout: float = 60.0,
@@ -35,11 +77,12 @@ def run(netlist: str, *, control: str, timeout: float = 60.0,
         cir.write_text(deck)
         try:
             proc = subprocess.run(
-                ["ngspice", "-b", str(cir)],
+                [_ngspice_exe(), "-b", str(cir)],
                 capture_output=True, text=True, timeout=timeout,
             )
-        except FileNotFoundError:
-            raise NgspiceError("ngspice not found — `brew install ngspice`") from None
+        except (FileNotFoundError, OSError):
+            raise NgspiceError(
+                f"ngspice not found on PATH — {_INSTALL_HINT}") from None
         except subprocess.TimeoutExpired:
             raise NgspiceError(f"ngspice timed out after {timeout}s")
 
