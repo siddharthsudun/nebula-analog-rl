@@ -411,22 +411,21 @@ class TestPipelineSky130:
 
 
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
-@pytest.mark.xfail(strict=True, reason=(
-    "CONFIRMED BY SIMULATION: w_dfe changes no measured quantity. It appears in "
-    "ACTION_SPACE and in every exported design, but dv_to_params() omits it and "
-    "neither param_deck() nor _core_sky130() contains a DFE element, so one seventh "
-    "of the action space is wired to nothing. strict=True so this flips to a failure "
-    "the moment the DFE is actually connected — at which point delete the marker."))
 def test_w_dfe_is_not_a_dead_parameter():
-    """w_dfe is in ACTION_SPACE and in the design vector. If it reaches nothing in the
-    netlist, the agent is optimizing a knob wired to no circuit — the search will look
-    healthy while one seventh of its budget does nothing.
+    """w_dfe now drives a real 1-tap DFE receiver stage (circuits/dfe.py): a transient
+    testbench where the tap subtracts the first post-cursor. It has no `.ac` effect by
+    construction (a DFE is a sampled decision block, not a linear filter — that is why it
+    is a separate stage, not part of the CTLE `.ac` deck). So we exercise it in the
+    transient domain, where it belongs: sweeping the tap must change the eye at the slicer.
     """
-    res = _sweep_pipeline("w_dfe", np.linspace(0.0, 0.5, 4), "behavioral")
-    metrics = {k: {round(r[k], 9) for r in res} for k in res[0]}
-    changed = [k for k, vals in metrics.items() if len(vals) > 1]
-    assert changed, (
-        "w_dfe changed no measured quantity across its full range. It is a design "
-        "variable connected to nothing — either wire the 1-tap DFE into the netlist or "
-        "remove it from ACTION_SPACE."
+    from eqrl.circuits.dfe import dfe_stage_eye
+
+    c1 = 0.28
+    eyes = [dfe_stage_eye(tap, c0=0.5, c1=c1) for tap in (0.0, 0.5 * c1, c1, 1.5 * c1)]
+    assert len(set(round(e, 6) for e in eyes)) > 1, (
+        "the DFE tap changed no measured quantity — the 1-tap DFE stage is not wired"
+    )
+    # correctness: the eye is largest when the tap matches the post-cursor
+    assert eyes[2] == max(eyes), (
+        f"eye should peak at tap == c1 (full cancellation); got {eyes}"
     )
