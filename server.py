@@ -448,6 +448,11 @@ def pipeline_parse_spec(req: ParseSpecRequest):
             # against something other than the request.
             "conflict": key not in APPLIED and run_value is not None
                         and abs(float(run_value) - float(asked)) > 1e-12,
+            # Set when this field came from an ambiguous word and the parser had to
+            # choose a referent -- "gain" is peaking here, but it could have meant the
+            # DC gain. The choice is shown so the user can correct it; a reading the
+            # user cannot see is indistinguishable from an invented one.
+            "assumption": r.assumptions.get(key),
         })
     return {
         "target_boost_db": r.spec.target_boost_db,
@@ -455,6 +460,7 @@ def pipeline_parse_spec(req: ParseSpecRequest):
         "recognised": sorted(r.recognised),
         "fields": rows,
         "source": r.source,
+        "assumptions": r.assumptions,
         "applied_note": ("pipeline.design() is frozen to two inputs: target boost and "
                         "channel loss. Every other constraint is enforced at the "
                         "benchmarked default, not at the value you gave."),

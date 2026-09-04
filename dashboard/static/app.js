@@ -520,8 +520,16 @@ function renderParseTable(spec) {
   const warn = conflicts.length
     ? `<div class="parse-conflict">${conflicts.length} constraint${conflicts.length > 1 ? "s" : ""} you gave ${conflicts.length > 1 ? "are" : "is"} <strong>not</strong> applied. <code>pipeline.design()</code> is frozen to two inputs — target boost and channel loss — so the rest are scored at the benchmarked defaults shown above. The delivered circuit is not being optimised against ${conflicts.length > 1 ? "those numbers" : "that number"}.</div>`
     : "";
+  // A word like "gain" has two referents in this circuit. The parser picks one to avoid
+  // refusing an ordinary request, and says so here: an interpretation the user cannot
+  // see and correct is not meaningfully different from an invented one.
+  const assumed = Object.entries(spec.assumptions || {});
+  const assumeNote = assumed.length
+    ? `<div class="parse-assume">${assumed.map(([f, why]) =>
+        `<strong>${escapeHtml(f)}</strong> — ${escapeHtml(why)}`).join("<br>")}</div>`
+    : "";
   return `<div class="parse-head">[${escapeHtml(spec.source)}] read ${rows.length} field${rows.length === 1 ? "" : "s"} from your text. Anything you wrote that is not listed was not recognised, and anything not written at all is a default.</div>
-    <table class="parse-table"><thead><tr><th>Spec field</th><th class="num">You asked</th><th>What this run does</th></tr></thead><tbody>${body}</tbody></table>${warn}`;
+    <table class="parse-table"><thead><tr><th>Spec field</th><th class="num">You asked</th><th>What this run does</th></tr></thead><tbody>${body}</tbody></table>${assumeNote}${warn}`;
 }
 
 async function initPipeline() {
