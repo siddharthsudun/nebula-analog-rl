@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SILQ Dashboard</title>
-<link rel="stylesheet" href="/static/styles.css" />
+<link rel="stylesheet" href="/static/styles.css?v=4" />
 </head>
 <body>
 <div class="app">
@@ -23,6 +23,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.2 7.8-7 9-3.8-1.2-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
         Guard Layer
       </button>
+      <button class="nav-item" data-view="designtime" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M9 2h6"/></svg>
+        Design Time
+      </button>
+      <button class="nav-item" data-view="schematic" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4"/><rect x="7" y="4.5" width="6" height="5" rx="1"/><path d="M13 7h8"/><path d="M3 17h5"/><path d="M10 17h11"/><path d="M8 14v6"/><path d="M10 14v6"/><path d="M17 7v10"/></svg>
+        Schematic
+      </button>
       <button class="nav-item" data-view="results" type="button">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
         Results Explorer
@@ -40,6 +48,41 @@
   </nav>
 
   <main class="main">
+
+    <!-- ================= DESIGN TIME ================= -->
+    <section class="view" id="view-designtime">
+      <div class="view-header">
+        <h1>Design Time</h1>
+        <p>The brief asks for device sizing that uses <em>fewer search spaces</em> and takes significantly less time than sweeping the MOS/R/C/L parameter space. Design time is evaluation count &times; cost per evaluation, so both are measured here &mdash; against real baselines at a matched budget, and against an actual exhaustive sweep that was run, not estimated.</p>
+      </div>
+      <div id="designtime-body">
+        <p class="artifact-meta">loading design-time record&hellip;</p>
+      </div>
+    </section>
+
+    <!-- ================= SCHEMATIC ================= -->
+    <section class="view" id="view-schematic">
+      <div class="view-header">
+        <h1>Delivered Schematic</h1>
+        <p>The sized circuit the framework produced, drawn from the same <span class="mono">DesignVars</span> the simulator was handed &mdash; so the figure cannot drift from the netlist that was actually measured. Values in orange are the six the RL agent chose; everything else is fixed by the topology.</p>
+      </div>
+
+      <div class="preset-row" style="margin-bottom:14px;">
+        <button class="btn" id="schematic-delivered-btn" type="button">Delivered circuit</button>
+        <button class="btn" id="schematic-guard-btn" type="button">Draw what&rsquo;s in the Guard fields</button>
+        <a class="btn" id="schematic-download" href="/api/schematic" download="silq_delivered_schematic.svg">Download SVG</a>
+      </div>
+
+      <div id="schematic-holder" class="schematic-holder">
+        <p class="artifact-meta">loading schematic&hellip;</p>
+      </div>
+
+      <p class="artifact-meta" style="margin-top:14px;">
+        The 1-tap DFE is drawn dashed and downstream on purpose: it is a receiver-DSP tap
+        applied at the slicer in the eye engine, not an analog node in this netlist, and
+        <span class="mono">w_dfe = 0</span> in the delivered design.
+      </p>
+    </section>
 
     <!-- ================= GUARD LAYER ================= -->
     <section class="view active" id="view-guard">
@@ -147,7 +190,8 @@
             <input type="text" id="pipeline-text" placeholder='e.g. "PCIe Gen2 CTLE with about 9 dB of peaking, under 12 mW"' />
           </label>
           <button class="btn" id="pipeline-parse-btn">Parse into the fields below</button>
-          <div class="help-hint">Uses <code>eqrl.llm.spec_parser.parse_spec</code> — a keyword heuristic unless this machine has an Anthropic API key configured.</div>
+          <div class="parse-note" id="pipeline-parse-note" hidden></div>
+          <div class="help-hint">Uses <code>eqrl.llm.spec_parser.parse_spec_verbose</code> — a keyword heuristic unless this machine has an Anthropic API key configured. A request it cannot read is refused and leaves the fields untouched; it never invents a target.</div>
         </div>
       </details>
 
@@ -194,7 +238,7 @@
   </main>
 </div>
 
-<script src="/static/charts.js"></script>
-<script src="/static/app.js"></script>
+<script src="/static/charts.js?v=4"></script>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>

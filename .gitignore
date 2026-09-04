@@ -45,3 +45,6 @@ results/raw/
 #   evidence artifact for the mislabelling described in docs/REPRODUCE.md section 19.
 #   It is INVALID and is not part of any reproducibility path.
 results/*.npz
+
+# ngspice run logs (noise, not results)
+results/*.log

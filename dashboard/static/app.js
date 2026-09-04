@@ -39,7 +39,12 @@ async function api(path, opts) {
   const res = await fetch(path, opts);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText} ${text.slice(0, 300)}`);
+    // FastAPI puts the human-readable reason in `detail`. Surface that alone when it is
+    // there -- a deliberate refusal should read as a sentence, not as JSON wrapped in a
+    // status line.
+    let detail = "";
+    try { detail = JSON.parse(text).detail || ""; } catch { /* not JSON */ }
+    throw new Error(detail || `${res.status} ${res.statusText} ${text.slice(0, 300)}`);
   }
   return res.json();
 }
@@ -489,6 +494,36 @@ function genericHtml(d) {
 
 let pipelineDefaults = null;
 
+// The server has already scaled these to their display unit (watts -> mW, and so on);
+// all that is left is choosing decimals so 0.05 mm² and 100 mV both read cleanly.
+function prettySpec(v, unit) {
+  if (v === null || v === undefined) return "—";
+  const mag = Math.abs(v);
+  const dp = Number.isInteger(v) ? 0 : mag >= 1 ? 2 : 3;
+  return `${fmt(v, dp)} ${escapeHtml(unit)}`;
+}
+
+function renderParseTable(spec) {
+  const rows = spec.fields || [];
+  const conflicts = rows.filter((r) => r.conflict);
+  const body = rows.map((r) => {
+    const asked = prettySpec(r.asked_disp, r.unit);
+    // Three states, and the difference between them is the whole point of this table:
+    // applied (the run uses your number), matched (your number equals the frozen
+    // default, so nothing is lost), and overridden (the run ignores your number).
+    let tag, cls;
+    if (r.applied) { tag = "applied to this run"; cls = "pf-applied"; }
+    else if (r.conflict) { tag = `run enforces ${prettySpec(r.run_disp, r.unit)}`; cls = "pf-conflict"; }
+    else { tag = "matches the frozen default"; cls = "pf-same"; }
+    return `<tr><td class="mono">${escapeHtml(r.field)}</td><td class="num mono">${asked}</td><td class="${cls}">${tag}</td></tr>`;
+  }).join("");
+  const warn = conflicts.length
+    ? `<div class="parse-conflict">${conflicts.length} constraint${conflicts.length > 1 ? "s" : ""} you gave ${conflicts.length > 1 ? "are" : "is"} <strong>not</strong> applied. <code>pipeline.design()</code> is frozen to two inputs — target boost and channel loss — so the rest are scored at the benchmarked defaults shown above. The delivered circuit is not being optimised against ${conflicts.length > 1 ? "those numbers" : "that number"}.</div>`
+    : "";
+  return `<div class="parse-head">[${escapeHtml(spec.source)}] read ${rows.length} field${rows.length === 1 ? "" : "s"} from your text. Anything you wrote that is not listed was not recognised, and anything not written at all is a default.</div>
+    <table class="parse-table"><thead><tr><th>Spec field</th><th class="num">You asked</th><th>What this run does</th></tr></thead><tbody>${body}</tbody></table>${warn}`;
+}
+
 async function initPipeline() {
   pipelineDefaults = await api("/api/pipeline/defaults");
 
@@ -508,18 +543,28 @@ async function initPipeline() {
   channelInput.addEventListener("input", updateChannel);
   updateChannel();
 
+
   $("#pipeline-parse-btn").addEventListener("click", async () => {
     const text = $("#pipeline-text").value.trim();
+    const note = $("#pipeline-parse-note");
     if (!text) return;
     const btn = $("#pipeline-parse-btn");
     btn.disabled = true;
+    note.hidden = true;
     try {
       const spec = await postJSON("/api/pipeline/parse-spec", { text });
       targetInput.value = spec.target_boost_db; updateTarget();
       channelInput.value = spec.channel_loss_db; updateChannel();
       bindRangeFill(targetInput); bindRangeFill(channelInput);
+      note.className = "parse-note parse-note-ok";
+      note.innerHTML = renderParseTable(spec);
+      note.hidden = false;
     } catch (err) {
-      toast(`Parse failed: ${err.message}`, false);
+      // A refused parse leaves the sliders exactly as they were -- deliberately. Showing
+      // a default target after an unrecognised request would look like understanding.
+      note.className = "parse-note parse-note-bad";
+      note.textContent = err.message;
+      note.hidden = false;
     } finally {
       btn.disabled = false;
     }
@@ -608,11 +653,160 @@ function renderPipelineResult(r) {
   box.innerHTML = html;
 }
 
+// -- Design time ------------------------------------------------------------------------
+// Everything here is read from the recorded artifacts by /api/design-time. The panel leads
+// with the evaluation-count result (which the permutation tests support) and shows the
+// chance-matched negative on the strict column inline, rather than burying it.
+
+function statTile(value, unit, label, sub) {
+  return `<div class="stat-tile">
+    <div class="stat-value">${escapeHtml(value)}<span class="stat-unit">${escapeHtml(unit || "")}</span></div>
+    <div class="stat-label">${escapeHtml(label)}</div>
+    ${sub ? `<div class="stat-sub">${escapeHtml(sub)}</div>` : ""}
+  </div>`;
+}
+
+function pFmt(p) {
+  if (p === null || p === undefined) return "&mdash;";
+  if (p < 1e-3) return p.toExponential(1);
+  return p.toFixed(3);
+}
+
+function renderDesignTime(d) {
+  const P = d.protocol, S = d.sweep, E = d.per_eval, DL = d.delivered;
+  let html = "";
+
+  html += `<div class="stat-row">
+    ${statTile(String(DL.total_evals), " evals", "to size the delivered circuit", `${DL.stage1_ppo_evals} PPO + ${DL.stage2_evals} refinement`)}
+    ${statTile(S.total_points.toLocaleString(), " pts", "exhaustive sweep, actually run", `${S.elapsed_h} h · passed spec on ${S.spec_pass}`)}
+    ${statTile(`${E.speedup.toFixed(0)}×`, "", "faster per evaluation", `${E.resident_median_s.toFixed(3)} s vs ${E.subprocess_median_s.toFixed(2)} s`)}
+  </div>`;
+
+  // -- The defensible claim: evaluations at a matched budget --------------------------
+  html += `<div class="section-label">Evaluations to a solution — ${P.n_specs} held-out specs, ${P.budget}-evaluation budget for every arm</div>`;
+  html += `<div class="card"><table class="dt-table">
+    <thead><tr>
+      <th>Method</th>
+      <th class="num">Median evals<br/><span class="th-sub">to loose solve</span></th>
+      <th class="num">Solved<br/><span class="th-sub">loose</span></th>
+      <th class="num">p vs PPO<br/><span class="th-sub">permutation, loose</span></th>
+      <th class="num">Sim-matched<br/><span class="th-sub">evals → loose</span></th>
+      <th class="num">Solved<br/><span class="th-sub">strict</span></th>
+    </tr></thead><tbody>`;
+  let allStrictAtChance = true;
+  for (const a of d.arms) {
+    const sm = a.sim_matched;
+    if (!(a.chance && a.chance.p_one_sided > 0.05)) allStrictAtChance = false;
+    html += `<tr class="${a.is_silq ? "dt-silq" : ""}">
+      <td><strong>${escapeHtml(a.name)}</strong>${a.is_silq ? ' <span class="dt-tag">SILQ</span>' : ""}</td>
+      <td class="num">${a.loose_median}</td>
+      <td class="num">${a.loose} / ${a.n_specs}</td>
+      <td class="num">${a.vs_ppo_loose_p === null || a.vs_ppo_loose_p === undefined ? "&mdash;" : pFmt(a.vs_ppo_loose_p)}</td>
+      <td class="num">${sm ? `${sm.evals} → ${sm.loose}` : "&mdash;"}</td>
+      <td class="num dt-dim" title="${a.chance ? `chance-matched control expected ${a.chance.expected.toFixed(1)}, p=${a.chance.p_one_sided}` : ""}">${a.strict} / ${a.n_specs}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>
+    <p class="help-hint" style="margin-top:12px;">
+      &ldquo;Loose&rdquo; and &ldquo;strict&rdquo; are the two preregistered solve criteria (tolerance ${P.tol_db} dB).
+      p-values are ${P.permutations.toLocaleString()}-permutation paired tests against the <strong>PPO</strong> arm,
+      which is the reference (so PPO itself shows no p, and PPO-restart is compared to it).
+      &ldquo;Sim-matched&rdquo; re-runs each arm at an equalised simulation count.
+    </p></div>`;
+
+  const ref = d.arms.find((a) => a.name === "PPO-restart");
+  if (ref && ref.chance) {
+    html += banner("warning", "alertTriangle",
+      `Preregistered negative, reported: the strict solve <em>count</em> is greyed above because it is not distinguishable from a chance-matched control &mdash; SILQ scores ${ref.chance.observed} against an expectation of ${ref.chance.expected.toFixed(1)} (p = ${ref.chance.p_one_sided})${allStrictAtChance ? ", and the same is true of every other arm, so that column separates nothing" : ""}. The claim this panel makes is the <strong>evaluation count</strong>, not the number of specs solved.`);
+  }
+
+  // -- Versus the sweep the brief names ------------------------------------------------
+  html += `<div class="section-label">Versus sweeping the parameter space</div>`;
+  html += `<div class="card">
+    <p>A full-factorial grid over the six design variables was <strong>actually run</strong>, not estimated:
+    ${S.per_axis} points per axis = ${S.total_points.toLocaleString()} points, ${S.elapsed_h} hours of wall clock
+    at ${S.s_per_point} s per point. It was guard-valid on ${S.valid} and passed spec on
+    <strong>${S.spec_pass}</strong> of them; the first success came at point ${S.first_success_index.toLocaleString()}.</p>
+    <p class="help-hint">${escapeHtml(S.note)}</p>
+    <div class="section-label" style="margin-top:16px;">And that is the coarsest grid there is — refining it explodes</div>
+    <table class="dt-table"><thead><tr><th>Points per axis</th><th class="num">Grid size</th><th class="num">Projected wall clock</th></tr></thead><tbody>`;
+  for (const [k, hours] of Object.entries(S.extrapolation_hours)) {
+    const n = Number(k);
+    html += `<tr><td>${n}</td><td class="num">${Math.pow(n, 6).toLocaleString()}</td><td class="num">${
+      hours < 48 ? `${hours.toFixed(1)} h` : `${(hours / 24).toFixed(0)} days`}</td></tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  // -- Per-evaluation cost --------------------------------------------------------------
+  html += `<div class="section-label">Cost per evaluation</div>`;
+  html += `<div class="card"><p>Design time is evaluations &times; cost per evaluation, so the simulator loop was
+    optimised too: a resident libngspice server instead of one subprocess per design.
+    <strong>${E.resident_median_s.toFixed(4)} s</strong> vs <strong>${E.subprocess_median_s.toFixed(2)} s</strong>
+    &mdash; a ${E.speedup.toFixed(1)}× speedup. At that rate the delivered circuit's
+    ${DL.total_evals} evaluations are ${DL.wall_clock_s_at_resident_rate} s of simulation.</p>
+    <p class="help-hint">${escapeHtml(E.note)}</p></div>`;
+
+  // -- Caveats ---------------------------------------------------------------------------
+  html += `<div class="section-label">What these numbers do not say</div><div class="card"><ul class="dt-caveats">`;
+  for (const c of d.caveats) html += `<li>${escapeHtml(c)}</li>`;
+  html += `<li>${escapeHtml(DL.unit_warning)}</li></ul></div>`;
+
+  $("#designtime-body").innerHTML = html;
+}
+
+async function initDesignTime() {
+  const res = await fetch("/api/design-time");
+  if (!res.ok) throw new Error(`server returned ${res.status}`);
+  renderDesignTime(await res.json());
+}
+
+// -- Schematic --------------------------------------------------------------------------
+// The SVG is rendered server-side by eqrl.schematic from the same DesignVars the
+// simulator receives, so the picture cannot drift from the measured netlist.
+
+async function showSchematic(fetcher, label) {
+  const holder = $("#schematic-holder");
+  holder.innerHTML = `<p class="artifact-meta">rendering ${escapeHtml(label)}&hellip;</p>`;
+  try {
+    const svg = await fetcher();
+    holder.innerHTML = svg;
+  } catch (err) {
+    holder.innerHTML = banner("danger", "xCircle", `Could not render the schematic: ${escapeHtml(err.message)}`);
+  }
+}
+
+async function initSchematic() {
+  const delivered = async () => {
+    const res = await fetch("/api/schematic");
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    return res.text();
+  };
+  const fromGuard = async () => {
+    const res = await fetch("/api/schematic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: readGuardFields(),
+        title: "CTLE candidate",
+        subtitle: "drawn from the current Guard Layer fields — not the frozen delivered design",
+      }),
+    });
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    return res.text();
+  };
+
+  $("#schematic-delivered-btn").addEventListener("click", () => showSchematic(delivered, "the delivered circuit"));
+  $("#schematic-guard-btn").addEventListener("click", () => showSchematic(fromGuard, "the guard-field candidate"));
+  await showSchematic(delivered, "the delivered circuit");
+}
+
 // -- Boot -----------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
   initRouter();
   checkBackend();
+  initDesignTime().catch((err) => { $("#designtime-body").innerHTML = banner("danger", "xCircle", `Failed to load design-time record: ${escapeHtml(err.message)}`); });
+  initSchematic().catch((err) => { $("#schematic-holder").innerHTML = banner("danger", "xCircle", `Failed to load schematic: ${escapeHtml(err.message)}`); });
   initGuard().catch((err) => { $("#guard-result").innerHTML = `<div class="card">${banner("danger", "xCircle", `Failed to load guard layer: ${escapeHtml(err.message)}`)}</div>`; });
   initResults().catch((err) => { $("#results-detail").innerHTML = banner("danger", "xCircle", `Failed to load results: ${escapeHtml(err.message)}`); });
   initPipeline().catch((err) => { $("#pipeline-result").innerHTML = banner("danger", "xCircle", `Failed to load pipeline defaults: ${escapeHtml(err.message)}`); });
