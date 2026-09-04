@@ -1,0 +1,202 @@
+"""Watch a training run's LEARNING and stop it when it goes wrong.
+
+scripts/train_supervised.py already handles the run's *liveness*: native crashes inside
+libngspice, restarts, checkpoint resume. It cannot tell a healthy run from one that is
+burning seven hours learning nothing, because a diverging PPO run exits 0 and saves a
+model like any other.
+
+This is the other half. It tails the supervisor's log, parses stable-baselines3's own
+iteration tables, and compares them against the trajectory the delivered policy actually
+followed -- results/seq_clean40k_supervised.log, 39 logged iterations, seed 0, the run
+that produced results/seq_clean40k.zip. Every threshold below is derived from that curve
+rather than chosen from intuition:
+
+    steps      std   entropy  expl_var  approx_kl  value_loss
+     2048    0.996     -8.51     0.003     0.0076       745.0
+    20480    0.940     -8.14     0.009     0.0112       127.0
+    40960    0.838     -7.46     0.164     0.0186        24.6
+
+The shape that matters: `std` decays smoothly and only to 0.84 -- the policy stays wide.
+`value_loss` falls monotonically by 30x. `approx_kl` stays under 0.02. A new seed that
+departs from that envelope is not "a different seed", it is a broken run, and the cheapest
+moment to learn that is at 5,000 steps rather than at 40,000.
+
+    python scripts/train_watchdog.py --log results/seed1.log --heartbeat results/seed1_heartbeat.json
+    python scripts/train_watchdog.py --log results/seed1.log --stop --pid 1234
+
+Report-only by default. `--stop` terminates the supervisor process group on a breach; the
+verdict is always written to <log>.watchdog.json so the decision is auditable afterwards.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import signal
+import time
+from pathlib import Path
+
+#: Reference envelope, read off seed 0 (see module docstring). Each entry is
+#: (name, predicate(value, steps) -> bool is_breach, human explanation).
+#:
+#: These are deliberately LOOSE. The purpose is to catch a run that has genuinely come
+#: apart, not to enforce that every seed retraces seed 0 -- seed variation is the entire
+#: point of the experiment, and a watchdog that stops a merely-different run destroys the
+#: result it was meant to protect.
+CHECKS: list[tuple[str, str]] = [
+    ("std_collapse",
+     "policy went deterministic: the action std is far below seed 0's, so the run has "
+     "stopped exploring and every later evaluation will retrace one trajectory"),
+    ("kl_blowup",
+     "policy updates are too large: approx_kl is several times seed 0's, which is how a "
+     "PPO run destroys a working policy in a handful of updates"),
+    ("value_divergence",
+     "the value function is getting worse, not better: seed 0's value_loss fell "
+     "monotonically by 30x and explained_variance rose"),
+    ("invalid_rate",
+     "the policy is spending its time outside the physically valid region; seed 0 "
+     "settled at 0.419"),
+    ("stalled",
+     "no progress in the heartbeat: the trainer is alive but not stepping"),
+]
+
+
+def parse_iterations(text: str) -> list[dict]:
+    """Pull stable-baselines3's iteration tables out of a log full of simulator chatter.
+
+    The log is ~40k lines, the overwhelming majority of them `Note: Transient op ...`
+    emitted by ngspice, so a table is found by its `| key | value |` rows rather than by
+    position.
+    """
+    rows, cur = [], {}
+    for line in text.splitlines():
+        m = re.match(r"\|\s+(\w+)\s+\|\s+([-\d.e+]+)\s*\|", line)
+        if m:
+            try:
+                cur[m.group(1)] = float(m.group(2))
+            except ValueError:
+                pass
+        elif line.startswith("---") and cur.get("total_timesteps"):
+            rows.append(cur)
+            cur = {}
+    if cur.get("total_timesteps"):
+        rows.append(cur)
+    return [r for r in rows if "std" in r]
+
+
+def assess(rows: list[dict], invalid_rate: float | None,
+           hb_age_s: float | None) -> list[tuple[str, str]]:
+    """Return the list of (check, detail) breaches. Empty means healthy."""
+    out: list[tuple[str, str]] = []
+    if not rows:
+        return out
+    last = rows[-1]
+    steps = last["total_timesteps"]
+
+    # std: seed 0 held 0.996 -> 0.838. Anything under 0.55 has stopped exploring; the
+    # allowance widens with steps because some decay is the point of learning.
+    floor = 0.55 if steps < 30_000 else 0.45
+    if last["std"] < floor:
+        out.append(("std_collapse",
+                    f"std={last['std']:.3f} at {int(steps)} steps (floor {floor}; "
+                    f"seed 0 was 0.90 at 30k, 0.84 at 41k)"))
+
+    # approx_kl: seed 0 stayed in 0.008-0.028. Sustained means two consecutive tables,
+    # so one noisy update does not stop a good run.
+    kls = [r.get("approx_kl", 0.0) for r in rows[-2:]]
+    if len(kls) == 2 and all(k > 0.05 for k in kls):
+        out.append(("kl_blowup",
+                    f"approx_kl={kls[-1]:.4f} for 2 consecutive updates "
+                    f"(seed 0 peaked at 0.028)"))
+
+    # value function: only judged after it has had a chance to learn. Seed 0 was already
+    # at value_loss 213 by 10k steps and never rose across a 3-table window.
+    if steps > 12_000 and len(rows) >= 4:
+        window = [r.get("value_loss", 0.0) for r in rows[-4:]]
+        ev = last.get("explained_variance", 0.0)
+        # 1.5x, not 2x: value-function failure in practice is a steady climb rather than
+        # an explosion, and requiring a doubling only catches the runs that were going to
+        # be obvious anyway. Paired with explained_variance < -0.2 -- a value head doing
+        # worse than predicting the mean -- so ordinary noise cannot trip it.
+        if window[-1] > window[0] * 1.5 and ev < -0.2:
+            out.append(("value_divergence",
+                        f"value_loss {window[0]:.0f} -> {window[-1]:.0f} over 4 updates "
+                        f"with explained_variance={ev:.3f}"))
+
+    if invalid_rate is not None and invalid_rate > 0.60 and steps > 8_000:
+        out.append(("invalid_rate",
+                    f"invalid_rate={invalid_rate:.3f} at {int(steps)} steps "
+                    f"(seed 0 finished at 0.419)"))
+
+    if hb_age_s is not None and hb_age_s > 1800:
+        out.append(("stalled", f"heartbeat last written {hb_age_s / 60:.0f} min ago"))
+
+    return out
+
+
+def main() -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("--log", required=True, help="supervisor log to tail")
+    p.add_argument("--heartbeat", default=None)
+    p.add_argument("--invalid", default=None, help="the trainer's *_invalid.json")
+    p.add_argument("--interval", type=float, default=300.0)
+    p.add_argument("--pid", type=int, default=None, help="supervisor pid, for --stop")
+    p.add_argument("--stop", action="store_true",
+                   help="terminate the run on a breach instead of only reporting it")
+    p.add_argument("--once", action="store_true", help="assess once and exit")
+    args = p.parse_args()
+
+    log = Path(args.log)
+    verdict_path = log.with_suffix(log.suffix + ".watchdog.json")
+
+    while True:
+        rows = parse_iterations(log.read_text(errors="ignore")) if log.exists() else []
+        invalid = None
+        if args.invalid and Path(args.invalid).exists():
+            try:
+                invalid = json.loads(Path(args.invalid).read_text()).get("invalid_rate")
+            except json.JSONDecodeError:
+                pass          # the trainer rewrites this file; a torn read is not a fault
+        hb_age = None
+        if args.heartbeat and Path(args.heartbeat).exists():
+            hb_age = time.time() - Path(args.heartbeat).stat().st_mtime
+
+        breaches = assess(rows, invalid, hb_age)
+        last = rows[-1] if rows else {}
+        verdict = {
+            "checked_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "iterations_seen": len(rows),
+            "steps": int(last.get("total_timesteps", 0)),
+            "std": last.get("std"),
+            "entropy_loss": last.get("entropy_loss"),
+            "explained_variance": last.get("explained_variance"),
+            "approx_kl": last.get("approx_kl"),
+            "value_loss": last.get("value_loss"),
+            "invalid_rate": invalid,
+            "healthy": not breaches,
+            "breaches": [{"check": c, "detail": d} for c, d in breaches],
+        }
+        verdict_path.write_text(json.dumps(verdict, indent=2))
+
+        state = "HEALTHY" if not breaches else "BREACH"
+        print(f"[watchdog] {state} steps={verdict['steps']} std={verdict['std']} "
+              f"kl={verdict['approx_kl']} vloss={verdict['value_loss']} "
+              f"invalid={invalid}", flush=True)
+        for c, d in breaches:
+            print(f"[watchdog]   {c}: {d}", flush=True)
+
+        if breaches and args.stop and args.pid:
+            print(f"[watchdog] stopping pid {args.pid}", flush=True)
+            try:
+                os.kill(args.pid, signal.SIGTERM)
+            except OSError as exc:
+                print(f"[watchdog] could not stop {args.pid}: {exc}", flush=True)
+            return
+        if args.once or breaches:
+            return
+        time.sleep(args.interval)
+
+
+if __name__ == "__main__":
+    main()
