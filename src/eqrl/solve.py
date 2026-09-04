@@ -26,7 +26,7 @@ import argparse
 import json
 from pathlib import Path
 
-from eqrl.llm.spec_parser import parse_spec
+from eqrl.llm.spec_parser import parse_spec_verbose
 from eqrl.pipeline import FALLBACK, POLICY, design, describe
 
 
@@ -57,10 +57,25 @@ def main() -> None:
             "--out results/seq_agent.zip")
 
     text = " ".join(args.request)
-    print(f'  request : "{text}"')
-    spec = parse_spec(text)
+    # flush: the refusal below goes to stderr, and an unflushed stdout would print the
+    # request line *after* it -- which reads like a crash rather than a rejection.
+    print(f'  request : "{text}"', flush=True)
+    parsed = parse_spec_verbose(text)
+    if not parsed.understood:
+        # Refuse rather than run. The parser returns a DEFAULT Spec when it recognises
+        # nothing, so proceeding here would print "target boost 9.00 dB" and size a
+        # circuit for it, presenting a default as though it had been read out of the
+        # request. Sizing the wrong circuit confidently is worse than not sizing one.
+        raise SystemExit(
+            f"  [{parsed.source}] nothing in that request was recognised as a design "
+            "spec.\n  No target was inferred and nothing was simulated. State a target "
+            "boost in dB,\n  e.g.  \"PCIe Gen2 CTLE, ~9 dB boost over a 12 dB channel, "
+            "under 12 mW\"")
+    spec = parsed.spec
     channel = args.channel_loss_db if args.channel_loss_db is not None \
         else spec.channel_loss_db
+    print(f'  read    : {", ".join(sorted(parsed.recognised))} '
+          f'(everything else below is a default)')
     print(f'  parsed  : target boost {spec.target_boost_db:.2f} dB over a '
           f'{channel:.2f} dB channel, power < {spec.power_w_max*1e3:.0f} mW, '
           f'band {spec.peak_freq_lo_ghz}-{spec.peak_freq_hi_ghz} GHz\n')
