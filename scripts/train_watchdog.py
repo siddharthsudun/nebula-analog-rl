@@ -24,8 +24,9 @@ moment to learn that is at 5,000 steps rather than at 40,000.
     python scripts/train_watchdog.py --log results/seed1.log --heartbeat results/seed1_heartbeat.json
     python scripts/train_watchdog.py --log results/seed1.log --stop --pid 1234
 
-Report-only by default. `--stop` terminates the supervisor process group on a breach; the
-verdict is always written to <log>.watchdog.json so the decision is auditable afterwards.
+Report-only by default. `--stop` terminates the supervisor AND the trainer tree beneath it
+on a breach (see `_terminate_tree`); the verdict is always written to <log>.watchdog.json
+so the decision is auditable afterwards.
 """
 from __future__ import annotations
 
@@ -135,6 +136,57 @@ def assess(rows: list[dict], invalid_rate: float | None,
     return out
 
 
+def _terminate_tree(pid: int) -> str:
+    """Stop the supervisor AND everything it spawned. Returns a human summary.
+
+    `os.kill(pid, SIGTERM)` is TerminateProcess on Windows and reaches exactly one
+    process. The tree here is three deep -- this watchdog signals scripts/train_supervised,
+    whose child is `python -m eqrl.agents.train_sequential`, which itself holds --n-envs
+    SubprocVecEnv workers, each with a resident libngspice. Signalling only the top of that
+    leaves ten processes training on while this script prints "stopping" and exits.
+
+    A watchdog that reports a run stopped when nothing stopped is worse than no watchdog:
+    it converts a detected failure into a silent one, and whoever reads the verdict file
+    believes a breach was acted on.
+
+    Children are terminated before the parent so the supervisor cannot observe its child
+    dying and helpfully restart it -- that is exactly what it is built to do on a nonzero
+    exit, and it would resurrect the run this function exists to end.
+    """
+    try:
+        import psutil                      # not in requirements.txt; optional by design
+    except ImportError:
+        # Best effort without psutil. On Windows taskkill /T walks the tree; elsewhere the
+        # process group does. Either way, say what was actually attempted.
+        if os.name == "nt":
+            import subprocess
+            rc = subprocess.call(["taskkill", "/PID", str(pid), "/T", "/F"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return f"taskkill /T /F on {pid} returned {rc} (psutil not installed)"
+        os.killpg(os.getpgid(pid), signal.SIGTERM)
+        return f"SIGTERM to process group of {pid} (psutil not installed)"
+
+    try:
+        parent = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        return f"pid {pid} was already gone"
+
+    victims = parent.children(recursive=True) + [parent]
+    for v in victims:
+        try:
+            v.terminate()
+        except psutil.NoSuchProcess:
+            pass
+    gone, alive = psutil.wait_procs(victims, timeout=15)
+    for v in alive:                        # libngspice can ignore a polite terminate
+        try:
+            v.kill()
+        except psutil.NoSuchProcess:
+            pass
+    psutil.wait_procs(alive, timeout=10)
+    return f"terminated {len(gone)} of {len(victims)} processes, force-killed {len(alive)}"
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--log", required=True, help="supervisor log to tail")
@@ -187,11 +239,18 @@ def main() -> None:
             print(f"[watchdog]   {c}: {d}", flush=True)
 
         if breaches and args.stop and args.pid:
-            print(f"[watchdog] stopping pid {args.pid}", flush=True)
+            print(f"[watchdog] stopping pid {args.pid} and its trainer tree", flush=True)
             try:
-                os.kill(args.pid, signal.SIGTERM)
-            except OSError as exc:
-                print(f"[watchdog] could not stop {args.pid}: {exc}", flush=True)
+                outcome = _terminate_tree(args.pid)
+            except Exception as exc:        # noqa: BLE001 - report, never mask, a failed stop
+                outcome = f"FAILED: {type(exc).__name__}: {exc}"
+            print(f"[watchdog] {outcome}", flush=True)
+            # Rewrite the verdict with what the stop actually did. Without this the file
+            # records that a breach was detected but not whether anything was killed, and
+            # the two are not the same claim.
+            verdict["stop_attempted"] = True
+            verdict["stop_outcome"] = outcome
+            verdict_path.write_text(json.dumps(verdict, indent=2))
             return
         if args.once or breaches:
             return
