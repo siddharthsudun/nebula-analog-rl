@@ -22,12 +22,17 @@ SRC = REPO_ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-# Same three-line ngspice/PDK bootstrap every eqrl/experiments/*.py module performs
-# at import time. eqrl.sim.server only locates the PySpice DLL, not PDK_ROOT, so any
-# entry point outside eqrl.experiments has to do this itself.
-_NGSPICE = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
-os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
-os.environ["PATH"] = f"{_NGSPICE / 'shim'};{_NGSPICE / 'Library' / 'bin'};{os.environ['PATH']}"
+# ngspice/PDK bootstrap, cross-platform. On Windows ngspice is bundled under the home
+# folder (no package manager); on macOS/Linux it comes from Homebrew/apt and is already
+# on PATH, so we only prepend the bundled dirs when they actually exist. HOME is resolved
+# portably (Path.home() honours USERPROFILE on Windows and HOME on macOS/Linux), and PATH
+# is joined with the OS separator (os.pathsep).
+_HOME = Path.home()
+os.environ.setdefault("PDK_ROOT", str(_HOME / "pdk"))
+_NGSPICE = _HOME / "eqrl-ngspice"
+_extra = [p for p in (_NGSPICE / "shim", _NGSPICE / "Library" / "bin") if p.is_dir()]
+if _extra:
+    os.environ["PATH"] = os.pathsep.join([*map(str, _extra), os.environ.get("PATH", "")])
 
 from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.responses import FileResponse  # noqa: E402
