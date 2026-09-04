@@ -41,6 +41,32 @@ def _interp_H(freq_grid: np.ndarray, freq_ac: np.ndarray, H_ac: np.ndarray) -> n
     return mag * np.exp(1j * phg)
 
 
+def pulse_cursors(freq_ac: np.ndarray, H_ctle: np.ndarray, *,
+                  bit_rate: float = 5e9, samples_per_ui: int = 16, n_bits: int = 2048,
+                  swing_v: float = 1.0, channel_loss_db: float = 12.0,
+                  nyquist_hz: float = 2.5e9) -> tuple[float, float]:
+    """Main cursor c0 and first post-cursor c1 (volts) of the end-to-end channel+CTLE
+    pulse response, sampled at the optimal phase. This is the ISI the 1-tap DFE must
+    cancel; it feeds the behavioural DFE testbench in circuits/dfe.py. Additive helper --
+    it reuses the same pulse-response math as compute_eye without changing it.
+    """
+    fs = bit_rate * samples_per_ui
+    n = n_bits * samples_per_ui
+    fgrid = np.fft.rfftfreq(n, 1.0 / fs)
+    H = channel_response(fgrid, channel_loss_db, nyquist_hz) * _interp_H(fgrid, freq_ac, H_ctle)
+    M = samples_per_ui
+    amp = swing_v / 2.0
+    pulse = np.zeros(n)
+    pulse[:M] = 1.0
+    p = np.fft.irfft(np.fft.rfft(pulse) * H, n=n) * amp
+    P = p[:n_bits * M].reshape(n_bits, M)
+    r0 = int(np.argmax(np.max(np.abs(P), axis=1)))
+    ph = int(np.argmax(np.abs(P[r0])))
+    c0 = float(P[r0, ph])
+    c1 = float(P[r0 + 1, ph]) if r0 + 1 < n_bits else 0.0
+    return c0, c1
+
+
 def compute_eye(freq_ac: np.ndarray, H_ctle: np.ndarray, *,
                 bit_rate: float = 5e9, samples_per_ui: int = 16, n_bits: int = 2048,
                 swing_v: float = 1.0, channel_loss_db: float = 12.0,
