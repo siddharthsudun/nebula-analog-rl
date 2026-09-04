@@ -56,8 +56,9 @@ CHECKS: list[tuple[str, str]] = [
      "the value function is getting worse, not better: seed 0's value_loss fell "
      "monotonically by 30x and explained_variance rose"),
     ("invalid_rate",
-     "the policy is spending its time outside the physically valid region; seed 0 "
-     "settled at 0.419"),
+     "the policy is CURRENTLY spending its time outside the physically valid region. "
+     "Judged on the marginal rate between checks, never the cumulative one -- see "
+     "_marginal_invalid"),
     ("stalled",
      "no progress in the heartbeat: the trainer is alive but not stepping"),
 ]
@@ -86,7 +87,40 @@ def parse_iterations(text: str) -> list[dict]:
     return [r for r in rows if "std" in r]
 
 
-def assess(rows: list[dict], invalid_rate: float | None,
+#: Minimum simulations between two readings before their marginal rate means anything.
+#: Below this the ratio is dominated by which episode happened to straddle the boundary.
+_MARGINAL_MIN_SIMS = 300
+
+
+def _marginal_invalid(prev: tuple[int, int] | None,
+                      cur: tuple[int, int] | None) -> float | None:
+    """Invalid fraction of the simulations run BETWEEN two readings.
+
+    `*_invalid.json` reports cumulative counters: n_invalid / n_sims over the whole run.
+    That number cannot answer "is the policy stuck outside the valid region now", because
+    every invalid design from the first thousand steps stays in the denominator forever.
+    Early in a run it is high by construction -- seed 1 read 0.86 at step 0 and 0.81 at
+    4,096 while its PPO diagnostics tracked seed 0 almost exactly.
+
+    Thresholding the cumulative rate against seed 0's FINAL 0.419 therefore compares two
+    different quantities. Whether the old check would have fired on seed 0 itself is NOT
+    known: seed 0's log records its invalid count exactly once, in the closing summary, so
+    there is no intermediate value to check against. What is established is the mechanism
+    (a cumulative ratio cannot fall faster than its history allows) and seed 1's readings
+    above. Differencing two readings gives the rate over just the interval between them,
+    which is the quantity the check was always meant to be about.
+
+    Returns None when there is no previous reading or too few simulations to be meaningful.
+    """
+    if prev is None or cur is None:
+        return None
+    d_sims, d_invalid = cur[0] - prev[0], cur[1] - prev[1]
+    if d_sims < _MARGINAL_MIN_SIMS:
+        return None
+    return max(0.0, min(1.0, d_invalid / d_sims))
+
+
+def assess(rows: list[dict], marginals: list[float],
            hb_age_s: float | None) -> list[tuple[str, str]]:
     """Return the list of (check, detail) breaches. Empty means healthy."""
     out: list[tuple[str, str]] = []
@@ -125,10 +159,15 @@ def assess(rows: list[dict], invalid_rate: float | None,
                         f"value_loss {window[0]:.0f} -> {window[-1]:.0f} over 4 updates "
                         f"with explained_variance={ev:.3f}"))
 
-    if invalid_rate is not None and invalid_rate > 0.60 and steps > 8_000:
+    # Sustained across two intervals, for the same reason approx_kl is: one interval that
+    # happens to land on a bad patch of the search space is not a broken run. The gate is
+    # 12k rather than 8k steps because the marginal rate is still legitimately high while
+    # the policy is doing its initial exploration.
+    if steps > 12_000 and len(marginals) >= 2 and all(m > 0.60 for m in marginals[-2:]):
         out.append(("invalid_rate",
-                    f"invalid_rate={invalid_rate:.3f} at {int(steps)} steps "
-                    f"(seed 0 finished at 0.419)"))
+                    f"marginal invalid rate {marginals[-2]:.3f} then {marginals[-1]:.3f} "
+                    f"at {int(steps)} steps -- the policy is still producing mostly "
+                    f"unbuildable designs (seed 0's cumulative finished at 0.419)"))
 
     if hb_age_s is not None and hb_age_s > 1800:
         out.append(("stalled", f"heartbeat last written {hb_age_s / 60:.0f} min ago"))
@@ -202,19 +241,32 @@ def main() -> None:
     log = Path(args.log)
     verdict_path = log.with_suffix(log.suffix + ".watchdog.json")
 
+    prev_counts: tuple[int, int] | None = None
+    marginals: list[float] = []
+
     while True:
         rows = parse_iterations(log.read_text(errors="ignore")) if log.exists() else []
         invalid = None
+        counts: tuple[int, int] | None = None
         if args.invalid and Path(args.invalid).exists():
             try:
-                invalid = json.loads(Path(args.invalid).read_text()).get("invalid_rate")
-            except json.JSONDecodeError:
+                blob = json.loads(Path(args.invalid).read_text())
+                invalid = blob.get("invalid_rate")          # cumulative; reported only
+                if blob.get("n_sims") is not None:
+                    counts = (int(blob["n_sims"]), int(blob["n_invalid"]))
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
                 pass          # the trainer rewrites this file; a torn read is not a fault
+        m = _marginal_invalid(prev_counts, counts)
+        if m is not None:
+            marginals.append(m)
+            prev_counts = counts
+        elif prev_counts is None:
+            prev_counts = counts
         hb_age = None
         if args.heartbeat and Path(args.heartbeat).exists():
             hb_age = time.time() - Path(args.heartbeat).stat().st_mtime
 
-        breaches = assess(rows, invalid, hb_age)
+        breaches = assess(rows, marginals, hb_age)
         last = rows[-1] if rows else {}
         verdict = {
             "checked_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -225,16 +277,21 @@ def main() -> None:
             "explained_variance": last.get("explained_variance"),
             "approx_kl": last.get("approx_kl"),
             "value_loss": last.get("value_loss"),
-            "invalid_rate": invalid,
+            # Both, explicitly named. The cumulative one is context for a human reading
+            # this file; only the marginal one is thresholded.
+            "invalid_rate_cumulative": invalid,
+            "invalid_rate_marginal": marginals[-1] if marginals else None,
+            "invalid_marginal_history": marginals[-8:],
             "healthy": not breaches,
             "breaches": [{"check": c, "detail": d} for c, d in breaches],
         }
         verdict_path.write_text(json.dumps(verdict, indent=2))
 
         state = "HEALTHY" if not breaches else "BREACH"
+        mstr = f"{marginals[-1]:.3f}" if marginals else "n/a"
         print(f"[watchdog] {state} steps={verdict['steps']} std={verdict['std']} "
               f"kl={verdict['approx_kl']} vloss={verdict['value_loss']} "
-              f"invalid={invalid}", flush=True)
+              f"invalid_marg={mstr} (cum={invalid})", flush=True)
         for c, d in breaches:
             print(f"[watchdog]   {c}: {d}", flush=True)
 
