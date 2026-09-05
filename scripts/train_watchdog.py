@@ -60,8 +60,23 @@ CHECKS: list[tuple[str, str]] = [
      "Judged on the marginal rate between checks, never the cumulative one -- see "
      "_marginal_invalid"),
     ("stalled",
-     "no progress in the heartbeat: the trainer is alive but not stepping"),
+     "no progress in the heartbeat: the trainer is alive but not stepping. Suppressed "
+     "once the heartbeat reports a TERMINAL state -- see _TERMINAL_STATES"),
+    ("supervisor_gave_up",
+     "the supervisor hit its restart limit and stopped trying; the run is over and did "
+     "NOT reach its target"),
 ]
+
+#: Heartbeat states after which the supervisor never writes again, so heartbeat age stops
+#: measuring trainer progress and starts measuring how long ago the run ENDED.
+#:
+#: Without this, the stalled check fires ~30 min after every successful run: the supervisor
+#: writes state=done, exits, and the file it would have refreshed goes stale by design. That
+#: is what happened at the end of seed 1 -- a BREACH verdict and an attempted kill on a run
+#: that had finished cleanly 33 minutes earlier (the kill correctly reported "already gone",
+#: so nothing was harmed, but the verdict file recorded a failure that did not occur).
+#: A watchdog whose final word on a healthy run is BREACH trains its reader to ignore it.
+_TERMINAL_STATES = frozenset({"done", "restart_limit"})
 
 
 def parse_iterations(text: str) -> list[dict]:
@@ -121,7 +136,8 @@ def _marginal_invalid(prev: tuple[int, int] | None,
 
 
 def assess(rows: list[dict], marginals: list[float],
-           hb_age_s: float | None) -> list[tuple[str, str]]:
+           hb_age_s: float | None,
+           hb_state: str | None = None) -> list[tuple[str, str]]:
     """Return the list of (check, detail) breaches. Empty means healthy."""
     out: list[tuple[str, str]] = []
     if not rows:
@@ -169,8 +185,18 @@ def assess(rows: list[dict], marginals: list[float],
                     f"at {int(steps)} steps -- the policy is still producing mostly "
                     f"unbuildable designs (seed 0's cumulative finished at 0.419)"))
 
-    if hb_age_s is not None and hb_age_s > 1800:
-        out.append(("stalled", f"heartbeat last written {hb_age_s / 60:.0f} min ago"))
+    # A stale heartbeat only means a stall while the supervisor is still supposed to be
+    # writing one. After a terminal state it means the run ended, which is not a fault.
+    if (hb_age_s is not None and hb_age_s > 1800
+            and hb_state not in _TERMINAL_STATES):
+        out.append(("stalled", f"heartbeat last written {hb_age_s / 60:.0f} min ago"
+                               f" (heartbeat state={hb_state!r})"))
+
+    if hb_state == "restart_limit":
+        out.append(("supervisor_gave_up",
+                    "heartbeat state=restart_limit: the supervisor exhausted its restarts. "
+                    "This is a real failure and is reported as one -- but the process is "
+                    "already gone, so a --stop here has nothing left to terminate."))
 
     return out
 
@@ -263,10 +289,15 @@ def main() -> None:
         elif prev_counts is None:
             prev_counts = counts
         hb_age = None
+        hb_state = None
         if args.heartbeat and Path(args.heartbeat).exists():
             hb_age = time.time() - Path(args.heartbeat).stat().st_mtime
+            try:
+                hb_state = json.loads(Path(args.heartbeat).read_text()).get("state")
+            except (json.JSONDecodeError, OSError):
+                pass      # rewritten in place by the supervisor; a torn read is not a fault
 
-        breaches = assess(rows, marginals, hb_age)
+        breaches = assess(rows, marginals, hb_age, hb_state)
         last = rows[-1] if rows else {}
         verdict = {
             "checked_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -282,6 +313,7 @@ def main() -> None:
             "invalid_rate_cumulative": invalid,
             "invalid_rate_marginal": marginals[-1] if marginals else None,
             "invalid_marginal_history": marginals[-8:],
+            "heartbeat_state": hb_state,
             "healthy": not breaches,
             "breaches": [{"check": c, "detail": d} for c, d in breaches],
         }
@@ -294,6 +326,16 @@ def main() -> None:
               f"invalid_marg={mstr} (cum={invalid})", flush=True)
         for c, d in breaches:
             print(f"[watchdog]   {c}: {d}", flush=True)
+
+        # A finished run is the normal way to stop watching. Returning here -- before the
+        # --stop path -- is what keeps the watchdog from signalling a process that exited
+        # on purpose, and makes "the last line said BREACH" mean something again.
+        if hb_state == "done" and not breaches:
+            verdict["finished"] = True
+            verdict_path.write_text(json.dumps(verdict, indent=2))
+            print("[watchdog] FINISHED: heartbeat state=done; training reached its target. "
+                  "Nothing to stop; exiting clean.", flush=True)
+            return
 
         if breaches and args.stop and args.pid:
             print(f"[watchdog] stopping pid {args.pid} and its trainer tree", flush=True)
