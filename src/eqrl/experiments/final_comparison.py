@@ -110,14 +110,21 @@ def _check_constants() -> None:
 # --------------------------------------------------------------------------------------
 # The G3.2 constrained solver, transcribed from g32_repair.main().run
 # --------------------------------------------------------------------------------------
-def g32_solve(evaluate, xs, s1trace, target, plane, ladder, budget):
+def g32_solve(evaluate, xs, s1trace, target, plane, ladder, budget,
+              stop_abs_err_db: float | None = None):
     """Returns (trace, info, x_f, rec_f, budget_left).
 
     The three extra return values are what arm C needs to continue: the design the solver
     was last holding, its measurement, and the unspent budget. They are OUTPUTS ONLY --
     no branch, threshold or step in the solver reads them, so the control flow below is
     the frozen one line for line.
+
+    `stop_abs_err_db` defaults to None, which reads `PREREG["stop_abs_err_db"]` -- the
+    frozen arm B/C value -- so every existing caller is byte-identical. Passing a tighter
+    number is the ONLY way Accurate mode differs from Default: same feasibility gate, same
+    advance/refine bisection, just a stricter stopping test on the same loop.
     """
+    stop_err = PREREG["stop_abs_err_db"] if stop_abs_err_db is None else stop_abs_err_db
     jb = DIMS.index(plane["boost_axis"])
     jp = DIMS.index(plane["peak_axis"])
     S_BOOST = plane["d_boost_db_per_unit"]
@@ -234,7 +241,7 @@ def g32_solve(evaluate, xs, s1trace, target, plane, ladder, budget):
     # ---- STAGE B: precision targeting inside the feasible set -------------------------
     b_f = rec_f["boost_db"]
     best_err = abs(b_f - target)
-    if best_err <= PREREG["stop_abs_err_db"]:
+    if best_err <= stop_err:
         info["reached_target"] = True
         info["reason"] = "start already on target"
         return trace, info, x_f, rec_f, left[0]
@@ -255,7 +262,7 @@ def g32_solve(evaluate, xs, s1trace, target, plane, ladder, budget):
         if rec is not None and rec["loose_pass"]:
             b = rec["boost_db"]
             best_err = min(best_err, abs(b - target))
-            if abs(b - target) <= PREREG["stop_abs_err_db"]:
+            if abs(b - target) <= stop_err:
                 info["reached_target"] = True
                 info["reason"] = "target reached inside the feasible set"
                 break

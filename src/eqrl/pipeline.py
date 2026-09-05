@@ -67,6 +67,33 @@ CLOSED_NOT_VERIFIED = "closed_but_failed_verification"
 UNSOLVED = "unsolved"             #: the architecture ran and did not reach the target
 FALLBACK = "fallback_fixed_design_not_ai"   #: see `design(..., allow_fallback=True)`
 
+#: Every mode runs the SAME frozen PPO stage 1 and the SAME frozen `g32_solve` -- see that
+#: function's docstring and `eqrl.experiments.fastest_hedge` for what actually differs.
+#: "default" is byte-identical to this module's pre-mode behaviour: r = fc.PREREG["r"],
+#: stop_abs_err_db left at None so g32_solve reads fc.PREREG itself.
+MODES = ("default", "accurate", "fastest", "thinking")
+
+#: Accurate: same feasibility gate, a bigger stage-2 budget and a tighter stopping test on
+#: the SAME bisection loop. Nothing here is a new search -- just more of the existing one,
+#: asked to stop closer to the target than PREREG's own 0.25 dB.
+ACCURATE_R = 30
+ACCURATE_STOP_ABS_ERR_DB = 0.05
+
+#: Fastest: one surrogate-guided real evaluation (eqrl.experiments.fastest_hedge), then the
+#: unmodified `g32_solve` with whatever budget is left. 4 is 1 hedge + 3 for G3.2 -- roughly
+#: a third of default's r=10, which is where the time saving comes from.
+FASTEST_BUDGET = 4
+
+#: Thinking: THINKING_ROLLOUTS independent PPO stage-1 rollouts, each closed by G3.2 at
+#: Accurate's tolerance, the best of the N kept. Diversity comes from calling the frozen
+#: `stage1_rollout` with N different spec indices -- it seeds its env at `1000 + i`, so a
+#: different `i` is a different rollout without touching its seeding rule. The offsets are
+#: fixed and arbitrary, chosen only to be distinct and reproducible.
+THINKING_ROLLOUTS = 3
+THINKING_R = 15
+THINKING_STOP_ABS_ERR_DB = 0.05
+THINKING_SEED_OFFSETS = (0, 4001, 9007)
+
 
 def _plain(o: Any) -> Any:
     """Coerce numpy scalars to built-ins so a result survives `json.dumps`.
@@ -201,12 +228,19 @@ def _add_verification_cost(cost: dict[str, Any], c3: dict) -> None:
 def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
            *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
            peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
-           allow_fallback: bool = False) -> dict[str, Any]:
+           allow_fallback: bool = False, mode: str = "default") -> dict[str, Any]:
     """Run the delivered architecture for one specification.
 
     `spec_index` seeds stage 1's environment (`1000 + spec_index`), exactly as the
     benchmark does. It is the only knob that changes which circuit comes out for a given
     target, and it is recorded in the result so any run is reproducible.
+
+    `mode` selects one of `MODES` and changes ONLY the stage-2 budget/tolerance (and, for
+    "thinking", how many independent stage-1 rollouts are tried). It never changes the PPO
+    policy, the guard, `hard_pass`, or `g32_solve`'s control flow -- see the module-level
+    `MODES`/`ACCURATE_*`/`FASTEST_*`/`THINKING_*` constants for exactly what each preset is,
+    and `eqrl.experiments.fastest_hedge` for Fastest's one new mechanism. "default"
+    reproduces this function's pre-mode behaviour bit for bit.
 
     `allow_fallback` is OFF by default and is not part of the architecture. When on, and
     only when PPO -> G3.2 produced nothing guard-valid at all, the fixed
@@ -216,9 +250,11 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     answer the framework searched for, and the labelling exists so it can never be
     mistaken for one.
     """
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
     fc = _fc()
     fc._check_constants()
-    k, r = fc.PREREG["k"], fc.PREREG["r"]
+    k = fc.PREREG["k"]
     tol = fc.PREREG["tol"] if tol is None else tol
 
     plane = fc.plane_from_probe(peak_probe)
@@ -235,21 +271,82 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     # measurement below shows is one short of what the rollout actually spends.
     from eqrl.simcount import counting
 
-    # ---- stage 1: the frozen PPO policy, k evaluations -------------------------------
-    with counting() as c1:
-        xs, s1, term_at = fc.stage1_rollout(evaluate, policy, env, spec_index,
-                                            target_boost_db, channel_loss_db, k)
-    s1_only = [e for e in s1 if e]
-    stage1 = fc.summarize(s1_only, target_boost_db, tol)
+    mode_detail: dict[str, Any] = {"mode": mode}
 
-    # ---- stage 2: G3.2 constrained refinement, up to r evaluations --------------------
-    with counting() as c2:
-        g2, info, _x_f, _rec_f, left = fc.g32_solve(evaluate, xs, s1, target_boost_db,
-                                                    plane, ladder, r)
-    arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
+    if mode == "thinking":
+        # ---- N independent PPO rollouts, each closed by the frozen G3.2 -------------
+        candidates = []
+        c1 = {"measure_all": 0, "analysis": 0}
+        c2 = {"measure_all": 0, "analysis": 0}
+        for offset in THINKING_SEED_OFFSETS:
+            with counting() as c1_i:
+                xs_i, s1_i, term_i = fc.stage1_rollout(
+                    evaluate, policy, env, spec_index + offset, target_boost_db,
+                    channel_loss_db, k)
+            for key in c1:
+                c1[key] += c1_i[key]
+            s1_only_i = [e for e in s1_i if e]
+            with counting() as c2_i:
+                g2_i, info_i, _xf, _rf, left_i = fc.g32_solve(
+                    evaluate, xs_i, s1_i, target_boost_db, plane, ladder, THINKING_R,
+                    stop_abs_err_db=THINKING_STOP_ABS_ERR_DB)
+            for key in c2:
+                c2[key] += c2_i[key]
+            candidates.append({
+                "seed_offset": offset, "xs": xs_i, "s1": s1_i, "s1_only": s1_only_i,
+                "term_at": term_i, "g2": g2_i, "info": info_i, "left": left_i,
+                "arm": fc.summarize(s1_only_i + g2_i, target_boost_db, tol)})
+
+        def _rank(c):
+            has_design = c["arm"]["best_design"] is not None
+            err = c["arm"]["best_abs_err"]
+            return (0 if has_design else 1, err if err is not None else float("inf"))
+
+        winner = min(candidates, key=_rank)
+        s1, s1_only, term_at = winner["s1"], winner["s1_only"], winner["term_at"]
+        g2, info, left = winner["g2"], winner["info"], winner["left"]
+        arm_b = winner["arm"]
+        k_eff = k * len(THINKING_SEED_OFFSETS)
+        mode_detail["rollouts"] = [
+            {"seed_offset": c["seed_offset"], "best_abs_err_db": c["arm"]["best_abs_err"],
+             "n_loose_pass": c["arm"]["n_loose_pass"],
+             "reached_target": bool(c["info"]["reached_target"])}
+            for c in candidates]
+        mode_detail["winner_seed_offset"] = winner["seed_offset"]
+
+    else:
+        # ---- stage 1: the frozen PPO policy, k evaluations ---------------------------
+        with counting() as c1:
+            xs, s1, term_at = fc.stage1_rollout(evaluate, policy, env, spec_index,
+                                                target_boost_db, channel_loss_db, k)
+        s1_only = [e for e in s1 if e]
+        k_eff = k
+
+        # ---- stage 2: G3.2 constrained refinement, mode-dependent budget -------------
+        if mode == "fastest":
+            from eqrl.experiments.fastest_hedge import fastest_stage2, load_fastest_assets
+
+            surrogate, corpus_X, radius = load_fastest_assets()
+            with counting() as c2:
+                g2, info, _x_f, _rec_f, left = fastest_stage2(
+                    evaluate, xs, s1, target_boost_db, plane, ladder, FASTEST_BUDGET,
+                    surrogate=surrogate, corpus_X=corpus_X, safety_radius=radius)
+            mode_detail["hedge"] = info.get("hedge")
+        else:
+            r = ACCURATE_R if mode == "accurate" else fc.PREREG["r"]
+            stop = ACCURATE_STOP_ABS_ERR_DB if mode == "accurate" else None
+            with counting() as c2:
+                g2, info, _x_f, _rec_f, left = fc.g32_solve(
+                    evaluate, xs, s1, target_boost_db, plane, ladder, r,
+                    stop_abs_err_db=stop)
+
+        arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
+
+    stage1 = fc.summarize(s1_only, target_boost_db, tol)
 
     result: dict[str, Any] = {
         "architecture": "PPO (global feasibility) -> G3.2 constrained refinement",
+        "mode": mode,
         "spec": {"target_boost_db": target_boost_db, "channel_loss_db": channel_loss_db,
                  "boost_tol_db": tol, "spec_index": spec_index,
                  "requirement_set": "eqrl.specs.Spec defaults + this target/channel; "
@@ -257,6 +354,8 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         "provenance": {
             "is_ai_generated": True,
             "policy": model,
+            "mode": mode,
+            "mode_detail": mode_detail,
             "ppo_produced_handoff": s1[-1] is not None,
             "ppo_terminated_at_eval": term_at,
             "stage1": {"n_evals": stage1["n_evals"], "n_valid": stage1["n_valid"],
@@ -273,7 +372,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             "fallback_invoked": False,
             "hand_tuning": "none",
         },
-        "cost": _cost(fc, k, info, left, c1, c2),
+        "cost": _cost(fc, k_eff, info, left, c1, c2),
         "solver": arm_b,
         "design": arm_b["best_design"],
         "netlist": None,

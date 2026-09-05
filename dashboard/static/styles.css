@@ -90,32 +90,34 @@ button { font-family: inherit; }
 .num { font-variant-numeric: tabular-nums; }
 
 /* -- App shell ---------------------------------------------------------------- */
+/* Single scrolling column, no sidebar: Live Pipeline IS the product, so it is the
+   entire page. Everything else (guard demo, results browser, benchmark record) is
+   relocated -- not deleted -- into collapsed developer tools at the bottom. */
 
-.app {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+/* Use the monitor. 1100px was a reading-column width, but this page is a control surface
+   whose two widest objects -- a 940x800 schematic and a scrolling trace -- both want room.
+   Running PROSE is still capped per-block (see .how-it-works and .brand-sub), because a
+   90-character measure is unreadable no matter how wide the display is. */
+.page {
+  max-width: 1680px;
+  margin: 0 auto;
   min-height: 100vh;
+  padding: 0 32px 80px;
 }
 
-.sidebar {
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  padding: 22px 14px;
-}
-
-.brand {
+.top-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 10px 20px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 2px 18px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 26px;
 }
+
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-mark {
-  width: 30px; height: 30px;
+  width: 32px; height: 32px;
   border-radius: 8px;
   background: linear-gradient(155deg, var(--accent), var(--accent-hover));
   display: flex; align-items: center; justify-content: center;
@@ -124,52 +126,29 @@ button { font-family: inherit; }
   font-size: 0.8125rem;
   flex-shrink: 0;
 }
-.brand-text { line-height: 1.15; }
-.brand-title { font-size: 0.9375rem; font-weight: 700; letter-spacing: -0.01em; }
-.brand-sub { font-size: var(--fs-xs); color: var(--ink-faint); }
+.brand-text { line-height: 1.25; min-width: 0; }
+.brand-title { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+.brand-sub { font-size: var(--fs-xs); color: var(--ink-faint); max-width: 62ch; }
 
-.nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-.nav-item {
-  display: flex; align-items: center; gap: 11px;
-  padding: 9px 12px;
-  border-radius: var(--radius-sm);
-  color: var(--ink-muted);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  background: none;
-  text-align: left;
-  width: 100%;
-}
-.nav-item svg { flex-shrink: 0; opacity: 0.85; }
-.nav-item:hover { background: var(--surface-2); color: var(--ink); }
-.nav-item.active { background: var(--accent-tint); color: var(--accent-ink); }
-.nav-item.active svg { opacity: 1; }
-
-.sidebar-footer {
-  margin-top: auto;
-  padding: 12px 10px 4px;
-  border-top: 1px solid var(--border);
-}
-.status-line {
+.status-pill {
   display: flex; align-items: center; gap: 7px;
-  font-size: var(--fs-xs); color: var(--ink-faint);
-  margin-bottom: 6px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex-shrink: 0; }
-.status-dot.up { background: var(--success); }
-.status-dot.down { background: var(--danger); }
-.sidebar-footer .note { font-size: var(--fs-xs); color: var(--ink-faint); line-height: 1.4; }
+.status-dot.warming { background: var(--warning); animation: pulse-dot 1.4s ease-in-out infinite; }
+.status-dot.ready { background: var(--success); }
+.status-dot.error { background: var(--danger); }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-.main {
-  padding: 36px 44px 80px;
-  max-width: 1180px;
-  width: 100%;
-}
-
-.view { display: none; }
-.view.active { display: block; }
+.page-body { display: flex; flex-direction: column; }
 
 .view-header { margin-bottom: 22px; }
 .view-header h1 { font-size: var(--fs-xl); margin-bottom: 5px; }
@@ -304,6 +283,34 @@ input:focus, select:focus, button:focus-visible {
 select { appearance: none; cursor: pointer; padding-right: 30px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a92a1'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 11px center; }
+
+/* -- Design mode selector ----------------------------------------------------------- */
+
+.mode-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.mode-btn {
+  flex: 1 1 140px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.mode-btn:hover { background: var(--surface-2); }
+.mode-btn:disabled { opacity: 0.55; cursor: default; }
+.mode-btn-name { font-weight: 600; font-size: var(--fs-sm); }
+.mode-btn-sub { font-size: 11px; color: var(--ink-faint); }
+.mode-btn.active { border-color: var(--accent); background: var(--accent-tint); }
+.mode-btn.active .mode-btn-name { color: var(--accent-ink); }
+
+.mode-detail-block .kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
+.mode-detail-block .kv-row:last-child { border-bottom: none; }
+.mode-detail-block .kv-row .kv-k { color: var(--ink-muted); }
+.mode-detail-block .kv-row .kv-v { font-weight: 600; text-align: right; }
+.mode-detail-block .kv-row.winner { color: var(--accent-ink); }
 
 .slider-field { display: flex; flex-direction: column; gap: 8px; }
 .slider-field .slider-head { display: flex; justify-content: space-between; align-items: baseline; }
@@ -517,15 +524,219 @@ pre.code-block {
 .toast.fail { color: var(--danger); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* -- How this works ------------------------------------------------------------------- */
+
+.how-it-works { margin-bottom: 14px; }
+.how-it-works ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.how-it-works li { display: flex; align-items: baseline; gap: 12px; font-size: var(--fs-sm); color: var(--ink-muted); line-height: 1.5; }
+/* Prose keeps a readable measure even on a 1680px page. */
+.how-it-works li > span:last-child { max-width: 90ch; }
+.step-num {
+  flex-shrink: 0;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+  transform: translateY(1px);
+}
+
+.banner.compact { padding: 9px 14px; margin-bottom: 22px; font-weight: 500; font-size: var(--fs-xs); }
+
+/* -- The Ask -------------------------------------------------------------------------- */
+
+.ask-panel { margin-bottom: 22px; }
+.ask-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; margin-bottom: 16px; }
+.describe-toggle { margin-bottom: 10px; }
+.advanced-body { display: flex; flex-direction: column; }
+.ask-run-btn { margin-top: 14px; padding: 13px; font-size: var(--fs-base); }
+
+details.explainer.nested { margin: 4px 0 16px; }
+details.explainer.nested .explainer-body { padding-left: 30px; }
+
+/* -- Progress: stage tracker ------------------------------------------------------------ */
+
+.stage-tracker-wrap { margin-bottom: 22px; }
+.stage-tracker { display: flex; align-items: center; margin-bottom: 8px; }
+.stage {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.stage-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.stage-connector { flex: 1; height: 2px; background: var(--border); margin: 0 4px; min-width: 12px; }
+.stage.active { color: var(--ink); border-color: var(--accent); background: var(--accent-tint); }
+.stage.active .stage-dot { background: var(--accent); animation: pulse-dot 1.1s ease-in-out infinite; }
+.stage.done { color: var(--ink); border-color: var(--success); }
+.stage.done .stage-dot { background: var(--success); }
+.stage.warn { color: var(--ink); border-color: var(--warning); }
+.stage.warn .stage-dot { background: var(--warning); }
+.stage.skip { color: var(--ink-faint); }
+.stage.skip .stage-dot { background: var(--border); }
+.stage-note { font-size: var(--fs-xs); color: var(--ink-faint); padding: 0 4px; }
+
+/* -- Result: hero (schematic + headline values) ----------------------------------------- */
+
+.result-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(230px, 0.8fr); gap: 20px; align-items: start; margin-bottom: 16px; }
+.result-hero .schematic-holder { margin: 0; }
+/* The 720px floor below is right for the full-width schematic view, but in this two-column
+   hero it clips the drawing's right-hand devices at every desktop width -- a circuit with
+   its output stage cut off reads as a broken render, not as something to scroll. The
+   viewBox is 940x800, so letting it fit the column costs about 10% of the label size and
+   nothing else. */
+.result-hero .schematic-holder svg { min-width: 0; }
+.result-hero .schematic-holder { position: relative; }
+/* One column: the drawing takes the full content width and its labels come back up to
+   full size. The sizing numbers move below it rather than disappearing. */
+.result-hero.wide { grid-template-columns: 1fr; }
+.schematic-zoom {
+  /* Bottom-right: the drawing puts its title top-left and its legend top-right. */
+  position: absolute; bottom: 10px; right: 12px; z-index: 2;
+  font: 500 11px/1 var(--font-ui);
+  letter-spacing: 0.03em;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.schematic-zoom:hover { color: var(--ink); border-color: var(--accent); }
+
+/* -- Live trace ------------------------------------------------------------------------ */
+/* A fixed-height scroller, not a growing block: the page under it must not jump every time
+   another circuit is simulated. */
+.run-log-wrap { margin-top: 14px; }
+.run-log-head {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 7px;
+}
+.run-log {
+  height: 190px;
+  overflow-y: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+.log-row { display: flex; gap: 12px; color: var(--ink-muted); }
+.log-t { flex-shrink: 0; width: 44px; text-align: right; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.log-text { min-width: 0; }
+/* Stage headers are the spine of the trace; candidate lines are the detail under them. */
+.log-stage { color: var(--ink); font-weight: 600; margin-top: 6px; }
+.log-stage:first-child { margin-top: 0; }
+.log-rejected .log-text { color: var(--warning); }
+.log-error .log-text { color: var(--danger); font-weight: 600; }
+
+/* -- Numbered error codes -------------------------------------------------------------- */
+.err-code {
+  display: inline-block;
+  margin-right: 9px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.headline-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  align-content: start;
+}
+.headline-grid .kpi-label { font-size: 10.5px; }
+.headline-grid .kpi-value { font-size: var(--fs-md); }
+.headline-power { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid var(--border); }
+.headline-power .kpi-value { font-size: var(--fs-lg); color: var(--accent-ink); }
+
+/* -- Result: status banners -------------------------------------------------------------- */
+
+.status-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.status-banner svg { flex-shrink: 0; margin-top: 2px; }
+.status-banner .status-title { font-size: var(--fs-base); font-weight: 700; margin-bottom: 3px; }
+.status-banner .status-sub { font-size: var(--fs-sm); font-weight: 400; }
+.status-banner.st-solved { background: var(--success-tint); color: var(--success); }
+.status-banner.st-closed { background: var(--warning-tint); color: var(--warning); }
+.status-banner.st-unsolved { background: var(--surface-2); color: var(--ink-muted); }
+.status-banner.st-fallback { background: var(--danger-tint); color: var(--danger); border: 1.5px solid var(--danger); }
+.status-banner.st-error { background: var(--danger-tint); color: var(--danger); }
+.status-banner .status-title, .status-banner.st-unsolved .status-title { color: inherit; }
+
+/* -- Result: secondary block (quiet, below the hero) -------------------------------------- */
+
+.secondary-block {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.secondary-block .card-title { margin-bottom: 10px; }
+.secondary-block .kpi-grid { gap: 12px 20px; }
+.secondary-block .kpi-label { font-size: 10px; }
+.secondary-block .kpi-value { font-size: var(--fs-sm); font-weight: 600; }
+.secondary-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--fs-xs); color: var(--ink-muted); }
+
+/* -- Cost strip ---------------------------------------------------------------------------- */
+
+.cost-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: 20px;
+}
+.cost-strip .cs-item { white-space: nowrap; }
+.cost-strip .cs-item strong { color: var(--ink-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* -- Secondary tools (developer / inspection) ---------------------------------------------- */
+
+.dev-tools { margin-top: 30px; }
+.dev-tools-label {
+  font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-faint); margin-bottom: 10px;
+}
+details.explainer.dev-tool { margin-bottom: 10px; }
+details.explainer.dev-tool > summary { font-size: var(--fs-sm); }
+.dev-tool-body { padding-left: 16px; }
+.dev-tool-intro { color: var(--ink-muted); font-size: var(--fs-sm); max-width: 72ch; margin-bottom: 16px !important; }
+
 /* -- Responsive ---------------------------------------------------------------------------------- */
 
 @media (max-width: 880px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar { position: relative; height: auto; flex-direction: row; align-items: center; overflow-x: auto; }
-  .nav { flex-direction: row; margin-top: 0; }
-  .sidebar-footer { display: none; }
   .split { grid-template-columns: 1fr; }
-  .main { padding: 24px 18px 60px; }
+  .page { padding: 0 14px 60px; }
+  .top-header { flex-wrap: wrap; }
+  .result-hero { grid-template-columns: 1fr; }
+  .ask-grid { grid-template-columns: 1fr; }
+  .stage-tracker { flex-direction: column; align-items: stretch; }
+  .stage-connector { width: 2px; height: 18px; margin: 0 0 0 9px; }
 }
 
 /* -- Schematic view ------------------------------------------------------------------ */
