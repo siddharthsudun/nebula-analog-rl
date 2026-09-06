@@ -1,9 +1,9 @@
 """Phrasing regressions for the natural-language spec parser.
 
-The heuristic path is what actually runs: `parse_spec_verbose` falls through to it
-whenever no Anthropic credential is configured, which so far has been always. Every bug
-this file pins is a real one that reached a user -- a request the parser either misread
-or refused outright -- so treat a failure here as a demo failure, not a style question.
+The heuristic reader is pinned here with the LLM reader switched OFF (`backend="off"`):
+a corpus assertion must be about the rules, never about a model's mood that day. The
+LLM merge is tested separately with a stubbed reader, so the merge rule itself is pinned
+without a network or a login.
 
 Two rules are load-bearing and both have a test below:
 
@@ -17,11 +17,16 @@ from __future__ import annotations
 
 import pytest
 
+from eqrl.llm import spec_parser as sp
 from eqrl.llm.spec_parser import parse_spec_verbose
 
 
+def parse(text: str) -> sp.ParseResult:
+    return parse_spec_verbose(text, backend="off")
+
+
 def rec(text: str) -> dict:
-    return parse_spec_verbose(text).recognised
+    return parse(text).recognised
 
 
 class TestOrderingTraps:
@@ -80,8 +85,9 @@ class TestVocabulary:
     def test_bare_milliwatts_are_a_power_budget(self):
         # "under 12 mW" names no field and was silently dropped -- while being the
         # example in solve.py's own docstring.
-        assert rec("PCIe Gen2 CTLE, ~9 dB boost, under 12 mW") == pytest.approx(
-            {"target_boost_db": 9.0, "power_w_max": 0.012})
+        got = rec("PCIe Gen2 CTLE, ~9 dB boost, under 12 mW")
+        assert got["target_boost_db"] == pytest.approx(9.0)
+        assert got["power_w_max"] == pytest.approx(0.012)
 
     def test_lowercase_db_and_no_space(self):
         got = rec("I want 9.8 db gain but a loss margin of 13db")
@@ -89,11 +95,52 @@ class TestVocabulary:
         assert got["channel_loss_db"] == pytest.approx(13.0)
 
 
+class TestStandards:
+    """Naming a link standard is how most people state a data rate."""
+
+    @pytest.mark.parametrize("text,gbps", [
+        ("PCIe Gen2 CTLE, 9 dB boost", 5.0),
+        ("pcie gen3 receiver", 8.0),
+        ("PCI Express Gen 4 link", 16.0),
+        ("USB 3.0 front end", 5.0),
+        ("SATA 3 equalizer", 6.0),
+        ("10GbE SFP+ host side", 10.3125),
+    ])
+    def test_standard_implies_rate_and_says_so(self, text, gbps):
+        r = parse(text)
+        assert r.recognised["data_rate_gbps"] == pytest.approx(gbps)
+        assert r.recognised["nyquist_ghz"] == pytest.approx(gbps / 2)
+        assert "data_rate_gbps" in r.assumptions
+
+    def test_explicit_rate_beats_the_standard(self):
+        r = parse("PCIe Gen2 at 8 Gbps")
+        assert r.recognised["data_rate_gbps"] == pytest.approx(8.0)
+        assert "data_rate_gbps" not in r.assumptions
+
+    def test_pam4_does_not_get_a_nyquist_guess(self):
+        assert "nyquist_ghz" not in rec("56 Gbps PAM4 link")
+
+
+class TestRanges:
+    def test_boost_range_sets_bounds_and_midpoint_target(self):
+        r = parse("boost between 8 and 10 dB over a 14 dB channel")
+        assert r.recognised["boost_db_min"] == pytest.approx(8.0)
+        assert r.recognised["boost_db_max"] == pytest.approx(10.0)
+        assert r.recognised["target_boost_db"] == pytest.approx(9.0)
+        assert "target_boost_db" in r.assumptions
+        assert r.recognised["channel_loss_db"] == pytest.approx(14.0)
+
+    def test_tunable_range_number_first(self):
+        r = parse("3-12 dB of boost, tunable")
+        assert r.recognised["boost_db_min"] == pytest.approx(3.0)
+        assert r.recognised["boost_db_max"] == pytest.approx(12.0)
+
+
 class TestAmbiguityIsDeclared:
     """"gain" is not a synonym for peaking -- it is a word with two referents here."""
 
     def test_bare_gain_is_read_as_peaking_and_says_so(self):
-        r = parse_spec_verbose("I want 9.8 db gain but a loss margin of 13db")
+        r = parse("I want 9.8 db gain but a loss margin of 13db")
         assert r.recognised["target_boost_db"] == pytest.approx(9.8)
         assert "target_boost_db" in r.assumptions, (
             "reading bare 'gain' as the peaking target is a judgement call; making it "
@@ -101,14 +148,30 @@ class TestAmbiguityIsDeclared:
         assert "dc gain" in r.assumptions["target_boost_db"].lower()
 
     def test_explicit_dc_gain_is_not_an_assumption(self):
-        r = parse_spec_verbose("3 dB DC gain")
+        r = parse("3 dB DC gain")
         assert r.recognised == pytest.approx({"dc_gain_db_min": 3.0})
         assert r.assumptions == {}
 
     def test_explicit_boost_is_not_an_assumption(self):
-        r = parse_spec_verbose("9 dB of boost")
+        r = parse("9 dB of boost")
         assert r.recognised == pytest.approx({"target_boost_db": 9.0})
         assert r.assumptions == {}
+
+
+class TestWarnings:
+    """Out-of-range and implausible values are reported, not clamped or planted."""
+
+    def test_target_outside_boost_range_warns_but_keeps_the_number(self):
+        r = parse("20 dB of boost")
+        assert r.recognised["target_boost_db"] == pytest.approx(20.0)
+        assert any("3 to 12 dB" in w for w in r.warnings)
+
+    def test_implausible_unit_slip_is_rejected(self):
+        # 15 W is a space heater, not a CTLE. A slipped SI prefix must not become a
+        # budget the slider then happily displays.
+        r = parse("9 dB boost, power under 15 W")
+        assert "power_w_max" not in r.recognised
+        assert any("power_w_max" in w for w in r.warnings)
 
 
 B, C, P = "target_boost_db", "channel_loss_db", "power_w_max"
@@ -142,6 +205,12 @@ CORPUS = [
     ("CTLE for 8 Gbps NRZ, 12 dB insertion loss at Nyquist, 9 dB boost",
      {B: 9.0, C: 12.0}),
     ("I need to recover 14 dB of channel loss", {C: 14.0}),
+    # The misspellings that used to be the rules' ceiling. Each is a real miss; the
+    # fix is a spelling table, not fuzzy matching (which reads "less" as "loss").
+    ("9 dB bost over a 14 dB channel", {B: 9.0, C: 14.0}),
+    ("9 db boots, 14 db chanel", {B: 9.0, C: 14.0}),
+    ("9 dB gian", {B: 9.0}),
+    ("nine decibels of peeking, fourteen db chanel", {B: 9.0, C: 14.0}),
 ]
 
 
@@ -153,20 +222,6 @@ def test_corpus(text, want):
         assert got[key] == pytest.approx(value)
 
 
-#: The known ceiling. Rules cannot reach a misspelled label without fuzzy matching, and
-#: fuzzy matching on a six-word vocabulary invents readings more often than it rescues
-#: them. These are the cases that justify the LLM path, and they are recorded as xfail so
-#: the boundary stays visible instead of being quietly dropped from the corpus.
-@pytest.mark.parametrize("text", [
-    "9 dB bost over a 14 dB channel",
-    "9 db boots, 14 db chanel",
-    "9 dB gian",
-])
-@pytest.mark.xfail(strict=True, reason="misspelled label; needs the LLM path")
-def test_typos_are_the_ceiling(text):
-    assert "target_boost_db" in rec(text)
-
-
 class TestNoFalsePositives:
     """The unit-less fallbacks must not claim a number that belongs to another field."""
 
@@ -176,6 +231,7 @@ class TestNoFalsePositives:
         ("design for 2.5 GHz peak frequency", ("channel_loss_db", "target_boost_db")),
         ("I have 3 questions about the channel", ("channel_loss_db",)),
         ("eye height 100 mV and 0.4 UI", ("channel_loss_db", "target_boost_db")),
+        ("boost it, less loss please", ("channel_loss_db", "target_boost_db")),
     ])
     def test_other_units_are_not_decibels(self, text, forbidden):
         got = rec(text)
@@ -191,13 +247,83 @@ class TestRefusal:
         "what is a CTLE",
     ])
     def test_nothing_recognised(self, text):
-        r = parse_spec_verbose(text)
+        r = parse(text)
         assert r.recognised == {}
         assert not r.understood
 
     def test_spec_is_still_usable_but_flagged_as_defaults(self):
         # `spec` always holds a runnable Spec; `understood` is how a caller tells that
         # apart from a real interpretation. The dashboard 422s on this.
-        r = parse_spec_verbose("lets fuck")
+        r = parse("lets fuck")
         assert r.spec is not None
         assert not r.understood
+
+
+class TestLLMMerge:
+    """The LLM is a second reader. Its answer is merged, never trusted over a rule."""
+
+    @pytest.fixture
+    def stub(self, monkeypatch):
+        replies: dict = {}
+        monkeypatch.setattr(sp, "_pick_backend", lambda backend: "cli")
+        monkeypatch.setattr(sp, "_llm_cli", lambda text, model: replies["raw"])
+        return replies
+
+    def test_llm_fills_what_the_rules_missed(self, stub):
+        stub["raw"] = '{"target_boost_db": 9, "power_w_max": 0.012}'
+        r = parse_spec_verbose("9 dB boost and keep it frugal, 12 mW-ish")
+        assert r.sources["target_boost_db"] == "both"
+        assert r.recognised["power_w_max"] == pytest.approx(0.012)
+        assert r.llm_backend == "cli"
+        assert r.source == "heuristic+cli"
+
+    def test_disagreement_keeps_the_rule_and_reports_it(self, stub):
+        stub["raw"] = '```json\n{"channel_loss_db": 41}\n```'
+        r = parse_spec_verbose("9 dB boost over a 14 dB channel")
+        assert r.recognised["channel_loss_db"] == pytest.approx(14.0)
+        assert r.conflicts["channel_loss_db"] == {"heuristic": 14.0, "llm": 41.0}
+
+    def test_llm_cannot_add_unknown_or_implausible_fields(self, stub):
+        stub["raw"] = '{"target_boost_db": 9000, "favourite_colour": "blue", "vdd_nominal": 1.8}'
+        r = parse_spec_verbose("nothing readable here really")
+        assert "favourite_colour" not in r.recognised
+        assert "target_boost_db" not in r.recognised
+        assert r.recognised["vdd_nominal"] == pytest.approx(1.8)
+        assert any("target_boost_db" in w for w in r.warnings)
+
+    def test_llm_failure_leaves_the_rules_standing(self, monkeypatch):
+        monkeypatch.setattr(sp, "_pick_backend", lambda backend: "cli")
+
+        def boom(text, model):
+            raise RuntimeError("claude CLI exit 1: not logged in")
+        monkeypatch.setattr(sp, "_llm_cli", boom)
+        r = parse_spec_verbose("9 dB boost")
+        assert r.recognised == pytest.approx({"target_boost_db": 9.0})
+        assert r.llm_backend is None
+        assert any("unavailable" in w for w in r.warnings)
+
+    def test_llm_assumption_is_kept_only_for_its_field(self, stub):
+        stub["raw"] = ('{"target_boost_db": 9, "_assumptions": {"target_boost_db": '
+                       '"read gain as peaking", "channel_loss_db": "made up"}}')
+        r = parse_spec_verbose("9 dB gain")
+        assert "channel_loss_db" not in r.assumptions
+        # the rules already declared this one; the model does not overwrite it
+        assert "dc gain" in r.assumptions["target_boost_db"].lower()
+
+    def test_empty_object_means_nothing(self, stub):
+        stub["raw"] = "{}"
+        r = parse_spec_verbose("hello how are you")
+        assert not r.understood
+
+
+class TestJsonExtraction:
+    @pytest.mark.parametrize("raw,want", [
+        ('{"a": 1}', {"a": 1}),
+        ('Sure! ```json\n{"a": 1}\n```', {"a": 1}),
+        ('{ok: true}', {"ok": True}),
+        ('[1, 2]', None),
+        ('no json here', None),
+        ('', None),
+    ])
+    def test_extract(self, raw, want):
+        assert sp._extract_json(raw) == want

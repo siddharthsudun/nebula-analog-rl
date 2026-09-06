@@ -210,7 +210,7 @@ def render(dv: DesignVars, *, title: str = "Delivered CTLE",
     g.append(_wire((mid + 5, DEG_Y + 42), (XR, DEG_Y + 42), (XR, DEG_Y)))
     g.append(_cap(mid, DEG_Y + 42, "Cs", _eng(dv.cs, "F"), accent=True, horizontal=True))
     g.append(f'<text x="{mid}" y="{DEG_Y + 92}" class="hint" text-anchor="middle">'
-             f'Rs·Cs zero → HF peaking</text>')
+             f'Rs·Cs zero sets the HF peaking</text>')
 
     # ---- tail current mirror -----------------------------------------------------------
     mir_lbl = f"W = {wb_um:.2f} um x {fingers}   L = {MIRROR_L_UM:g} um"
@@ -335,7 +335,7 @@ def render_delivered(path: str = "results/delivered_circuit.json") -> str:
         t=spec.get("target_boost_db", float("nan")),
         c=spec.get("channel_loss_db", float("nan")),
         n=d.get("provenance", {}).get("total_evals", "?"))
-    return render(dv, title="Delivered CTLE — SILQ", subtitle=sub)
+    return render(dv, title="Delivered CTLE, SILQ", subtitle=sub)
 
 
 def main() -> None:

@@ -62,19 +62,19 @@ DESIGN_FIELDS: list[tuple[str, str, float, int, float]] = [
 CURATED: dict[str, dict[str, str]] = {
     "delivered_circuit.json": {
         "label": "Delivered circuit (flagship)",
-        "blurb": "The final PPO → G3.2 design, independently re-verified across "
-                 "all 45 PVT corners (5 process × 3 VDD × 3 temperature).",
+        "blurb": "The final PPO to G3.2 design, independently re-verified across "
+                 "all 45 PVT corners (5 process x 3 VDD x 3 temperature).",
     },
     "pass_vs_valid.json": {
-        "label": "Pass vs. valid — the 86% finding",
+        "label": "Pass vs. valid: the 86% finding",
         "blurb": "Of 28 designs that passed all 8 hard specs under CMA-ES, 24 (86%) "
-                 "were rejected by the guard layer — mostly for not actually "
+                 "were rejected by the guard layer, mostly for not actually "
                  "being amplifiers.",
     },
     "target_tracking_clean40k.json": {
         "label": "Target tracking (retargeting correlation)",
         "blurb": "Does the achieved boost track the boost that was REQUESTED, or "
-                 "just land anywhere in the legal 3–12 dB range? Correlation "
+                 "just land anywhere in the legal 3 to 12 dB range? Correlation "
                  "across 26 held-out specs.",
     },
     "g32_selfcal_bench.json": {
@@ -208,7 +208,8 @@ ERROR_CODES: dict[str, int] = {
 }
 
 
-def _api_error(status: int, code: str, title: str, detail: str, hint: str) -> JSONResponse:
+def _api_error(status: int, code: str, title: str, detail: str, hint: str,
+               extra: dict | None = None) -> JSONResponse:
     number = ERROR_CODES.get(code, 500)
     return JSONResponse(status_code=status, content={
         "error_code": code, "error_number": number,
@@ -216,6 +217,7 @@ def _api_error(status: int, code: str, title: str, detail: str, hint: str) -> JS
         # report -- shows the same string rather than each one inventing a format.
         "label": f"Error {number}",
         "title": title, "detail": detail, "hint": hint,
+        **(extra or {}),
     })
 
 
@@ -318,7 +320,7 @@ def guard_presets():
     if delivered:
         presets.append({
             "id": "delivered", "label": "Delivered circuit",
-            "description": "The flagship PPO → G3.2 design from "
+            "description": "The flagship PPO to G3.2 design from "
                            "results/delivered_circuit.json",
             "fields": _human_fields(delivered["design"]),
         })
@@ -332,14 +334,14 @@ def guard_presets():
             presets.append({
                 "id": "dc_attenuator", "label": "Passed spec, DC attenuator",
                 "description": "One of the 24/28 designs from results/pass_vs_valid.json "
-                               "that passed all 8 hard specs and was still rejected "
-                               "— here for negative DC gain.",
+                               "that passed all 8 hard specs and was still rejected, "
+                               "here for negative DC gain.",
                 "fields": _human_fields(by_reason["T4.10_dc_gain_implausible"]["design"]),
             })
         if "T2.5_mosfet_not_in_saturation" in by_reason:
             presets.append({
                 "id": "out_of_saturation", "label": "Passed spec, out of saturation",
-                "description": "Another of that same 24/28 — here for the input "
+                "description": "Another of that same 24/28, here for the input "
                                "pair leaving saturation.",
                 "fields": _human_fields(by_reason["T2.5_mosfet_not_in_saturation"]["design"]),
             })
@@ -548,23 +550,47 @@ class PipelineRunRequest(BaseModel):
     channel_loss_db: float = DEFAULT_SPEC.channel_loss_db
     spec_index: int = 0
     allow_fallback: bool = False
-    mode: str = "default"
-    mode: str = "default"
+    mode: str = "auto"
+    #: Acceptance constraints in the Spec's own SI units (watts, volts), keyed by the
+    #: fields in eqrl.pipeline.REQUIREMENT_FIELDS. Null or absent means the competition
+    #: default. See that constant for what setting one does and does not change.
+    requirements: dict[str, float | None] | None = None
 
 
 class ParseSpecRequest(BaseModel):
     text: str
+    #: "auto" (default), "api", "cli" or "off". "off" is the instant keyword-only read the
+    #: dashboard uses while the user is still typing; "auto" adds the LLM second reader.
+    backend: str = "auto"
 
 
-#: The two modes the dashboard offers, in display order. Fastest is the landing choice --
-#: it is the one that answers in seconds -- and Thinking is the one to escalate to.
+#: The modes the dashboard offers, in display order. Auto is the landing choice: the fast
+#: corpus-seeded search, escalating to Thinking only on the specs it does not verify.
 #: `MODES` (eqrl.pipeline) stays wider; see the comment in `pipeline_defaults` for why
 #: "default" survives in the API but not in the UI.
-UI_MODES = ("fastest", "thinking")
+UI_MODES = ("auto", "fastest", "thinking")
+
+MODE_COPY = {
+    "auto": {"label": "Auto", "tagline": "Fast first, Thinking only if needed",
+             "detail": "Runs the corpus-seeded fast search and verifies it. If the "
+                       "verification does not pass, the same request is re-run in "
+                       "Thinking with independent restarts. Both attempts are reported."},
+    "fastest": {"label": "Fastest", "tagline": "One corpus seed, three solver steps",
+                "detail": "Stage 1 is a lookup in the frozen corpus instead of a PPO "
+                          "rollout, followed by the unmodified G3.2 solver on a budget of "
+                          "three. Answers in seconds; solves 22 of 32 held-out specs."},
+    "thinking": {"label": "Thinking", "tagline": "Up to eight restarts, budget 25",
+                 "detail": "Up to eight independent PPO rollouts, each closed by G3.2 "
+                           "with a larger budget and a 0.01 dB stop, then corpus-proposed "
+                           "restarts if none reached target. Solves 30 of 32."},
+}
 
 
 @app.get("/api/pipeline/defaults")
 def pipeline_defaults():
+    from eqrl.llm.spec_parser import LABELS, UNITS
+    from eqrl.pipeline import REQUIREMENT_FIELDS
+
     return {
         "target_boost_db": DEFAULT_SPEC.target_boost_db,
         "boost_db_min": DEFAULT_SPEC.boost_db_min,
@@ -573,6 +599,18 @@ def pipeline_defaults():
         "boost_tol_db": DEFAULT_SPEC.boost_tol_db,
         "statuses": {"solved": SOLVED, "closed_not_verified": CLOSED_NOT_VERIFIED,
                      "unsolved": UNSOLVED, "fallback": FALLBACK},
+        # The acceptance constraints a user may set, with the competition default for
+        # each in display units, so the UI can offer them without hardcoding a table.
+        "requirements": [
+            {"field": k, "label": LABELS.get(k, k), "unit": UNITS[k][0],
+             "default": getattr(DEFAULT_SPEC, k),
+             "default_disp": getattr(DEFAULT_SPEC, k) * UNITS[k][1],
+             "scale": UNITS[k][1],
+             "kind": "max" if k.endswith("_max") or k in ("boost_db_max",
+                                                           "peak_freq_hi_ghz")
+                     else "min"}
+            for k in REQUIREMENT_FIELDS],
+        "mode_copy": MODE_COPY,
         # What the UI OFFERS is deliberately narrower than what the API ACCEPTS.
         # `MODES` still carries "default" and "retarget" and `/api/pipeline/run` still
         # takes them -- "default" in particular is the arm every measured claim in this
@@ -583,7 +621,7 @@ def pipeline_defaults():
         # product should not lead with that.
         "modes": list(UI_MODES),
         "all_modes": list(MODES),
-        "default_mode": "fastest",
+        "default_mode": "auto",
     }
 
 
@@ -597,12 +635,15 @@ def pipeline_parse_spec(req: ParseSpecRequest):
     producing -- a fabricated interpretation. So this reports what was actually
     recognised and 422s when that is empty.
     """
-    from eqrl.llm.spec_parser import parse_spec_verbose
+    from eqrl.llm.spec_parser import BACKENDS, LABELS, UNITS, parse_spec_verbose
+    from eqrl.pipeline import REQUIREMENT_FIELDS, _TIGHTER_IS_LOWER
 
-    from eqrl.llm.spec_parser import UNITS
-
+    if req.backend not in BACKENDS:
+        return _api_error(422, "invalid_request", f'"{req.backend}" is not a parser backend',
+                          f"backend must be one of {', '.join(BACKENDS)}.",
+                          "Use \"auto\" unless you are testing the readers separately.")
     try:
-        r = parse_spec_verbose(req.text)
+        r = parse_spec_verbose(req.text, backend=req.backend)
     except Exception as e:
         return _unexpected_error(e)
 
@@ -611,59 +652,90 @@ def pipeline_parse_spec(req: ParseSpecRequest):
         # tool; the same sentence with the user's own words in it reads as a fact about
         # that input, and is the difference between a confusing refusal and an obvious one.
         typed = req.text.strip()
-        quoted = f'"{typed[:60]}{"…" if len(typed) > 60 else ""}"' if typed else "an empty request"
-        reader = ("The keyword reader" if r.source == "heuristic"
-                  else f"The {r.source} reader")
+        quoted = (f'"{typed[:60]}{"..." if len(typed) > 60 else ""}"' if typed
+                  else "an empty request")
+        reader = ("The keyword reader found no" if r.llm_backend is None
+                  else "Neither the keyword reader nor the Claude reader found a")
         return _api_error(
             422, "spec_not_understood", f"{quoted} is not a design spec",
-            f"{reader} found no target boost, channel loss, or any other spec field in "
-            f"{quoted}. No target was inferred, and both sliders were left where they were.",
-            "Give it a number and a unit -- e.g. \"PCIe Gen2 CTLE, ~9 dB boost over a "
-            "12 dB channel, under 12 mW\".")
+            f"{reader} target boost, channel loss, or any other spec field in "
+            f"{quoted}. No target was inferred, and the sliders were left where they were.",
+            "Give it a number and a unit, for example \"PCIe Gen2 CTLE, ~9 dB boost over a "
+            "12 dB channel, under 12 mW\".",
+            extra={"warnings": r.warnings, "source": r.source,
+                   "llm_backend": r.llm_backend, "llm_ms": r.llm_ms})
 
-    # Which parsed fields actually steer this run. `pipeline.design()` takes exactly two
-    # arguments; every other spec field is enforced by hard_pass/the guard at its
-    # DEFAULT_SPEC value, which this entry point cannot override. Reporting all thirteen
-    # as "parsed" without that distinction would be the same lie as inventing a target:
-    # the user would read a 5 mW power line back and assume the search honoured it.
-    APPLIED = {"target_boost_db", "channel_loss_db"}
+    # Which parsed fields steer or score this run. The target and channel steer the
+    # search; the REQUIREMENT_FIELDS are acceptance constraints the verification scores
+    # against (eqrl.pipeline.design(requirements=...)). Everything else (data rate,
+    # supply, Nyquist) is fixed by the simulated environment and is reported as a
+    # directional conflict so the user sees what the run cannot honour.
+    STEERS = {"target_boost_db", "channel_loss_db"}
+    SCORES = set(REQUIREMENT_FIELDS)
     rows = []
+    requirements = {}
     for key in sorted(r.recognised):
         asked = r.recognised[key]
-        run_value = asked if key in APPLIED else getattr(DEFAULT_SPEC, key, None)
+        applied = key in STEERS or key in SCORES
+        default = getattr(DEFAULT_SPEC, key, None)
+        run_value = asked if applied else default
         unit, scale = UNITS.get(key, ("", 1.0))
+        direction = None
+        if key in SCORES and default is not None and abs(asked - default) > 1e-12:
+            lower = asked < default
+            direction = "tighter" if lower == (key in _TIGHTER_IS_LOWER) else "looser"
+            requirements[key] = asked
+        conflict = (not applied and run_value is not None
+                    and abs(float(run_value) - float(asked)) > 1e-12)
         rows.append({
             "field": key,
+            "label": LABELS.get(key, key),
             "unit": unit,
             # `asked`/`run_value` stay in the Spec's own SI units; `*_disp` are the same
             # numbers scaled for the unit label, so no interface has to know that power
             # is stored in watts but shown in milliwatts.
             "asked": asked,
             "asked_disp": asked * scale,
-            "applied": key in APPLIED,
+            "applied": applied,
+            "role": ("steers" if key in STEERS else "scores" if key in SCORES
+                     else "fixed"),
             "run_value": run_value,
             "run_disp": None if run_value is None else run_value * scale,
+            "default_disp": None if default is None else default * scale,
+            # "tighter"/"looser" than the competition default, for a scoring field.
+            "direction": direction,
             # A field the run cannot honour AND whose default disagrees with what was
-            # asked for. This is the only case where the delivered circuit is scored
-            # against something other than the request.
-            "conflict": key not in APPLIED and run_value is not None
-                        and abs(float(run_value) - float(asked)) > 1e-12,
+            # asked for. Directional: the message says which way the run differs.
+            "conflict": conflict,
+            "conflict_note": (None if not conflict else
+                              f"The simulated environment fixes {LABELS.get(key, key)} "
+                              f"at {run_value * scale:g} {unit}; you asked for "
+                              f"{asked * scale:g} {unit}. The run will be scored at "
+                              f"{run_value * scale:g} {unit}."),
             # Set when this field came from an ambiguous word and the parser had to
             # choose a referent -- "gain" is peaking here, but it could have meant the
             # DC gain. The choice is shown so the user can correct it; a reading the
             # user cannot see is indistinguishable from an invented one.
             "assumption": r.assumptions.get(key),
+            "source": r.sources.get(key, "heuristic"),
+            "conflict_llm": r.conflicts.get(key),
         })
     return {
         "target_boost_db": r.spec.target_boost_db,
         "channel_loss_db": r.spec.channel_loss_db,
         "recognised": sorted(r.recognised),
         "fields": rows,
+        "requirements": requirements,
         "source": r.source,
+        "llm_backend": r.llm_backend,
+        "llm_ms": r.llm_ms,
         "assumptions": r.assumptions,
-        "applied_note": ("pipeline.design() is frozen to two inputs: target boost and "
-                        "channel loss. Every other constraint is enforced at the "
-                        "benchmarked default, not at the value you gave."),
+        "conflicts": r.conflicts,
+        "warnings": r.warnings,
+        "applied_note": ("Target boost and channel loss steer the search. Power, noise, "
+                         "HD3, area, eye and peak-band limits are scored at verification "
+                         "against the values you gave. Data rate and supply are fixed by "
+                         "the simulated environment."),
     }
 
 
@@ -703,10 +775,14 @@ def _narrating():
 
     orig_load, orig_s1 = fc.load_policy, fc.stage1_rollout
     orig_g32, orig_make = fc.g32_solve, fc.Evaluation.make_eval
-    orig_verify = pl.verify
+    orig_verify, orig_notify = pl.verify, pl.notify
 
     cur = {"stage": "load"}
     n = {"sim": 0, "valid": 0}
+
+    def notify(stage, text):
+        cur["stage"] = stage
+        _emit(stage, text, kind="stage")
 
     def load_policy(*a, **kw):
         _emit("load", "Loading the frozen PPO checkpoint and building the CTLE "
@@ -726,22 +802,35 @@ def _narrating():
             if rec is None:
                 # The interesting half of the story: the guard layer throwing away a
                 # proposal that SPICE was perfectly happy to simulate.
-                _emit(cur["stage"], f"Circuit {i} — rejected by the guard layer: {reason}",
-                      kind="candidate", ok=False)
+                _emit(cur["stage"], f"Circuit {i}: rejected by the guard layer, {reason}",
+                      kind="candidate", ok=False, design=rec_design(x))
             else:
                 n["valid"] += 1
                 fails = rec.get("failing") or []
-                verdict = ("passes all 8 hard specs" if not fails
+                verdict = ("passes all hard specs" if not fails
                            else "fails " + ", ".join(fails))
                 _emit(cur["stage"],
-                      f"Circuit {i} — {rec['boost_db']:.2f} dB boost, {verdict}",
-                      kind="candidate", ok=True, boost=float(rec["boost_db"]))
+                      f"Circuit {i}: {rec['boost_db']:.2f} dB boost, {verdict}",
+                      kind="candidate", ok=True, boost=float(rec["boost_db"]),
+                      dc_gain=float(rec.get("dc_gain_db", 0.0)),
+                      peak_ghz=float(rec.get("peak_freq_ghz", 0.0)),
+                      design=rec.get("design"))
             return rec, score, reason
         return evaluate
 
+    def rec_design(x):
+        """The design a rejected proposal WOULD have been, for the live schematic."""
+        try:
+            from eqrl.circuits.ctle import decode_action
+            import dataclasses as _dc
+            import numpy as _np
+            return _dc.asdict(decode_action(_np.asarray(x)))
+        except Exception:
+            return None
+
     def stage1_rollout(*a, **kw):
         cur["stage"] = "search"
-        _emit("search", "Stage 1 — PPO search. The trained policy proposes complete "
+        _emit("search", "Stage 1, PPO search. The trained policy proposes complete "
                         "circuits one at a time; each is simulated in SKY130 and screened "
                         "by the guard layer.", kind="stage")
         out = orig_s1(*a, **kw)
@@ -752,7 +841,7 @@ def _narrating():
     def g32_solve(*a, **kw):
         cur["stage"] = "refine"
         before = n["sim"]
-        _emit("refine", "Stage 2 — G3.2 refinement. A constrained solver walks the best "
+        _emit("refine", "Stage 2, G3.2 refinement. A constrained solver walks the best "
                         "circuit onto your exact target, and is not allowed to leave the "
                         "guard-valid region to get there.", kind="stage")
         out = orig_g32(*a, **kw)
@@ -762,7 +851,7 @@ def _narrating():
 
     def verify(dv, spec):
         cur["stage"] = "verify"
-        _emit("verify", "Stage 3 — independent verification. The delivered design is "
+        _emit("verify", "Stage 3, independent verification. The delivered design is "
                         "re-simulated from scratch and scored against all ten hard specs.",
               kind="stage")
         v = orig_verify(dv, spec)
@@ -780,7 +869,7 @@ def _narrating():
 
     fc.load_policy, fc.stage1_rollout = load_policy, stage1_rollout
     fc.g32_solve, fc.Evaluation.make_eval = g32_solve, make_eval
-    pl.verify = verify
+    pl.verify, pl.notify = verify, notify
     try:
         yield
     finally:
@@ -789,7 +878,7 @@ def _narrating():
         # them, or every later run in this process narrates through a dead closure.
         fc.load_policy, fc.stage1_rollout = orig_load, orig_s1
         fc.g32_solve, fc.Evaluation.make_eval = orig_g32, orig_make
-        pl.verify = orig_verify
+        pl.verify, pl.notify = orig_verify, orig_notify
 
 
 @app.get("/api/pipeline/progress")
@@ -855,7 +944,12 @@ def pipeline_run(req: PipelineRunRequest):
                 result = design(req.target_boost_db, req.channel_loss_db,
                                 spec_index=req.spec_index,
                                 allow_fallback=req.allow_fallback,
-                                mode=req.mode)
+                                mode=req.mode,
+                                requirements=req.requirements)
+        except ValueError as e:
+            return _api_error(422, "invalid_request", "Request rejected", str(e),
+                              "Check the requirement field names against "
+                              "GET /api/pipeline/defaults.")
         except SearchHalted as e:   # BaseException -- must be caught explicitly, first
             _emit(_run_state["stage"] or "search",
                   f"Halted by a tier-5 search-integrity guard: {e.check.value}",

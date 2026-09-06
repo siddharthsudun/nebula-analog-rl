@@ -1,22 +1,25 @@
-// SILQ Dashboard -- vanilla JS, no framework, no build step. Talks to server.py's
-// JSON API, which wraps the same eqrl functions eqrl.solve and the benchmarks use.
+// silQ dashboard. Vanilla JS, no build step. Talks to server.py's JSON API, which wraps
+// the same eqrl functions the CLI and the benchmarks use.
 //
-// Page shape: one scrolling column, Live Pipeline first (it is the product). Guard
-// Layer, Results Explorer and the benchmark record are relocated -- not rewritten --
-// into collapsed developer tools at the bottom; their functions below are otherwise
-// unchanged from when they lived in their own sidebar views.
+// Shape of the page: an intro splash, then one product surface (Design) whose spine is
+// "type to circuit": the composer at the top reads the request as it is typed, the spec
+// panel shows what will steer and score the run, and the stage on the right always shows
+// a circuit, its sizing and one headline number. During a run the stage redraws with every
+// simulated candidate. The Lab view keeps the guard sandbox, results explorer and benchmark
+// record.
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const ICONS = {
-  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
-  cross: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
-  dash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>',
-  checkCircle: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.3 2.3 5-5.3"/></svg>',
-  xCircle: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
-  alertTriangle: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l9 15H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.4" fill="currentColor"/></svg>',
-  info: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><circle cx="12" cy="8.3" r="0.4" fill="currentColor"/></svg>',
+  check: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  cross: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  dash: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  checkCircle: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.3 2.3 5-5.3"/></svg>',
+  xCircle: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
+  alertTriangle: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l9 15H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.4" fill="currentColor"/></svg>',
+  info: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><circle cx="12" cy="8.3" r="0.4" fill="currentColor"/></svg>',
+  spark: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
 };
 
 function el(tag, attrs = {}, html) {
@@ -30,36 +33,41 @@ function el(tag, attrs = {}, html) {
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]));
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 function fmt(v, decimals = 2) {
-  if (v === null || v === undefined || Number.isNaN(Number(v))) return "—";
+  if (v === null || v === undefined || Number.isNaN(Number(v))) return "n/a";
   return Number(v).toFixed(decimals);
 }
 
-// Fetch wrapper that never swallows a failure into a blank panel. Two error shapes are
-// understood: the new structured one the backend is being upgraded to emit --
-// {"error_code","title","detail","hint"} -- and plain FastAPI {"detail": "..."}. Either
-// way the thrown Error carries enough for the caller to render something honest; when
-// the body is neither shape (or isn't JSON at all) the raw HTTP status and body text are
-// kept so nothing renders as "[object Object]" or silently disappears.
+const urlFlags = new URLSearchParams(location.search);
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches || urlFlags.has("nomotion");
+const hasGsap = typeof gsap !== "undefined" && !reducedMotion;
+
+// Entrance tweens start from opacity 0. If the animation frame loop stalls (background
+// tab, throttled renderer, a GSAP failure), nothing readable may ever appear, so every
+// entrance also arms a timer that strips the inline styles regardless.
+function animateIn(targets, vars, delayMs = 0) {
+  if (!hasGsap) return;
+  const nodes = typeof targets === "string" ? $$(targets) : targets;
+  if (!nodes || !nodes.length) return;
+  gsap.from(nodes, { ...vars, clearProps: "all" });
+  setTimeout(() => gsap.set(nodes, { clearProps: "all" }), delayMs + 2500);
+}
+
+// Fetch wrapper that never swallows a failure into a blank panel. Understands the
+// structured error shape {"error_code","title","detail","hint"} and plain FastAPI
+// {"detail": ...}; either way the thrown Error carries enough to render something honest.
 async function api(path, opts) {
   let res;
   try {
     res = await fetch(path, opts);
   } catch (netErr) {
-    // fetch only rejects when the request never reached a server. Left alone this
-    // surfaces as "Failed to fetch", which tells a first-time reader nothing -- and it
-    // is the single most likely failure here, because a long pipeline run outlives an
-    // impatient Ctrl-C in the terminal the server was started from.
-    const err = new Error("Cannot reach the SILQ server");
-    err.title = "Cannot reach the SILQ server";
+    const err = new Error("Cannot reach the silQ server");
+    err.title = "Cannot reach the silQ server";
     err.detail = `The browser could not open a connection to ${location.host} (${netErr.message}). The server process is most likely stopped.`;
-    err.hint = "Restart it from the repo root with: python -m uvicorn server:app --port "
-             + (location.port || "8000") + "   then reload this page.";
+    err.hint = "Restart it from the repo root with: python -m uvicorn server:app --port " + (location.port || "8000") + "   then reload this page.";
     err.errorCode = "server_unreachable";
     throw err;
   }
@@ -67,28 +75,17 @@ async function api(path, opts) {
     const text = await res.text().catch(() => "");
     let parsed = null;
     try { parsed = JSON.parse(text); } catch { /* not JSON */ }
-
     if (parsed && typeof parsed === "object" && (parsed.title || parsed.error_code)) {
       const err = new Error(parsed.title || parsed.detail || `${res.status} ${res.statusText}`);
-      err.title = parsed.title || null;
-      err.detail = parsed.detail || null;
-      err.hint = parsed.hint || null;
-      err.errorCode = parsed.error_code || null;
-      err.label = parsed.label || null;      // "Error 101" -- quotable, stable, searchable
-      err.status = res.status;
+      Object.assign(err, { title: parsed.title || null, detail: parsed.detail || null, hint: parsed.hint || null,
+        errorCode: parsed.error_code || null, label: parsed.label || null, status: res.status, extra: parsed });
       throw err;
     }
-    // FastAPI's own request validation puts a LIST in `detail` -- one object per bad
-    // field -- so the string test below would miss it and dump raw JSON into the banner.
-    // Flatten it to "body.target_boost_db: <msg>" lines instead.
     if (parsed && Array.isArray(parsed.detail)) {
-      const lines = parsed.detail.map((d) =>
-        `${(d.loc || []).join(".")}: ${d.msg || "invalid"}`).join("; ");
+      const lines = parsed.detail.map((d) => `${(d.loc || []).join(".")}: ${d.msg || "invalid"}`).join("; ");
       const err = new Error(lines);
-      err.title = "The server rejected these values";
-      err.detail = lines;
-      err.hint = "This is a malformed request rather than a design failure -- reload the page and try again.";
-      err.status = res.status;
+      Object.assign(err, { title: "The server rejected these values", detail: lines,
+        hint: "This is a malformed request rather than a design failure. Reload the page and try again.", status: res.status });
       throw err;
     }
     const plainDetail = parsed && typeof parsed === "object" && typeof parsed.detail === "string" ? parsed.detail : "";
@@ -102,9 +99,6 @@ function postJSON(path, body) {
   return api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 }
 
-// Renders either error shape api() can throw as a proper banner -- title prominent,
-// detail beneath it, hint as the suggested next step -- or falls back to the plain
-// message (which is itself either the server's `detail` string or "<status> <text>").
 function errorBannerHtml(err, fallbackTitle) {
   if (err && err.title) {
     const label = err.label ? `<span class="err-code">${escapeHtml(err.label)}</span>` : "";
@@ -116,16 +110,6 @@ function errorBannerHtml(err, fallbackTitle) {
   }
   const msg = (err && err.message) ? err.message : "unknown error";
   return banner("danger", "xCircle", `${escapeHtml(fallbackTitle || "Request failed")}: ${escapeHtml(msg)}`);
-}
-
-function bindRangeFill(input) {
-  const update = () => {
-    const min = Number(input.min) || 0, max = Number(input.max) || 100, val = Number(input.value);
-    const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-    input.style.setProperty("--pct", `${pct}%`);
-  };
-  input.addEventListener("input", update);
-  update();
 }
 
 function banner(kind, iconName, html) {
@@ -143,49 +127,116 @@ function kpiGrid(items) {
 
 function toast(message, ok) {
   let wrap = $(".toast-container");
-  if (!wrap) {
-    wrap = el("div", { class: "toast-container" });
-    document.body.appendChild(wrap);
-  }
-  const t = el("div", { class: `toast ${ok ? "ok" : "fail"}` },
-    `${ICONS[ok ? "check" : "cross"]}<span>${escapeHtml(message)}</span>`);
+  if (!wrap) { wrap = el("div", { class: "toast-container" }); document.body.appendChild(wrap); }
+  const t = el("div", { class: `toast ${ok ? "ok" : "fail"}` }, `${ICONS[ok ? "check" : "cross"]}<span>${escapeHtml(message)}</span>`);
   wrap.appendChild(t);
-  setTimeout(() => {
-    t.style.transition = "opacity 0.25s";
-    t.style.opacity = "0";
-    setTimeout(() => t.remove(), 260);
-  }, 3600);
+  setTimeout(() => { t.style.transition = "opacity 0.25s"; t.style.opacity = "0"; setTimeout(() => t.remove(), 260); }, 3800);
 }
 
-// -- Health pill ----------------------------------------------------------------------
-// GET /api/health -- {ready, warming, error, policy, detail} -- backed by a background
-// warm-up thread that loads the SKY130 device models and the frozen policy at server
-// startup (server.py's `_warm_up`/`_startup`). Its own docstring says it is meant to be
-// polled, so this polls every 2s until it reaches a terminal state (ready or error)
-// rather than reading it once and leaving the pill stuck on "warming" for the ~20s the
-// real warm-up takes. If the endpoint is missing entirely (404) or errors outright, this
-// falls back to the old reachability probe (GET /api/pipeline/defaults) so the pill still
-// resolves to a terminal state instead of being stuck on "checking..." forever.
+function bindRangeFill(input) {
+  const update = () => {
+    const min = Number(input.min) || 0, max = Number(input.max) || 100, val = Number(input.value);
+    input.style.setProperty("--pct", `${max > min ? ((val - min) / (max - min)) * 100 : 0}%`);
+  };
+  input.addEventListener("input", update);
+  update();
+  return update;
+}
+
+function downloadText(name, text, type = "text/plain") {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = el("a", { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// -- Intro ----------------------------------------------------------------------------
+
+let heroPlayed = false;
+function playHeroEntrance() {
+  if (heroPlayed) return;
+  heroPlayed = true;
+  const v = $("#hero-video");
+  if (v && !reducedMotion) v.play().catch(() => {});
+  animateIn(".hero-inner > *", { y: 18, opacity: 0, stagger: 0.07, duration: 0.75, ease: "power3.out" });
+  animateIn(".spec-panel .panel, .stage-card", { y: 14, opacity: 0, stagger: 0.06, duration: 0.6, delay: 0.25, ease: "power2.out" }, 250);
+}
+
+function runIntro(force = false) {
+  const intro = $("#intro"), video = $("#intro-video"), lockup = $("#intro-lockup"), bar = $("#intro-bar");
+  let seen = false;
+  try { seen = sessionStorage.getItem("silq_intro") === "1"; } catch { /* storage blocked */ }
+  if ((seen && !force) || (reducedMotion && !force) || (urlFlags.has("nointro") && !force)) { intro.hidden = true; playHeroEntrance(); return; }
+
+  intro.hidden = false;
+  intro.classList.remove("leaving", "masked");
+  lockup.style.opacity = "0";
+  bar.style.transition = "none"; bar.style.width = "0%";
+  let finished = false;
+  const timers = [];
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    timers.forEach(clearTimeout);
+    try { sessionStorage.setItem("silq_intro", "1"); } catch { /* storage blocked */ }
+    intro.classList.add("leaving");
+    setTimeout(() => { intro.hidden = true; video.pause(); intro.classList.remove("masked"); }, 720);
+    playHeroEntrance();
+  };
+  // Timeline: the clip runs clean for ~2.3 s (signal traces, the curve forming), then the
+  // mask rises and the HTML lockup carries "silQ, built for Astera Labs" to the end.
+  const DURATION = 5200, MASK_AT = 2300, LOCKUP_AT = 2600;
+  requestAnimationFrame(() => { bar.style.transition = `width ${DURATION}ms linear`; bar.style.width = "100%"; });
+  timers.push(setTimeout(() => intro.classList.add("masked"), MASK_AT));
+  if (hasGsap) {
+    gsap.fromTo(lockup, { opacity: 0, y: 16, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 1.0, delay: LOCKUP_AT / 1000, ease: "power3.out" });
+  }
+  timers.push(setTimeout(() => { lockup.style.transition = "opacity 0.9s ease"; lockup.style.opacity = "1"; }, LOCKUP_AT + (hasGsap ? 1200 : 0)));
+  video.currentTime = 0;
+  video.play().catch(() => { /* autoplay blocked: the lockup still carries the intro */ });
+  video.onended = finish;
+  setTimeout(finish, DURATION + 300);
+  $("#intro-skip").onclick = finish;
+}
+
+// -- Theme, views, health -------------------------------------------------------------
+
+function initTheme() {
+  $("#theme-toggle").addEventListener("click", () => {
+    const root = document.documentElement;
+    const light = root.getAttribute("data-theme") === "light";
+    if (light) root.removeAttribute("data-theme"); else root.setAttribute("data-theme", "light");
+    try { localStorage.setItem("silq_theme", light ? "dark" : "light"); } catch { /* storage blocked */ }
+  });
+}
+
+function showView(name) {
+  $$(".view").forEach((v) => { v.hidden = v.id !== `view-${name}`; });
+  $$(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
+  window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+}
+
+function initViews() {
+  $$(".nav-tab").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
+  $("#brand-link").addEventListener("click", (e) => { e.preventDefault(); showView("design"); });
+  $("#replay-intro").addEventListener("click", () => { heroPlayed = true; runIntro(true); });
+  if (urlFlags.get("view") === "lab") showView("lab");
+}
 
 function setHealthPill(state, text) {
-  const dot = $("#health-dot"), label = $("#health-label");
-  dot.className = `status-dot ${state}`;
-  label.textContent = text;
+  $("#health-dot").className = `status-dot ${state}`;
+  $("#health-label").textContent = text;
 }
-
-// Warm-up and a live run both drive the one resident, non-reentrant ngspice process
-// (server.py's `_warm_up` now takes `_run_lock` for exactly this reason), so a click
-// during "warming" would just wait behind that lock or bounce off its 409. Disabling the
-// button is the UI half of that fix -- it stops the user from ever needing to see it.
+let serverWarming = true;
 function setRunButtonWarming(warming) {
-  const btn = $("#pipeline-run-btn");
-  if (!btn) return;
-  btn.disabled = warming;
-  btn.title = warming ? "Waiting for the server to finish loading device models…" : "";
+  serverWarming = warming;
+  const btn = $("#run-btn");
+  btn.disabled = warming || running;
+  btn.title = warming ? "Waiting for the server to finish loading device models" : "";
 }
-
-// Returns true when the pill has reached a terminal state (ready or error) and polling
-// should stop; false to keep polling.
 async function checkHealthOnce() {
   try {
     const res = await fetch("/api/health");
@@ -193,75 +244,781 @@ async function checkHealthOnce() {
     if (!res.ok) { setHealthPill("error", `backend error (${res.status})`); return true; }
     const data = await res.json();
     if (data.error) { setHealthPill("error", data.detail || data.error); setRunButtonWarming(false); return true; }
-    if (data.ready === true) { setHealthPill("ready", data.detail || "Ready"); setRunButtonWarming(false); return true; }
-    setHealthPill("warming", data.detail || "Loading device models…");
+    if (data.ready === true) { setHealthPill("ready", "Simulator ready"); $("#health-pill").title = data.detail || ""; setRunButtonWarming(false); return true; }
+    setHealthPill("warming", data.detail || "Loading device models");
     setRunButtonWarming(true);
     return false;
   } catch {
-    try {
-      await api("/api/pipeline/defaults");
-      setHealthPill("ready", "Ready");
-    } catch {
-      setHealthPill("error", "backend unreachable");
-    }
+    try { await api("/api/pipeline/defaults"); setHealthPill("ready", "Ready"); }
+    catch { setHealthPill("error", "backend unreachable"); }
     setRunButtonWarming(false);
     return true;
   }
 }
+function pollHealth() { checkHealthOnce().then((done) => { if (!done) setTimeout(pollHealth, 2000); }); }
 
-function pollHealth() {
-  checkHealthOnce().then((done) => { if (!done) setTimeout(pollHealth, 2000); });
+// -- Spec state -------------------------------------------------------------------------
+
+let defaults = null;
+let selectedMode = "auto";
+let updateTarget, updateChannel;
+const reqInputs = {};     // field -> input element
+
+const PARAM_UNITS = {
+  w_in: { scale: 1e6, unit: "µm", dp: 2 }, l_in: { scale: 1e6, unit: "µm", dp: 3 },
+  i_tail: { scale: 1e6, unit: "µA", dp: 1 }, rs: { scale: 1e-3, unit: "kΩ", dp: 2 },
+  cs: { scale: 1e15, unit: "fF", dp: 1 }, r_load: { scale: 1, unit: "Ω", dp: 0 },
+};
+// server.py DESIGN_FIELDS: human = SI / scale. POST /api/schematic takes human units.
+const DESIGN_FIELD_SCALE = { w_in: 1e-6, l_in: 1e-6, i_tail: 1e-6, rs: 1e3, cs: 1e-15, r_load: 1.0, w_dfe: 1.0 };
+function designToHumanFields(dv) {
+  const out = {};
+  for (const [k, scale] of Object.entries(DESIGN_FIELD_SCALE)) if (dv[k] !== undefined && dv[k] !== null) out[k] = dv[k] / scale;
+  return out;
 }
 
-// -- Guard layer ----------------------------------------------------------------
+// "15", "-30", "0.4", "1.25": the shortest exact decimal form of a display value.
+function compactNum(v) {
+  if (v === null || v === undefined || !Number.isFinite(Number(v))) return "";
+  return String(Math.round(Number(v) * 1e6) / 1e6);
+}
 
-const TIER_NAMES = {
-  1: "Run integrity", 2: "Circuit sanity", 3: "Corner integrity",
-  4: "Physical plausibility", 5: "Search pathology",
+function prettyDisp(v, unit) {
+  if (v === null || v === undefined) return "n/a";
+  const mag = Math.abs(v);
+  const dp = Number.isInteger(v) ? 0 : mag >= 100 ? 0 : mag >= 1 ? 2 : 3;
+  return `${fmt(v, dp)} ${unit}`;
+}
+
+function renderRequirements() {
+  const list = $("#req-list");
+  list.innerHTML = "";
+  for (const r of defaults.requirements) {
+    const row = el("div", { class: "req-row" });
+    row.innerHTML = `<div><div class="req-name">${escapeHtml(r.label)}</div><div class="req-default">${r.kind === "max" ? "at most" : "at least"} ${escapeHtml(prettyDisp(r.default_disp, r.unit))}</div></div>
+      <input type="number" step="any" data-field="${r.field}" placeholder="${escapeHtml(compactNum(r.default_disp))}" aria-label="${escapeHtml(r.label)}" />
+      <div><div class="req-unit">${escapeHtml(r.unit)}</div><div class="req-tag" data-tag="${r.field}"></div></div>`;
+    const input = row.querySelector("input");
+    reqInputs[r.field] = input;
+    input.addEventListener("input", () => refreshRequirementTags());
+    list.appendChild(row);
+  }
+  $("#req-reset").addEventListener("click", () => { Object.values(reqInputs).forEach((i) => { i.value = ""; }); refreshRequirementTags(); });
+}
+
+function requirementDirection(r, valueDisp) {
+  const lowerIsTighter = ["power_w_max", "noise_vrms_max", "hd3_db_max", "area_mm2_max", "boost_db_max", "peak_freq_hi_ghz"].includes(r.field);
+  const lower = valueDisp < r.default_disp;
+  return lower === lowerIsTighter ? "tighter" : "looser";
+}
+
+function refreshRequirementTags() {
+  let changed = 0;
+  for (const r of defaults.requirements) {
+    const input = reqInputs[r.field];
+    const tag = $(`[data-tag="${r.field}"]`);
+    const v = input.value.trim() === "" ? null : Number(input.value);
+    const differs = v !== null && Number.isFinite(v) && Math.abs(v - r.default_disp) > 1e-9;
+    input.classList.toggle("set", differs);
+    if (differs) { changed += 1; const d = requirementDirection(r, v); tag.textContent = d; tag.className = `req-tag ${d}`; }
+    else { tag.textContent = ""; tag.className = "req-tag"; }
+  }
+  $("#req-summary").textContent = changed ? `${changed} limit${changed === 1 ? "" : "s"} changed from the competition spec. The result is scored against both.` : "All at the competition defaults.";
+}
+
+function readRequirements() {
+  const out = {};
+  for (const r of defaults.requirements) {
+    const raw = reqInputs[r.field].value.trim();
+    if (raw === "") continue;
+    const v = Number(raw);
+    if (!Number.isFinite(v) || Math.abs(v - r.default_disp) < 1e-9) continue;
+    out[r.field] = v / r.scale;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function setRequirementSI(field, si) {
+  const r = defaults.requirements.find((q) => q.field === field);
+  if (!r || !reqInputs[field]) return false;
+  const disp = si * r.scale;
+  reqInputs[field].value = String(Math.round(disp * 1e6) / 1e6);
+  return true;
+}
+
+function selectMode(mode) {
+  selectedMode = mode;
+  $$(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  const copy = (defaults.mode_copy || {})[mode] || { tagline: mode, detail: "" };
+  $("#mode-tag").textContent = copy.tagline || "";
+  $("#mode-detail").textContent = copy.detail || "";
+}
+
+function renderModes() {
+  const seg = $("#mode-seg");
+  const modes = defaults.modes && defaults.modes.length ? defaults.modes : ["auto", "fastest", "thinking"];
+  seg.innerHTML = modes.map((m) => `<button type="button" class="mode-btn" data-mode="${escapeHtml(m)}" role="radio">${escapeHtml(((defaults.mode_copy || {})[m] || {}).label || m)}</button>`).join("");
+  $$(".mode-btn").forEach((b) => b.addEventListener("click", () => selectMode(b.dataset.mode)));
+  selectMode(modes.includes(defaults.default_mode) ? defaults.default_mode : modes[0]);
+}
+
+async function initSpec() {
+  defaults = await api("/api/pipeline/defaults");
+  const target = $("#target"), channel = $("#channel");
+  target.min = defaults.boost_db_min; target.max = defaults.boost_db_max; target.value = defaults.target_boost_db;
+  channel.value = defaults.channel_loss_db;
+  const fillT = bindRangeFill(target), fillC = bindRangeFill(channel);
+  updateTarget = () => { $("#target-val").textContent = fmt(target.value, 1); fillT(); };
+  updateChannel = () => { $("#channel-val").textContent = fmt(channel.value, 1); fillC(); };
+  target.addEventListener("input", updateTarget); channel.addEventListener("input", updateChannel);
+  updateTarget(); updateChannel();
+  renderRequirements();
+  refreshRequirementTags();
+  renderModes();
+}
+
+// -- Composer: type to circuit -----------------------------------------------------------
+// Two readers. The keyword reader runs on every keystroke (backend "off": instant, local).
+// The Claude reader runs on request or right before a run (backend "auto"), and the merge
+// of the two is shown per field: which reader found it, where they disagree, what was
+// assumed. Nothing is applied silently: a field lands in the spec panel only when it is
+// shown as a chip.
+
+let parseSeq = 0;
+let lastParse = null;          // last successful parse (any backend)
+let lastParseText = "";
+let llmReadText = null;        // text that has already been read by Claude
+let readingWithClaude = false;
+
+const ROLE_HINT = { steers: "steers the search", scores: "scored at verification", fixed: "fixed by the environment" };
+
+function setReaderBadge(state, label) {
+  const b = $("#reader-badge");
+  b.className = `reader-badge ${state}`;
+  $("#reader-label").textContent = label;
+}
+
+function applyParse(spec) {
+  const target = $("#target"), channel = $("#channel");
+  for (const row of spec.fields || []) {
+    if (row.field === "target_boost_db") { target.value = Math.min(Math.max(row.asked, Number(target.min)), Number(target.max)); updateTarget(); }
+    else if (row.field === "channel_loss_db") { channel.value = Math.min(Math.max(row.asked, Number(channel.min)), Number(channel.max)); updateChannel(); }
+    else if (row.role === "scores") setRequirementSI(row.field, row.asked);
+  }
+  refreshRequirementTags();
+}
+
+function renderChips(spec) {
+  const strip = $("#parse-strip");
+  const rows = spec.fields || [];
+  const chips = rows.map((r) => {
+    const cls = ["chip", r.role, r.conflict ? "conflict" : ""].join(" ");
+    const dir = r.direction ? `<span class="dir ${r.direction}">${r.direction}</span>` : "";
+    const src = r.source === "both" ? "both" : r.source === "llm" ? "llm" : "kw";
+    const srcLabel = r.source === "both" ? "both readers" : r.source === "llm" ? "Claude" : "keyword";
+    const llmAlt = r.conflict_llm && typeof r.conflict_llm.llm === "number"
+      ? ` <button type="button" class="chip-btn" data-use-llm="${r.field}" data-val="${r.conflict_llm.llm}" title="The keyword reader and Claude disagree. Use Claude's ${escapeHtml(prettyDisp(r.conflict_llm.llm * (r.asked_disp / r.asked || 1), r.unit))} instead.">Claude read ${escapeHtml(prettyDisp(r.conflict_llm.llm * (r.asked_disp / r.asked || 1), r.unit))}</button>`
+      : "";
+    return `<span class="${cls}" title="${escapeHtml(ROLE_HINT[r.role] || "")}"><span class="chip-k">${escapeHtml(r.label)}</span><span class="chip-v">${escapeHtml(prettyDisp(r.asked_disp, r.unit))}</span>${dir}<span class="src ${src}">${srcLabel}</span>${llmAlt}</span>`;
+  });
+  const notes = [];
+  for (const r of rows) {
+    if (r.assumption) notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(r.label)}</strong> was read from an ambiguous word: ${escapeHtml(r.assumption)}</div></div>`);
+    if (r.conflict && r.conflict_note) notes.push(`<div class="note info">${ICONS.info}<div>${escapeHtml(r.conflict_note)}</div></div>`);
+    if (r.conflict_llm) notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(r.label)}</strong>: the keyword reader and Claude disagree (${escapeHtml(prettyDisp(r.conflict_llm.heuristic * (r.asked_disp / r.asked || 1), r.unit))} vs ${escapeHtml(prettyDisp(r.conflict_llm.llm * (r.asked_disp / r.asked || 1), r.unit))}). The keyword value is applied; click the chip to use Claude's.</div></div>`);
+  }
+  for (const w of spec.warnings || []) notes.push(`<div class="note warn">${ICONS.info}<div>${escapeHtml(w)}</div></div>`);
+  const reader = spec.llm_backend ? `Claude (${spec.llm_backend}) and the keyword reader` : "keyword reader";
+  const head = `<div class="parse-empty">${reader}: ${rows.length} field${rows.length === 1 ? "" : "s"} recognised. Anything you wrote that is not listed was not understood; anything not listed at all stays at its default.</div>`;
+  strip.innerHTML = `<div class="chips">${chips.join("")}</div>${notes.length ? `<div class="parse-notes">${notes.join("")}</div>` : ""}${head}`;
+  $$("[data-use-llm]", strip).forEach((b) => b.addEventListener("click", () => {
+    const field = b.dataset.useLlm, si = Number(b.dataset.val);
+    if (field === "target_boost_db") { $("#target").value = si; updateTarget(); }
+    else if (field === "channel_loss_db") { $("#channel").value = si; updateChannel(); }
+    else setRequirementSI(field, si);
+    refreshRequirementTags();
+    b.textContent = "using Claude's reading";
+    b.disabled = true;
+    toast(`Applied Claude's reading for ${field}.`, true);
+  }));
+}
+
+function renderParseRefusal(err) {
+  const strip = $("#parse-strip");
+  const title = err.title || "Not understood";
+  strip.innerHTML = `<div class="note bad">${ICONS.xCircle}<div><strong>${escapeHtml(title)}</strong>${err.detail ? ` ${escapeHtml(err.detail)}` : ""}${err.hint ? `<br><em>${escapeHtml(err.hint)}</em>` : ""}</div></div>`;
+}
+
+async function parseNow(text, backend) {
+  const seq = ++parseSeq;
+  if (!text) {
+    lastParse = null; lastParseText = "";
+    $("#parse-strip").innerHTML = `<div class="parse-empty">Start typing. Every quantity the readers recognise appears here, with which reader found it.</div>`;
+    return null;
+  }
+  try {
+    const spec = await postJSON("/api/pipeline/parse-spec", { text, backend });
+    if (seq !== parseSeq && backend === "off") return null;   // a newer keystroke won
+    lastParse = spec; lastParseText = text;
+    if (backend !== "off") llmReadText = text;
+    renderChips(spec);
+    applyParse(spec);
+    if (spec.llm_backend) setReaderBadge("llm", `Claude read it in ${fmt((spec.llm_ms || 0) / 1000, 1)} s`);
+    else if (backend !== "off") setReaderBadge("", "Claude unavailable, keyword reader only");
+    return spec;
+  } catch (err) {
+    if (seq !== parseSeq && backend === "off") return null;
+    lastParse = null; lastParseText = text;
+    if (backend !== "off") llmReadText = text;
+    if (err.status === 422) renderParseRefusal(err);
+    else $("#parse-strip").innerHTML = errorBannerHtml(err, "Reader failed");
+    if (backend !== "off") setReaderBadge("", err.status === 422 ? "not a spec" : "reader error");
+    return null;
+  }
+}
+
+let typeTimer = null;
+function initComposer() {
+  const ta = $("#spec-text");
+  ta.addEventListener("input", () => {
+    clearTimeout(typeTimer);
+    if (llmReadText !== ta.value.trim()) setReaderBadge("", "keyword reader");
+    typeTimer = setTimeout(() => parseNow(ta.value.trim(), "off"), 220);
+  });
+  ta.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runDesign(); }
+  });
+  $$(".example-chip").forEach((b) => b.addEventListener("click", () => {
+    ta.value = b.dataset.text; ta.focus();
+    parseNow(ta.value.trim(), "off");
+    setReaderBadge("", "keyword reader");
+  }));
+  $("#read-btn").addEventListener("click", () => readWithClaude());
+  $("#run-btn").addEventListener("click", () => runDesign());
+}
+
+async function readWithClaude() {
+  const text = $("#spec-text").value.trim();
+  if (!text) { toast("Type a request first.", false); return null; }
+  if (readingWithClaude) return null;
+  readingWithClaude = true;
+  const btn = $("#read-btn");
+  btn.disabled = true;
+  setReaderBadge("busy", "Claude is reading the request");
+  try { return await parseNow(text, "auto"); }
+  finally { readingWithClaude = false; btn.disabled = false; }
+}
+
+// -- The stage --------------------------------------------------------------------------
+
+let currentSvg = null;
+let currentResult = null;
+const schematicQueue = { pending: null, inflight: false, last: 0 };
+
+function setStageTitle(title, sub) {
+  $("#stage-title").textContent = title;
+  $("#stage-sub").textContent = sub || "";
+}
+function setStateChip(cls, label) {
+  $("#state-chip").className = `state-chip ${cls || ""}`;
+  $("#state-label").textContent = label;
+}
+function setParams(dv) {
+  for (const [k, u] of Object.entries(PARAM_UNITS)) {
+    const node = $(`[data-p="${k}"]`);
+    if (!node) continue;
+    if (!dv || dv[k] === undefined || dv[k] === null) { node.textContent = "n/a"; continue; }
+    const txt = `${fmt(dv[k] * u.scale, u.dp)}<span class="u">${u.unit}</span>`;
+    if (node.innerHTML !== txt) {
+      node.innerHTML = txt;
+      node.classList.add("bump");
+      setTimeout(() => node.classList.remove("bump"), 350);
+    }
+  }
+}
+function setReadout(label, valueHtml, sub) {
+  $("#readout-k").textContent = label;
+  $("#readout-v").innerHTML = valueHtml;
+  $("#readout-sub").textContent = sub || "";
+}
+
+function placeSvg(svg) {
+  const holder = $("#schematic-holder");
+  holder.innerHTML = svg;
+  const node = holder.querySelector("svg");
+  if (node) node.classList.add("swap-in");
+  currentSvg = svg;
+  $("#export-svg").disabled = !svg;
+}
+
+async function fetchSchematic(fieldsHuman, title, subtitle) {
+  const res = await fetch("/api/schematic", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: fieldsHuman, title, subtitle }),
+  });
+  if (!res.ok) {
+    let parsed = null;
+    try { parsed = JSON.parse(await res.text()); } catch { /* not JSON */ }
+    const err = new Error(parsed && parsed.title ? parsed.title : `server returned ${res.status}`);
+    if (parsed && parsed.title) Object.assign(err, { title: parsed.title, detail: parsed.detail || null, hint: parsed.hint || null });
+    throw err;
+  }
+  return res.text();
+}
+
+// Coalesced: during a run candidates arrive faster than the drawing is worth refreshing,
+// so only the newest pending one is fetched, at most every 450 ms.
+function scheduleSchematic(fieldsHuman, title, subtitle) {
+  schematicQueue.pending = { fieldsHuman, title, subtitle };
+  pumpSchematic();
+}
+async function pumpSchematic() {
+  if (schematicQueue.inflight || !schematicQueue.pending) return;
+  const wait = Math.max(0, 450 - (performance.now() - schematicQueue.last));
+  if (wait > 0) { setTimeout(pumpSchematic, wait); schematicQueue.inflight = true; setTimeout(() => { schematicQueue.inflight = false; pumpSchematic(); }, wait); return; }
+  const job = schematicQueue.pending;
+  schematicQueue.pending = null;
+  schematicQueue.inflight = true;
+  schematicQueue.last = performance.now();
+  try { placeSvg(await fetchSchematic(job.fieldsHuman, job.title, job.subtitle)); }
+  catch (err) { $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not render the schematic"); }
+  finally { schematicQueue.inflight = false; if (schematicQueue.pending) pumpSchematic(); }
+}
+
+async function showDeliveredOnStage() {
+  setStageTitle("Delivered CTLE", "the frozen reference design, drawn from its manifest");
+  setStateChip("", "reference");
+  try {
+    const d = await api("/api/results/delivered_circuit.json");
+    setParams(d.design);
+    const tt = d.pvt && d.pvt.tt_nominal;
+    if (tt) setReadout("Boost at tt", `${fmt(tt.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(d.spec && d.spec.target_boost_db, 2)} dB, ${fmt(tt.power_w * 1e3, 2)} mW, ${d.pvt.corners_passed}/${d.pvt.corners_total} PVT corners`);
+  } catch { /* the drawing still loads below */ }
+  try {
+    const res = await fetch("/api/schematic");
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    placeSvg(await res.text());
+  } catch (err) {
+    $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not load the delivered schematic");
+  }
+}
+
+function showFieldsOnStage(fieldsHuman, title, subtitle) {
+  showView("design");
+  const si = {};
+  for (const [k, scale] of Object.entries(DESIGN_FIELD_SCALE)) if (fieldsHuman[k] !== undefined) si[k] = fieldsHuman[k] * scale;
+  setParams(si);
+  setStageTitle(title, subtitle);
+  setStateChip("", "candidate");
+  setReadout("Boost", "n/a", "not simulated yet; use Evaluate in the Lab");
+  scheduleSchematic(fieldsHuman, title, subtitle);
+}
+
+// -- Run ----------------------------------------------------------------------------------
+
+let running = false;
+const STAGE_LABEL = { load: "Loading the frozen policy", search: "Stage 1, PPO search", refine: "Stage 2, G3.2 refinement", verify: "Stage 3, independent verification" };
+const STAGE_ORDER = ["search", "refine", "verify"];
+
+function setStep(stage, state) {
+  const s = $(`.step[data-stage="${stage}"]`);
+  if (s) s.className = `step${state ? " " + state : ""}`;
+}
+function markStepsLive(stage) {
+  const key = stage === "load" ? "search" : stage;
+  const at = STAGE_ORDER.indexOf(key);
+  if (at < 0) return;
+  STAGE_ORDER.forEach((s, i) => setStep(s, i < at ? "done" : i === at ? "active" : ""));
+}
+
+function appendLog(events) {
+  const log = $("#run-log");
+  const empty = log.querySelector(".log-empty");
+  if (empty) empty.remove();
+  for (const ev of events) {
+    const pass = ev.kind === "candidate" && ev.ok !== false && /passes all/.test(ev.text || "");
+    const row = el("div", { class: `log-row log-${ev.kind}${ev.ok === false ? " log-rejected" : ""}${pass ? " log-pass" : ""}` });
+    row.innerHTML = `<span class="log-t">${fmt(ev.t, 1)}s</span><span class="log-text">${escapeHtml(ev.text)}</span>`;
+    log.appendChild(row);
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
+function handleRunEvents(state, events) {
+  for (const ev of events) {
+    if (ev.kind === "candidate") {
+      state.points.push({ boost: typeof ev.boost === "number" ? ev.boost : null, ok: ev.ok !== false,
+        pass: ev.ok !== false && /passes all/.test(ev.text || ""), label: ev.text });
+      state.simulated += 1;
+      if (ev.design) {
+        setParams(ev.design);
+        setStageTitle(`Candidate ${state.simulated}`, STAGE_LABEL[ev.stage] || "simulating");
+        scheduleSchematic(designToHumanFields(ev.design), `Candidate ${state.simulated}`,
+          ev.ok === false ? "rejected by the guard layer" : `${fmt(ev.boost, 2)} dB boost, ${STAGE_LABEL[ev.stage] || ""}`);
+      }
+      if (typeof ev.boost === "number") {
+        const err = Math.abs(ev.boost - state.target);
+        setReadout("Latest boost", `${fmt(ev.boost, 2)}<span class="u">dB</span>`, `target ${fmt(state.target, 2)} dB, off by ${fmt(err, 2)} dB${err <= state.tol ? ", inside tolerance" : ""}`);
+      } else {
+        setReadout("Latest circuit", `<span style="color:var(--warning)">rejected</span>`, "the guard layer refused to score it");
+      }
+    }
+  }
+  renderTraceChart($("#trace-chart"), state.points, { target: state.target, tol: state.tol });
+  $("#trace-count").textContent = `${state.simulated} simulated`;
+}
+
+function pollRunProgress(state) {
+  return setInterval(async () => {
+    if (state.stopped) return;
+    try {
+      const p = await api(`/api/pipeline/progress?since=${state.cursor}`);
+      state.cursor = p.next;
+      if (p.events.length) { appendLog(p.events); handleRunEvents(state, p.events); }
+      if (p.stage) markStepsLive(p.stage);
+      $("#trace-elapsed").textContent = `${fmt(p.elapsed_s, 1)} s`;
+    } catch { /* a dropped poll is not a failed run */ }
+  }, 300);
+}
+
+async function runDesign() {
+  if (running || serverWarming || !defaults) return;
+  const text = $("#spec-text").value.trim();
+  if (text && llmReadText !== text) {
+    // The run is about to spend real simulator budget on this request, so give the
+    // stronger reader a chance first. A refusal stops the run: nothing was understood.
+    const spec = await readWithClaude();
+    if (!spec && !lastParse) return;
+  }
+  running = true;
+  const btn = $("#run-btn");
+  btn.disabled = true; btn.classList.add("running");
+  $$(".mode-btn").forEach((b) => { b.disabled = true; });
+  currentResult = null;
+  $("#result").innerHTML = "";
+  ["export-netlist", "export-json"].forEach((id) => { $(`#${id}`).disabled = true; });
+  const trace = $("#trace-card");
+  trace.hidden = false;
+  STAGE_ORDER.forEach((s) => setStep(s, ""));
+  setStep("search", "active");
+  $("#run-log").innerHTML = `<div class="log-empty">waiting for the first simulation</div>`;
+  $("#trace-count").textContent = ""; $("#trace-elapsed").textContent = "";
+  setStateChip("live", "designing");
+  setStageTitle("Searching", "every candidate below is a real SKY130 simulation");
+
+  const target = Number($("#target").value), channel = Number($("#channel").value);
+  const state = { cursor: 0, stopped: false, simulated: 0, points: [], target, tol: defaults.boost_tol_db };
+  renderTraceChart($("#trace-chart"), [], { target, tol: state.tol });
+  const t0 = performance.now();
+  const timer = pollRunProgress(state);
+  const request = {
+    target_boost_db: target, channel_loss_db: channel,
+    spec_index: Number($("#spec-index").value) || 0,
+    allow_fallback: $("#allow-fallback").checked,
+    mode: selectedMode, requirements: readRequirements(),
+  };
+  try {
+    const result = await postJSON("/api/pipeline/run", request);
+    const elapsedS = (performance.now() - t0) / 1000;
+    state.stopped = true; clearInterval(timer);
+    try {
+      const p = await api(`/api/pipeline/progress?since=${state.cursor}`);
+      if (p.events.length) { appendLog(p.events); handleRunEvents(state, p.events); }
+    } catch { /* cosmetic */ }
+    finishSteps(result);
+    if (result.design && result.verification && typeof result.verification.abs_err_db === "number") {
+      const m = result.verification.measures || {};
+      state.points.push({ boost: m.boost_db, ok: true, pass: result.verification.passed, final: true, label: `delivered: ${fmt(m.boost_db, 3)} dB` });
+      renderTraceChart($("#trace-chart"), state.points, { target, tol: state.tol });
+    }
+    await presentResult(result, elapsedS, { text, target, channel });
+    pushHistory({ ts: Date.now(), text, target, channel, mode: selectedMode, status: result.status,
+      boost: result.verification && result.verification.measures ? result.verification.measures.boost_db : null,
+      elapsed: elapsedS, result });
+  } catch (err) {
+    state.stopped = true; clearInterval(timer);
+    setStateChip("bad", "failed");
+    setStageTitle("Run failed", err.title || err.message);
+    $("#result").innerHTML = errorBannerHtml(err, "Run failed");
+  } finally {
+    running = false;
+    btn.classList.remove("running");
+    btn.disabled = serverWarming;
+    $$(".mode-btn").forEach((b) => { b.disabled = false; });
+  }
+}
+
+function finishSteps(r) {
+  const st = defaults.statuses;
+  if (r.status === st.fallback) { setStep("search", "warn"); setStep("refine", "warn"); setStep("verify", r.verification ? "done" : ""); return; }
+  if (!r.design) { setStep("search", "done"); setStep("refine", "warn"); setStep("verify", ""); return; }
+  setStep("search", "done"); setStep("refine", "done");
+  setStep("verify", !r.verification ? "" : r.status === st.solved ? "done" : "warn");
+}
+
+// -- Result -------------------------------------------------------------------------------
+
+const CHECK_META = {
+  boost_range: { label: "Boost in range", m: "boost_db", unit: "dB", dp: 2 },
+  boost_target: { label: "Boost on target", m: "boost_db", unit: "dB", dp: 2 },
+  peak_in_band: { label: "Peak in band", m: "peak_freq_ghz", unit: "GHz", dp: 2 },
+  dc_gain: { label: "DC gain floor", m: "dc_gain_db", unit: "dB", dp: 2 },
+  hd3: { label: "HD3", m: "hd3_db", unit: "dB", dp: 1 },
+  noise: { label: "Input noise", m: "noise_vrms", unit: "µV", dp: 0, scale: 1e6 },
+  power: { label: "Power", m: "power_w", unit: "mW", dp: 2, scale: 1e3 },
+  area: { label: "Area", m: "area_mm2", unit: "mm²", dp: 4 },
+  eye_h: { label: "Eye width", m: "eye_h_ui", unit: "UI", dp: 2 },
+  eye_v: { label: "Eye height", m: "eye_v_mv", unit: "mV", dp: 0 },
 };
+
+function checksHtml(checks, measures, title) {
+  if (!checks) return "";
+  const items = Object.entries(checks).map(([k, ok]) => {
+    const meta = CHECK_META[k] || { label: k };
+    const mv = measures && meta.m && typeof measures[meta.m] === "number" ? `${fmt(measures[meta.m] * (meta.scale || 1), meta.dp)} ${meta.unit}` : "";
+    return `<div class="check ${ok ? "pass" : "fail"}"><span class="ci">${ICONS[ok ? "check" : "cross"]}</span>${escapeHtml(meta.label)}<span class="cv">${escapeHtml(mv)}</span></div>`;
+  }).join("");
+  return `<div class="panel"><div class="panel-head"><span class="panel-title">${escapeHtml(title)}</span><span class="panel-meta">${Object.values(checks).filter(Boolean).length} of ${Object.keys(checks).length} pass</span></div><div class="checks">${items}</div></div>`;
+}
+
+function verdictHtml(r) {
+  const st = defaults.statuses;
+  const v = r.verification;
+  const reqs = (r.spec && r.spec.requirements) || [];
+  let cls, icon, title, sub;
+  if (r.status === st.fallback) {
+    cls = "bad"; icon = "alertTriangle"; title = "Fixed fallback design, not an AI result";
+    sub = "The architecture found nothing guard-valid for this spec. What is shown is a fixed, hand-verified design that ignores your requested target. It is not an output of the search and must not be read as one.";
+  } else if (r.status === st.solved) {
+    cls = "ok"; icon = "checkCircle"; title = "Verified";
+    sub = `An independent re-simulation of the delivered design passes every hard check, boost included.${v && typeof v.abs_err_db === "number" ? ` The delivered boost is ${fmt(v.abs_err_db, 2)} dB from the number you asked for, inside the ±${fmt(r.spec.boost_tol_db, 2)} dB tolerance.` : ""}`;
+  } else if (r.status === st.closed_not_verified) {
+    cls = "warn"; icon = "alertTriangle"; title = "Closed, but failed independent verification";
+    sub = `The solver reported it reached the target; the fresh re-simulation disagrees${v && v.failing && v.failing.length ? `, failing ${v.failing.join(", ")}` : ""}.`;
+  } else {
+    cls = "neutral"; icon = "xCircle"; title = "Unsolved";
+    sub = "The architecture ran and did not reach a guard-valid design for this spec.";
+  }
+  const bars = [];
+  if (v && reqs.length) {
+    bars.push(`<span class="state-chip ${v.passed ? "ok" : "bad"}"><span class="dot"></span>your limits: ${v.passed ? "pass" : "fail"}</span>`);
+    if ("competition_passed" in v) bars.push(`<span class="state-chip ${v.competition_passed ? "ok" : "warn"}"><span class="dot"></span>competition spec: ${v.competition_passed ? "pass" : `fails ${(v.competition_failing || []).join(", ")}`}</span>`);
+  } else if (v) {
+    bars.push(`<span class="state-chip ${v.passed ? "ok" : "bad"}"><span class="dot"></span>competition spec: ${v.passed ? "pass" : "fail"}</span>`);
+  }
+  if (r.auto) {
+    bars.push(r.auto.escalated
+      ? `<span class="state-chip warn"><span class="dot"></span>auto: fast attempt ${escapeHtml(r.auto.first_status || "")}, escalated to Thinking</span>`
+      : `<span class="state-chip ok"><span class="dot"></span>auto: fast search verified first time</span>`);
+  } else if (r.mode) {
+    bars.push(`<span class="state-chip"><span class="dot"></span>${escapeHtml(r.mode)} mode</span>`);
+  }
+  return `<div class="verdict ${cls}"><div class="vicon">${ICONS[icon]}</div><div><div class="verdict-title">${escapeHtml(title)}</div><div class="verdict-sub">${escapeHtml(sub)}</div>${bars.length ? `<div class="verdict-bars">${bars.join("")}</div>` : ""}</div></div>`;
+}
+
+function measuresHtml(r) {
+  const v = r.verification;
+  if (!v || !v.measures) return "";
+  const m = v.measures;
+  return `<div class="panel"><div class="panel-head"><span class="panel-title">Measured on re-simulation</span><span class="panel-meta">tt corner, ${fmt(r.spec.channel_loss_db, 1)} dB channel</span></div>${kpiGrid([
+    { label: "Boost", value: fmt(m.boost_db, 3) + " dB", accent: true, help: `asked ${fmt(r.spec.target_boost_db, 2)} ±${fmt(r.spec.boost_tol_db, 2)} dB` },
+    { label: "DC gain", value: fmt(m.dc_gain_db, 2) + " dB" },
+    { label: "Peak freq", value: fmt(m.peak_freq_ghz, 2) + " GHz" },
+    { label: "Power", value: fmt(m.power_w * 1e3, 2) + " mW" },
+    { label: "Noise", value: Math.round(m.noise_vrms * 1e6) + " µVrms" },
+    { label: "HD3", value: fmt(m.hd3_db, 1) + " dB" },
+    { label: "Eye width", value: fmt(m.eye_h_ui, 2) + " UI" },
+    { label: "Eye height", value: Math.round(m.eye_v_mv) + " mV" },
+    { label: "Area", value: fmt(m.area_mm2 * 1e3, 1) + " ×10⁻³ mm²" },
+  ])}</div>`;
+}
+
+function requirementsHtml(r) {
+  const reqs = (r.spec && r.spec.requirements) || [];
+  if (!reqs.length) return "";
+  const rows = reqs.map((q) => {
+    const meta = (defaults.requirements || []).find((d) => d.field === q.field) || { label: q.field, unit: "", scale: 1 };
+    const val = typeof q.value === "number" ? prettyDisp(q.value * meta.scale, meta.unit) : "";
+    const def = typeof q.default === "number" ? prettyDisp(q.default * meta.scale, meta.unit) : "";
+    return `<div class="kv-row"><span class="kv-k">${escapeHtml(meta.label)}</span><span class="kv-v">${escapeHtml(val)} <span class="req-tag ${escapeHtml(q.direction || "")}">${escapeHtml(q.direction || "")}</span>${def ? ` <span class="help-hint" style="display:inline;margin:0;">(competition ${escapeHtml(def)})</span>` : ""}</span></div>`;
+  }).join("");
+  const resel = r.provenance && r.provenance.requirement_reselection;
+  return `<div class="panel"><div class="panel-head"><span class="panel-title">Your acceptance limits</span><span class="panel-meta">${escapeHtml(r.spec.scored_against || "")}</span></div>${rows}${resel && resel.applied ? `<div class="help-hint" style="margin-top:8px;">The most accurate candidate failed one of these limits, so the next candidate from the search trace that passes them was re-verified and delivered instead.</div>` : ""}</div>`;
+}
+
+function guidanceHtml(r) {
+  const g = r.guidance;
+  if (!g || !g.headline) return "";
+  const suggest = g.suggest_mode && g.suggest_mode !== r.mode && (defaults.modes || []).includes(g.suggest_mode)
+    ? `<p class="help-hint" style="margin-top:6px;">Suggested next step: <button type="button" class="mode-suggest" data-mode="${escapeHtml(g.suggest_mode)}">try ${escapeHtml(g.suggest_mode)} mode</button></p>` : "";
+  const auto = r.auto && r.auto.escalated && r.auto.first_guidance
+    ? `<div class="kv-row"><span class="kv-k">Fast attempt stopped because</span><span class="kv-v">${escapeHtml(r.auto.first_guidance.headline || "")}</span></div>` : "";
+  return `<div class="panel"><div class="panel-head"><span class="panel-title">Why the search stopped here</span></div><div style="font-weight:600;">${escapeHtml(g.headline)}</div><p class="help-hint" style="margin-top:4px;">${escapeHtml(g.detail || "")}</p>${g.reason ? `<div class="kv-row"><span class="kv-k">Solver reason</span><span class="kv-v mono">${escapeHtml(g.reason)}</span></div>` : ""}${auto}${suggest}</div>`;
+}
+
+function modeDetailHtml(r) {
+  const detail = r.provenance && r.provenance.mode_detail;
+  const mode = (detail && detail.mode) || r.mode || "default";
+  if (!detail || mode === "default") return "";
+  if (mode === "fastest") {
+    const seed = detail.surrogate_seed;
+    const h = detail.hedge;
+    let rows = "";
+    if (seed) {
+      rows += `<div class="kv-row"><span class="kv-k">Corpus seed simulated at</span><span class="kv-v">${fmt(seed.candidate_boost_db, 3)} dB for a ${fmt(seed.target_boost_db, 2)} dB target</span></div>`;
+      rows += `<div class="kv-row"><span class="kv-k">Seed outcome</span><span class="kv-v">${seed.candidate_guard_valid ? "guard-valid" : "guard-rejected"}${seed.candidate_loose_pass ? ", inside tolerance, so the refinement stage had nothing left to do" : ", refined by G3.2"}</span></div>`;
+    } else if (h) {
+      const verdict = !h.attempted ? "not attempted" : !h.evaluated ? "attempted, no candidate cleared the corpus safety radius" : h.accepted ? "accepted" : "attempted, not accepted";
+      rows += `<div class="kv-row"><span class="kv-k">Outcome</span><span class="kv-v">${escapeHtml(verdict)}</span></div>${h.reason ? `<div class="kv-row"><span class="kv-k">Reason</span><span class="kv-v">${escapeHtml(h.reason)}</span></div>` : ""}`;
+    } else {
+      rows += `<div class="kv-row"><span class="kv-k">Corpus seed</span><span class="kv-v">no seed was close enough; the frozen policy started the search from scratch</span></div>`;
+    }
+    return `<div class="panel"><div class="panel-head"><span class="panel-title">Fastest mode, corpus-seeded start</span></div>${rows}</div>`;
+  }
+  if (mode === "thinking") {
+    const rollouts = detail.rollouts || [];
+    const rows = rollouts.map((ro) => {
+      const isWinner = ro.start === detail.winner_start;
+      const kind = String(ro.start || "").startsWith("surrogate") ? "corpus-proposed start" : "PPO rollout";
+      return `<tr><td class="mono">${escapeHtml(ro.start)}${isWinner ? " <strong>(winner)</strong>" : ""}</td><td>${kind}</td><td class="num mono">${ro.best_abs_err_db === null || ro.best_abs_err_db === undefined ? "n/a" : fmt(ro.best_abs_err_db, 4) + " dB"}</td><td class="num mono">${ro.n_loose_pass}</td><td>${ro.reached_target ? "reached target" : "did not reach target"}</td></tr>`;
+    }).join("");
+    const gov = detail.governor_stopped ? `<p class="help-hint" style="margin-top:6px;">Stopped launching further restarts at the ~60 s budget (${detail.measure_all_spent} measure_all spent). Fewer starting points were tried than this mode's maximum.</p>` : "";
+    return `<div class="panel"><div class="panel-head"><span class="panel-title">Thinking mode, ${detail.n_ppo_rollouts || 0} PPO rollout${(detail.n_ppo_rollouts || 0) === 1 ? "" : "s"}${detail.n_surrogate_starts ? ` + ${detail.n_surrogate_starts} corpus start${detail.n_surrogate_starts === 1 ? "" : "s"}` : ""}</span></div><div style="overflow-x:auto;"><table class="parse-table"><thead><tr><th>Start</th><th>Kind</th><th class="num">Best abs. error</th><th class="num">Loose passes</th><th>Target</th></tr></thead><tbody>${rows}</tbody></table></div>${gov}</div>`;
+  }
+  if (mode === "retarget") {
+    const rt = detail.retarget || {};
+    return `<div class="panel"><div class="panel-head"><span class="panel-title">Retarget mode</span></div><div class="kv-row"><span class="kv-k">Outcome</span><span class="kv-v">${rt.fired ? `resumed along ${escapeHtml(rt.accepted_axis || "another axis")}` : "did not fire"}</span></div></div>`;
+  }
+  return "";
+}
+
+function costStripHtml(r, elapsedS) {
+  const c = r.cost || {};
+  const prior = c.measure_all_prior_attempts ? `<span><strong>${c.measure_all_prior_attempts}</strong> of those in the fast attempt</span>` : "";
+  return `<div class="cost-strip"><span><strong>${c.optimizer_evals ?? "n/a"}</strong> optimizer evals</span><span><strong>${c.measure_all_total ?? "n/a"}</strong> measure_all calls</span>${prior}<span><strong>${c.spice_analyses_total ?? "n/a"}</strong> SPICE analyses</span>${typeof elapsedS === "number" ? `<span><strong>${fmt(elapsedS, 1)}</strong> s wall clock</span>` : ""}</div>`;
+}
+
+async function presentResult(r, elapsedS, ctx) {
+  currentResult = r;
+  const st = defaults.statuses;
+  const v = r.verification;
+  const box = $("#result");
+  let html = verdictHtml(r);
+  if (!r.design) html += banner("warning", "alertTriangle", "No design: the architecture produced nothing guard-valid for this spec, and the fixed fallback was not allowed.");
+  html += measuresHtml(r);
+  if (v && v.checks) html += checksHtml(v.checks, v.measures, (r.spec.requirements || []).length ? "Checks against your limits" : "The ten hard checks");
+  if (v && v.competition_checks && (r.spec.requirements || []).length) html += checksHtml(v.competition_checks, v.measures, "Checks against the competition spec");
+  html += requirementsHtml(r);
+  html += guidanceHtml(r);
+  html += modeDetailHtml(r);
+  html += costStripHtml(r, elapsedS);
+  html += `<details class="explainer"><summary>Full report</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(r.describe_text || "")}</pre></div></details>`;
+  if (r.netlist) html += `<details class="explainer"><summary>SPICE netlist</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(r.netlist)}</pre></div></details>`;
+  html += `<details class="explainer"><summary>Raw result JSON</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(JSON.stringify(r, null, 2))}</pre></div></details>`;
+  box.innerHTML = html;
+  const suggestBtn = box.querySelector(".mode-suggest");
+  if (suggestBtn) suggestBtn.addEventListener("click", () => { selectMode(suggestBtn.dataset.mode); $("#mode-seg").scrollIntoView({ behavior: "smooth", block: "center" }); });
+  animateIn([...box.children], { y: 12, opacity: 0, stagger: 0.05, duration: 0.5, ease: "power2.out" });
+
+  // The stage: final drawing, sizing, headline number, exports.
+  const isFallback = r.status === st.fallback;
+  if (r.design) {
+    setParams(r.design);
+    const m = v && v.measures;
+    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${v.passed ? "verified" : "not verified"}`);
+    else setReadout("Boost", "n/a", v ? "guard rejected the final design on re-simulation" : "verification did not run");
+    const title = isFallback ? "Fixed fallback design (not AI-generated)" : "Delivered design";
+    const sub = `target ${fmt(r.spec.target_boost_db, 1)} dB boost over a ${fmt(r.spec.channel_loss_db, 1)} dB channel`;
+    setStageTitle(title, `${sub}${r.mode ? `, ${r.mode} mode` : ""}`);
+    setStateChip(r.status === st.solved ? "ok" : isFallback ? "bad" : "warn",
+      r.status === st.solved ? "verified" : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
+    schematicQueue.pending = null;
+    try { placeSvg(await fetchSchematic(designToHumanFields(r.design), title, sub)); }
+    catch (err) { $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not render the schematic"); }
+  } else {
+    setStageTitle("No design", "nothing guard-valid came out of the search");
+    setStateChip("bad", "unsolved");
+    setReadout("Boost", "n/a", "");
+  }
+  $("#export-netlist").disabled = !r.netlist;
+  $("#export-json").disabled = false;
+}
+
+function initExports() {
+  $("#export-svg").addEventListener("click", () => { if (currentSvg) downloadText("silq_schematic.svg", currentSvg, "image/svg+xml"); });
+  $("#export-netlist").addEventListener("click", () => { if (currentResult && currentResult.netlist) downloadText("silq_ctle.cir", currentResult.netlist); });
+  $("#export-json").addEventListener("click", () => { if (currentResult) downloadText("silq_result.json", JSON.stringify(currentResult, null, 2), "application/json"); });
+}
+
+// -- History ------------------------------------------------------------------------------
+
+const HISTORY_KEY = "silq_history_v1";
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } }
+function saveHistory(items) { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); } catch { /* quota or blocked */ } }
+function pushHistory(item) {
+  const items = [item, ...loadHistory()].slice(0, 8);
+  saveHistory(items);
+  renderHistory();
+}
+function renderHistory() {
+  const items = loadHistory();
+  const list = $("#history-list");
+  if (!items.length) { list.innerHTML = `<div class="hist-empty">Runs you make on this machine are kept here, so a design can be reopened without spending simulator budget again.</div>`; return; }
+  const st = defaults ? defaults.statuses : {};
+  list.innerHTML = items.map((it, i) => {
+    const cls = it.status === st.solved ? "ok" : it.status === st.fallback ? "bad" : "warn";
+    const label = it.status === st.solved ? "verified" : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
+    const when = new Date(it.ts).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
+    return `<button type="button" class="hist" data-i="${i}"><div class="hist-top"><span class="state-chip ${cls}"><span class="dot"></span>${label}</span><span class="hist-meta">${escapeHtml(when)}</span></div><div class="hist-text">${escapeHtml(it.text || `${fmt(it.target, 1)} dB over ${fmt(it.channel, 1)} dB`)}</div><div class="hist-meta"><span>target ${fmt(it.target, 1)} dB</span><span>got ${it.boost === null || it.boost === undefined ? "n/a" : fmt(it.boost, 2) + " dB"}</span><span>${escapeHtml(it.mode || "")}</span><span>${fmt(it.elapsed, 0)} s</span></div></button>`;
+  }).join("");
+  $$(".hist", list).forEach((b) => b.addEventListener("click", async () => {
+    const it = loadHistory()[Number(b.dataset.i)];
+    if (!it || !it.result || running) return;
+    $("#spec-text").value = it.text || "";
+    $("#target").value = it.target; updateTarget();
+    $("#channel").value = it.channel; updateChannel();
+    $("#trace-card").hidden = true;
+    await presentResult(it.result, it.elapsed, it);
+    $("#result").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+  }));
+}
+function initHistory() {
+  $("#history-clear").addEventListener("click", () => { saveHistory([]); renderHistory(); });
+  renderHistory();
+}
+
+// -- Lab: guard sandbox ------------------------------------------------------------------
+
+const TIER_NAMES = { 1: "Run integrity", 2: "Circuit sanity", 3: "Corner integrity", 4: "Physical plausibility", 5: "Search pathology" };
 
 async function initGuard() {
   const data = await api("/api/guard/presets");
-
   const vddInput = $("#guard-vdd");
-  vddInput.min = data.vdd.min;
-  vddInput.max = data.vdd.max;
-  vddInput.value = data.vdd.nominal;
-  $("#guard-vdd-hint").textContent =
-    `Spec nominal is ${data.vdd.nominal} V ±${(data.vdd.tolerance * 100).toFixed(0)}%.`;
-  bindRangeFill(vddInput);
-  const updateVddLabel = () => { $("#guard-vdd-val").textContent = fmt(vddInput.value, 2); };
+  vddInput.min = data.vdd.min; vddInput.max = data.vdd.max; vddInput.value = data.vdd.nominal;
+  $("#guard-vdd-hint").textContent = `Spec nominal is ${data.vdd.nominal} V ±${(data.vdd.tolerance * 100).toFixed(0)}%.`;
+  const fill = bindRangeFill(vddInput);
+  const updateVddLabel = () => { $("#guard-vdd-val").textContent = fmt(vddInput.value, 2); fill(); };
   vddInput.addEventListener("input", updateVddLabel);
   updateVddLabel();
 
-  const grid = $("#guard-fields");
-  grid.innerHTML = data.field_meta.map((f) => `
-    <label class="field">
-      <span class="field-label">${escapeHtml(f.label)}</span>
-      <input type="number" step="${f.step}" data-field="${f.key}" />
-    </label>`).join("");
-
+  $("#guard-fields").innerHTML = data.field_meta.map((f) => `<label class="field"><span class="field-label">${escapeHtml(f.label)}</span><input type="number" step="${f.step}" data-field="${f.key}" /></label>`).join("");
   const presetRow = $("#guard-presets");
   presetRow.innerHTML = "";
   data.presets.forEach((p) => {
-    const b = el("button", { class: "btn", type: "button", title: p.description }, escapeHtml(p.label));
+    const b = el("button", { class: "btn sm", type: "button", title: p.description }, escapeHtml(p.label));
     b.addEventListener("click", () => applyGuardPreset(p));
     presetRow.appendChild(b);
   });
   const defaultsPreset = data.presets.find((p) => p.id === "defaults");
   if (defaultsPreset) applyGuardPreset(defaultsPreset);
-
   $("#guard-evaluate-btn").addEventListener("click", runGuardEvaluate);
   $("#guard-corner-check-btn").addEventListener("click", runCornerCheck);
+  $("#schematic-guard-btn").addEventListener("click", () => showFieldsOnStage(readGuardFields(), "CTLE candidate", "drawn from the Lab's guard fields, not the delivered design"));
 }
 
 function applyGuardPreset(preset) {
-  for (const [key, val] of Object.entries(preset.fields)) {
-    const input = $(`#guard-fields [data-field="${key}"]`);
-    if (input) input.value = val;
-  }
+  for (const [key, val] of Object.entries(preset.fields)) { const input = $(`#guard-fields [data-field="${key}"]`); if (input) input.value = val; }
 }
-
 function readGuardFields() {
   const fields = {};
   $$("#guard-fields [data-field]").forEach((inp) => { fields[inp.dataset.field] = Number(inp.value); });
@@ -269,21 +1026,15 @@ function readGuardFields() {
 }
 
 async function runGuardEvaluate() {
-  const btn = $("#guard-evaluate-btn");
-  const corner = $("#guard-corner").value;
-  const box = $("#guard-result");
+  const btn = $("#guard-evaluate-btn"), corner = $("#guard-corner").value, box = $("#guard-result");
   btn.disabled = true;
-  box.innerHTML = `<div class="card"><div class="spinner-line"><span class="spinner"></span>Running real ngspice on the ${escapeHtml(corner)} corner…</div></div>`;
+  box.innerHTML = `<div class="card"><div class="spinner-line"><span class="spinner"></span>Running real ngspice on the ${escapeHtml(corner)} corner</div></div>`;
   try {
-    const data = await postJSON("/api/guard/evaluate", {
-      fields: readGuardFields(), corner, vdd: Number($("#guard-vdd").value),
-    });
+    const data = await postJSON("/api/guard/evaluate", { fields: readGuardFields(), corner, vdd: Number($("#guard-vdd").value) });
     renderGuardResult(data);
   } catch (err) {
     box.innerHTML = `<div class="card">${errorBannerHtml(err, "Request failed")}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
+  } finally { btn.disabled = false; }
 }
 
 async function runCornerCheck() {
@@ -291,85 +1042,62 @@ async function runCornerCheck() {
   btn.disabled = true;
   try {
     const data = await postJSON("/api/guard/verify-corners", { corner: $("#guard-corner").value });
-    toast(data.ok
-      ? "Tier 3 passed: tt and ss corner models are genuinely different."
-      : `Tier 3 FAILED: ${data.reason}`, data.ok);
-  } catch (err) {
-    toast(`Request failed: ${(err.title || err.message)}`, false);
-  } finally {
-    btn.disabled = false;
-  }
+    toast(data.ok ? "Tier 3 passed: tt and ss corner models are genuinely different." : `Tier 3 FAILED: ${data.reason}`, data.ok);
+  } catch (err) { toast(`Request failed: ${err.title || err.message}`, false); }
+  finally { btn.disabled = false; }
 }
 
 function renderGuardResult(data) {
   const box = $("#guard-result");
   if (data.valid) {
-    const m = data.metrics;
-    const hp = data.hard_pass;
-    box.innerHTML = `
-      <div class="card">
-        ${banner("success", "checkCircle", "<strong>VALID</strong> — tiers 1, 2 and 4 all passed. This is a real, physically-plausible amplifier.")}
+    const m = data.metrics, hp = data.hard_pass;
+    box.innerHTML = `<div class="card">
+        ${banner("success", "checkCircle", "<strong>VALID</strong>: tiers 1, 2 and 4 all passed. This is a real, physically plausible amplifier.")}
         ${kpiGrid([
-          { label: "Boost", value: fmt(m.boost_db, 2) + " dB" },
-          { label: "DC gain", value: fmt(m.dc_gain_db, 2) + " dB" },
-          { label: "Peak freq", value: fmt(m.peak_freq_ghz, 2) + " GHz" },
-          { label: "Power", value: fmt(m.power_w * 1e3, 2) + " mW" },
-          { label: "HD3", value: fmt(m.hd3_db, 1) + " dB" },
-          { label: "Noise", value: Math.round(m.noise_vrms * 1e6) + " µVrms" },
-          { label: "Eye width", value: fmt(m.eye_h_ui, 2) + " UI" },
-          { label: "Eye height", value: Math.round(m.eye_v_mv) + " mV" },
+          { label: "Boost", value: fmt(m.boost_db, 2) + " dB" }, { label: "DC gain", value: fmt(m.dc_gain_db, 2) + " dB" },
+          { label: "Peak freq", value: fmt(m.peak_freq_ghz, 2) + " GHz" }, { label: "Power", value: fmt(m.power_w * 1e3, 2) + " mW" },
+          { label: "HD3", value: fmt(m.hd3_db, 1) + " dB" }, { label: "Noise", value: Math.round(m.noise_vrms * 1e6) + " µVrms" },
+          { label: "Eye width", value: fmt(m.eye_h_ui, 2) + " UI" }, { label: "Eye height", value: Math.round(m.eye_v_mv) + " mV" },
         ])}
-        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
-          <p style="font-size:var(--fs-sm); margin-bottom:10px;"><strong>Guard-valid is not the same question as spec-passing.</strong> Here is the same design scored against <code>eqrl.specs.hard_pass</code> (<code>DEFAULT_SPEC</code>):</p>
-          <div class="row wrap" style="margin-bottom:10px;">
-            <span class="badge ${hp.ok ? "valid" : "warning"}">${hp.ok ? "PASSES all hard specs" : "fails the hard spec"}</span>
-          </div>
-          <div class="row wrap" style="font-size:var(--fs-xs); color:var(--ink-muted); gap:14px 16px;">
-            ${Object.entries(hp.checks).map(([k, v]) => `<span class="row" style="gap:5px;"><span style="color:${v ? "var(--success)" : "var(--danger)"}">${ICONS[v ? "check" : "cross"]}</span>${escapeHtml(k)}</span>`).join("")}
-          </div>
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
+          <p style="font-size:var(--fs-sm); margin-bottom:10px;"><strong>Guard-valid is not the same question as spec-passing.</strong> The same design scored against the competition spec:</p>
+          <div class="row wrap" style="margin-bottom:10px;"><span class="badge ${hp.ok ? "valid" : "warning"}">${hp.ok ? "PASSES all hard specs" : "fails the hard spec"}</span></div>
+          <div class="checks">${Object.entries(hp.checks).map(([k, ok]) => `<div class="check ${ok ? "pass" : "fail"}"><span class="ci">${ICONS[ok ? "check" : "cross"]}</span>${escapeHtml((CHECK_META[k] || { label: k }).label)}</div>`).join("")}</div>
         </div>
-        <details style="margin-top:14px;"><summary style="cursor:pointer; font-size:var(--fs-xs); color:var(--ink-faint);">Raw run artifacts</summary><pre class="code-block" style="margin-top:8px;">${escapeHtml(data.artifact_dir)}</pre></details>
+        <details class="explainer" style="margin-top:14px;"><summary>Raw run artifacts</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(data.artifact_dir)}</pre></div></details>
       </div>`;
     return;
   }
-
   const tier = data.tier;
   const rows = data.reached_tiers.map((t) => {
     let cls, icon, note;
     if (t < tier) { cls = "pass"; icon = "check"; note = "passed"; }
     else if (t === tier) { cls = "fail"; icon = "cross"; note = "failed here"; }
     else { cls = "skip"; icon = "dash"; note = "not reached"; }
-    return `<div class="tier-row ${cls}"><span class="tier-icon">${ICONS[icon]}</span><span class="tier-name">Tier ${t} — ${TIER_NAMES[t]}</span><span style="margin-left:auto; font-size:var(--fs-xs);">${note}</span></div>`;
+    return `<div class="tier-row ${cls}"><span class="tier-icon">${ICONS[icon]}</span><span class="tier-name">Tier ${t}, ${TIER_NAMES[t]}</span><span style="margin-left:auto; font-size:var(--fs-xs);">${note}</span></div>`;
   }).join("");
-
-  box.innerHTML = `
-    <div class="card">
-      ${banner("danger", "xCircle", `<strong>INVALID</strong> — Tier ${tier} (${TIER_NAMES[tier]}): <code>${escapeHtml(data.check)}</code>`)}
+  box.innerHTML = `<div class="card">
+      ${banner("danger", "xCircle", `<strong>INVALID</strong>: Tier ${tier} (${TIER_NAMES[tier]}): <code>${escapeHtml(data.check)}</code>`)}
       <p style="font-size:var(--fs-sm); color:var(--ink-muted); margin-bottom:8px;">${escapeHtml(data.reason)}</p>
-      <p class="help-hint">${data.violation !== null
-        ? `Violation magnitude: ${fmt(data.violation, 2)}× the failing bound's own scale (0 = exactly on the bound). Reported for context only — the guard's pass/fail decision never reads this number.`
-        : "Violation magnitude: not computable for this failure (e.g. the solver never returned a number to measure a distance from)."}</p>
-      <p style="font-size:var(--fs-sm); font-weight:600; margin-top:18px; margin-bottom:4px;">Tier-by-tier (evaluation stops at the first failure):</p>
-      <div class="tier-list">
-        ${rows}
-        <div class="tier-row pending"><span class="tier-icon">${ICONS.dash}</span><span class="tier-name">Tier 3 — ${TIER_NAMES[3]}</span><span style="margin-left:auto; font-size:var(--fs-xs);">startup check, not part of this per-design path</span></div>
-        <div class="tier-row pending"><span class="tier-icon">${ICONS.dash}</span><span class="tier-name">Tier 5 — ${TIER_NAMES[5]}</span><span style="margin-left:auto; font-size:var(--fs-xs);">only meaningful across a run's history</span></div>
+      <p class="help-hint">${data.violation !== null ? `Violation magnitude: ${fmt(data.violation, 2)}× the failing bound's own scale (0 = exactly on the bound). Reported for context only; the guard's pass/fail decision never reads this number.` : "Violation magnitude: not computable for this failure."}</p>
+      <p style="font-size:var(--fs-sm); font-weight:600; margin-top:16px; margin-bottom:4px;">Tier by tier (evaluation stops at the first failure):</p>
+      <div class="tier-list">${rows}
+        <div class="tier-row pending"><span class="tier-icon">${ICONS.dash}</span><span class="tier-name">Tier 3, ${TIER_NAMES[3]}</span><span style="margin-left:auto; font-size:var(--fs-xs);">startup check, not part of this per-design path</span></div>
+        <div class="tier-row pending"><span class="tier-icon">${ICONS.dash}</span><span class="tier-name">Tier 5, ${TIER_NAMES[5]}</span><span style="margin-left:auto; font-size:var(--fs-xs);">only meaningful across a run's history</span></div>
       </div>
-      <details style="margin-top:14px;"><summary style="cursor:pointer; font-size:var(--fs-xs); color:var(--ink-faint);">Raw run artifacts</summary><pre class="code-block" style="margin-top:8px;">${escapeHtml(data.artifact_dir)}</pre></details>
+      <details class="explainer" style="margin-top:14px;"><summary>Raw run artifacts</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(data.artifact_dir)}</pre></div></details>
     </div>`;
 }
 
-// -- Results explorer --------------------------------------------------------------
+// -- Lab: results explorer ---------------------------------------------------------------
 
 let resultsRows = [];
 
 async function initResults() {
   resultsRows = await api("/api/results");
   const sel = $("#results-picker");
-  const featured = resultsRows.filter((r) => r.featured);
-  const rest = resultsRows.filter((r) => !r.featured);
-  sel.innerHTML = `
-    <optgroup label="Featured">${featured.map((r) => `<option value="${escapeHtml(r.name)}">${escapeHtml(r.label)}</option>`).join("")}</optgroup>
+  const featured = resultsRows.filter((r) => r.featured), rest = resultsRows.filter((r) => !r.featured);
+  sel.innerHTML = `<optgroup label="Featured">${featured.map((r) => `<option value="${escapeHtml(r.name)}">${escapeHtml(r.label)}</option>`).join("")}</optgroup>
     <optgroup label="All files">${rest.map((r) => `<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`).join("")}</optgroup>`;
   $("#results-count").textContent = `${featured.length} featured, ${resultsRows.length} total`;
   sel.addEventListener("change", () => loadResult(sel.value));
@@ -379,930 +1107,181 @@ async function initResults() {
 
 async function loadResult(name) {
   const detail = $("#results-detail");
-  detail.innerHTML = `<div class="spinner-line"><span class="spinner"></span>Loading…</div>`;
+  detail.innerHTML = `<div class="spinner-line"><span class="spinner"></span>Loading</div>`;
   const row = resultsRows.find((r) => r.name === name) || {};
   let data;
-  try {
-    data = await api(`/api/results/${encodeURIComponent(name)}`);
-  } catch (err) {
-    detail.innerHTML = errorBannerHtml(err, "Failed to load");
-    return;
-  }
-
-  const header = `
-    <div class="artifact-header">
-      <h2>${escapeHtml(row.label || name)}</h2>
-      ${row.blurb ? `<p>${escapeHtml(row.blurb)}</p>` : ""}
-      <div class="artifact-path">results/${escapeHtml(name)} — ${row.size_kb ?? "?"} KB</div>
-    </div>`;
-
+  try { data = await api(`/api/results/${encodeURIComponent(name)}`); }
+  catch (err) { detail.innerHTML = errorBannerHtml(err, "Failed to load"); return; }
+  const header = `<div class="artifact-header"><h3>${escapeHtml(row.label || name)}</h3>${row.blurb ? `<p>${escapeHtml(row.blurb)}</p>` : ""}<div class="artifact-path">results/${escapeHtml(name)}, ${row.size_kb ?? "?"} KB</div></div>`;
   if (name === "delivered_circuit.json") { detail.innerHTML = header + deliveredHtml(data); return; }
-  if (name === "pass_vs_valid.json") {
-    detail.innerHTML = header + passVsValidHtml(data);
-    wirePassVsValidChart(detail, data);
-    return;
-  }
-  if (name === "target_tracking_clean40k.json") {
-    detail.innerHTML = header + targetTrackingHtml(data);
-    wireTargetTrackingChart(detail, data);
-    return;
-  }
+  if (name === "pass_vs_valid.json") { detail.innerHTML = header + passVsValidHtml(data); wirePassVsValidChart(detail, data); return; }
+  if (name === "target_tracking_clean40k.json") { detail.innerHTML = header + targetTrackingHtml(data); wireTargetTrackingChart(detail, data); return; }
   detail.innerHTML = header + genericHtml(data);
 }
 
 function rawJsonBlock(d) {
-  return `<details class="explainer" style="margin-top:14px;"><summary>Raw JSON</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(JSON.stringify(d, null, 2))}</pre></div></details>`;
+  return `<details class="explainer" style="margin-top:14px;"><summary>Raw JSON</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(JSON.stringify(d, null, 2))}</pre></div></details>`;
 }
 
 function deliveredHtml(d) {
-  const tt = d.pvt.tt_nominal;
-  const pvt = d.pvt;
-  const p = d.provenance;
-  const dv = d.design;
-  const wc = pvt.worst_case_by_metric;
-  const wcRows = Object.entries(wc).map(([metric, v]) => `
-    <tr>
-      <td style="font-family:var(--font-ui);">${escapeHtml(metric)}</td>
-      <td>${fmt(v.min, 3)}</td>
-      <td style="font-size:10.5px; color:var(--ink-faint);">${escapeHtml(v.min_at)}</td>
-      <td>${fmt(v.max, 3)}</td>
-      <td style="font-size:10.5px; color:var(--ink-faint);">${escapeHtml(v.max_at)}</td>
-      <td>${v.limit_lo ?? "—"}</td>
-      <td>${v.limit_hi ?? "—"}</td>
-    </tr>`).join("");
-
+  const tt = d.pvt.tt_nominal, pvt = d.pvt, p = d.provenance, dv = d.design;
+  const wcRows = Object.entries(pvt.worst_case_by_metric).map(([metric, v]) => `<tr><td>${escapeHtml(metric)}</td><td>${fmt(v.min, 3)}</td><td style="font-size:10.5px; color:var(--ink-faint);">${escapeHtml(v.min_at)}</td><td>${fmt(v.max, 3)}</td><td style="font-size:10.5px; color:var(--ink-faint);">${escapeHtml(v.max_at)}</td><td>${v.limit_lo ?? "n/a"}</td><td>${v.limit_hi ?? "n/a"}</td></tr>`).join("");
   return `
-    <div class="section-label">Design — eqrl.circuits.ctle.DesignVars</div>
+    <div class="section-label">Design (eqrl.circuits.ctle.DesignVars)</div>
     <div class="card">${kpiGrid([
-      { label: "W / L", value: `${fmt(dv.w_in * 1e6, 2)} / ${fmt(dv.l_in * 1e6, 4)} µm` },
-      { label: "I_tail", value: `${fmt(dv.i_tail * 1e6, 1)} µA` },
-      { label: "Rs / Cs", value: `${fmt(dv.rs / 1e3, 2)} k / ${fmt(dv.cs * 1e15, 1)} f` },
-      { label: "R_load", value: `${fmt(dv.r_load, 1)} Ω` },
+      { label: "W / L", value: `${fmt(dv.w_in * 1e6, 2)} / ${fmt(dv.l_in * 1e6, 4)} µm` }, { label: "I_tail", value: `${fmt(dv.i_tail * 1e6, 1)} µA` },
+      { label: "Rs / Cs", value: `${fmt(dv.rs / 1e3, 2)} k / ${fmt(dv.cs * 1e15, 1)} f` }, { label: "R_load", value: `${fmt(dv.r_load, 1)} Ω` },
     ])}</div>
-    <div class="section-label">Performance at tt / nominal VDD / 27°C</div>
+    <div class="section-label">Performance at tt, nominal VDD, 27°C</div>
     <div class="card">${kpiGrid([
-      { label: "Boost", value: fmt(tt.boost_db, 2) + " dB" },
-      { label: "DC gain", value: fmt(tt.dc_gain_db, 2) + " dB" },
-      { label: "Power", value: fmt(tt.power_w * 1e3, 2) + " mW" },
-      { label: "Area", value: fmt(tt.area_mm2 * 1e3, 1) + " ×10⁻³ mm²" },
+      { label: "Boost", value: fmt(tt.boost_db, 2) + " dB" }, { label: "DC gain", value: fmt(tt.dc_gain_db, 2) + " dB" },
+      { label: "Power", value: fmt(tt.power_w * 1e3, 2) + " mW" }, { label: "Area", value: fmt(tt.area_mm2 * 1e3, 1) + " ×10⁻³ mm²" },
     ])}</div>
     <div class="card">${kpiGrid([
-      { label: "PVT corners passed", value: `${pvt.corners_passed} / ${pvt.corners_total}` },
-      { label: "All corners guard-valid", value: pvt.all_guard_valid ? "yes" : "no" },
-      { label: "Worst corner", value: escapeHtml(pvt.worst_corner) },
-      { label: "Worst-corner target error", value: fmt(pvt.worst_corner_target_err_db, 2) + " dB" },
+      { label: "PVT corners passed", value: `${pvt.corners_passed} / ${pvt.corners_total}` }, { label: "All corners guard-valid", value: pvt.all_guard_valid ? "yes" : "no" },
+      { label: "Worst corner", value: escapeHtml(pvt.worst_corner) }, { label: "Worst-corner target error", value: fmt(pvt.worst_corner_target_err_db, 2) + " dB" },
     ])}</div>
     <div class="section-label">Worst case across all 45 corners, per metric</div>
-    <div class="table-wrap"><table class="data">
-      <thead><tr><th>Metric</th><th>Min</th><th>at</th><th>Max</th><th>at</th><th>Limit lo</th><th>Limit hi</th></tr></thead>
-      <tbody>${wcRows}</tbody>
-    </table></div>
+    <div class="table-wrap"><table class="data"><thead><tr><th>Metric</th><th>Min</th><th>at</th><th>Max</th><th>at</th><th>Limit lo</th><th>Limit hi</th></tr></thead><tbody>${wcRows}</tbody></table></div>
     <div class="section-label">Provenance</div>
-    <div class="card"><p style="font-size:var(--fs-sm); color:var(--ink-muted);">Policy <code>${escapeHtml(p.policy)}</code> (sha256 <code>${escapeHtml(p.policy_sha256.slice(0, 12))}…</code>) — started from <code>${escapeHtml(p.g32_start_source)}</code>, ${escapeHtml(p.g32_reason)}. ${p.total_evals} optimizer evaluations total.</p></div>
-    <details class="explainer" style="margin-top:14px;"><summary>Final schematic (SPICE netlist)</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(d.netlist)}</pre></div></details>
-    ${rawJsonBlock(d)}
-  `;
+    <div class="card"><p style="font-size:var(--fs-sm); color:var(--ink-muted);">Policy <code>${escapeHtml(p.policy)}</code> (sha256 <code>${escapeHtml(p.policy_sha256.slice(0, 12))}</code>), started from <code>${escapeHtml(p.g32_start_source)}</code>, ${escapeHtml(p.g32_reason)}. ${p.total_evals} optimizer evaluations total.</p></div>
+    <details class="explainer" style="margin-top:14px;"><summary>Final schematic (SPICE netlist)</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(d.netlist)}</pre></div></details>
+    ${rawJsonBlock(d)}`;
 }
 
 function passVsValidHtml(d) {
   const totalPass = d.pass_valid + d.pass_invalid;
-  const tableRows = d.designs.map((x) => `
-    <tr>
-      <td>${fmt(x.target_boost_db, 2)}</td>
-      <td>${fmt(x.channel_loss_db, 2)}</td>
-      <td>${fmt(x.boost_db, 2)}</td>
-      <td>${Math.round(x.eye_v_mv)}</td>
-      <td><span class="badge ${x.guard_valid ? "valid" : "invalid"}">${x.guard_valid ? "valid" : "REJECTED"}</span></td>
-      <td style="font-family:var(--font-ui); font-weight:400; color:var(--ink-muted);">${escapeHtml(x.guard_reason || "")}</td>
-    </tr>`).join("");
-
+  const tableRows = d.designs.map((x) => `<tr><td>${fmt(x.target_boost_db, 2)}</td><td>${fmt(x.channel_loss_db, 2)}</td><td>${fmt(x.boost_db, 2)}</td><td>${Math.round(x.eye_v_mv)}</td><td><span class="badge ${x.guard_valid ? "valid" : "invalid"}">${x.guard_valid ? "valid" : "REJECTED"}</span></td><td style="font-family:var(--font-ui); color:var(--ink-muted);">${escapeHtml(x.guard_reason || "")}</td></tr>`).join("");
   return `
     <div class="card">${kpiGrid([
-      { label: "Passed all 8 hard specs", value: String(totalPass) },
-      { label: "…and were guard-valid", value: String(d.pass_valid) },
-      { label: "…but were guard-rejected", value: String(d.pass_invalid) },
-      { label: "Rejection rate", value: Math.round((100 * d.pass_invalid) / totalPass) + "%", accent: true },
+      { label: "Passed all 8 hard specs", value: String(totalPass) }, { label: "and were guard-valid", value: String(d.pass_valid) },
+      { label: "but were guard-rejected", value: String(d.pass_invalid) }, { label: "Rejection rate", value: Math.round((100 * d.pass_invalid) / totalPass) + "%", accent: true },
     ])}</div>
-    <div class="section-label">Why the 24 rejected designs failed</div>
+    <div class="section-label">Why the rejected designs failed</div>
     <div class="card chart-card"><div class="chart-container" data-chart="why-invalid"></div></div>
-    <div class="section-label">Every design that passed the spec (4 CMA-ES runs × up to 60 evaluations, best-per-run)</div>
-    <div class="table-wrap table-scroll"><table class="data">
-      <thead><tr><th>Target boost</th><th>Channel loss</th><th>Achieved boost</th><th>Eye height (mV)</th><th>Guard</th><th>Reason</th></tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table></div>
-    ${rawJsonBlock(d)}
-  `;
+    <div class="section-label">Every design that passed the spec (4 CMA-ES runs × up to 60 evaluations, best per run)</div>
+    <div class="table-wrap table-scroll"><table class="data"><thead><tr><th>Target boost</th><th>Channel loss</th><th>Achieved boost</th><th>Eye height (mV)</th><th>Guard</th><th>Reason</th></tr></thead><tbody>${tableRows}</tbody></table></div>
+    ${rawJsonBlock(d)}`;
 }
-
 function wirePassVsValidChart(detail, d) {
   const mount = detail.querySelector('[data-chart="why-invalid"]');
   if (!mount) return;
-  const entries = Object.entries(d.why_invalid).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
-  renderBarChart(mount, entries, { ariaLabel: "why designs were guard-rejected" });
+  renderBarChart(mount, Object.entries(d.why_invalid).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value })), { ariaLabel: "why designs were guard-rejected" });
 }
 
 function pearson(xs, ys) {
-  const n = xs.length;
-  const mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n;
+  const n = xs.length, mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n;
   let num = 0, dx2 = 0, dy2 = 0;
-  for (let i = 0; i < n; i++) {
-    const dx = xs[i] - mx, dy = ys[i] - my;
-    num += dx * dy; dx2 += dx * dx; dy2 += dy * dy;
-  }
+  for (let i = 0; i < n; i++) { const dx = xs[i] - mx, dy = ys[i] - my; num += dx * dy; dx2 += dx * dx; dy2 += dy * dy; }
   return num / Math.sqrt(dx2 * dy2);
 }
-
 function targetTrackingHtml(d) {
-  const targets = d.map((r) => r.target);
-  const boosts = d.map((r) => r.boost);
-  const corr = pearson(targets, boosts);
+  const corr = pearson(d.map((r) => r.target), d.map((r) => r.boost));
   const mae = d.reduce((s, r) => s + Math.abs(r.boost - r.target), 0) / d.length;
-  return `
-    <div class="card">
-      ${kpiGrid([
-        { label: "Held-out specs", value: String(d.length) },
-        { label: "Correlation(requested, achieved)", value: fmt(corr, 3), accent: true },
-        { label: "Mean abs error", value: fmt(mae, 2) + " dB" },
-      ])}
-      <p class="chart-caption">A policy that ignores the requested target and always returns the same design would still score well on the 3–12 dB range check — this correlation is what tells the two cases apart.</p>
-    </div>
-    <div class="card chart-card" style="margin-top:14px;"><div class="chart-container" data-chart="target-tracking"></div></div>
-    ${rawJsonBlock(d)}
-  `;
+  return `<div class="card">${kpiGrid([
+      { label: "Held-out specs", value: String(d.length) }, { label: "Correlation(requested, achieved)", value: fmt(corr, 3), accent: true }, { label: "Mean abs error", value: fmt(mae, 2) + " dB" },
+    ])}<p class="chart-caption">A policy that ignores the requested target and always returns the same design would still score well on the 3 to 12 dB range check. This correlation is what tells the two cases apart.</p></div>
+    <div class="card chart-card" style="margin-top:12px;"><div class="chart-container" data-chart="target-tracking"></div></div>
+    ${rawJsonBlock(d)}`;
 }
-
 function wireTargetTrackingChart(detail, d) {
   const mount = detail.querySelector('[data-chart="target-tracking"]');
   if (!mount) return;
-  const points = d.map((r) => ({
-    x: r.target, y: r.boost,
-    tooltip: `target ${fmt(r.target, 2)} dB → achieved ${fmt(r.boost, 2)} dB`,
-  }));
-  renderScatterChart(mount, points, {
-    refLine: true, xLabel: "Requested boost (dB)", yLabel: "Achieved boost (dB)",
-    ariaLabel: "requested vs achieved boost scatter plot",
-  });
+  renderScatterChart(mount, d.map((r) => ({ x: r.target, y: r.boost, tooltip: `target ${fmt(r.target, 2)} dB, achieved ${fmt(r.boost, 2)} dB` })),
+    { refLine: true, xLabel: "Requested boost (dB)", yLabel: "Achieved boost (dB)", ariaLabel: "requested vs achieved boost scatter plot" });
 }
 
 function formatScalar(v) {
   if (v === null) return "null";
-  if (typeof v === "number") {
-    return Number.isInteger(v) ? String(v) : escapeHtml(String(Math.round(v * 10000) / 10000));
-  }
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : escapeHtml(String(Math.round(v * 10000) / 10000));
   return escapeHtml(String(v));
 }
-
 function formatCell(v) {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "n/a";
   if (typeof v === "object") return escapeHtml(JSON.stringify(v));
   return escapeHtml(String(v));
 }
-
 function tableHtml(rows) {
   const keys = Object.keys(rows[0]);
-  const head = keys.map((k) => `<th>${escapeHtml(k)}</th>`).join("");
-  const body = rows.map((r) => `<tr>${keys.map((k) => `<td>${formatCell(r[k])}</td>`).join("")}</tr>`).join("");
-  return `<div class="table-wrap table-scroll"><table class="data"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  return `<div class="table-wrap table-scroll"><table class="data"><thead><tr>${keys.map((k) => `<th>${escapeHtml(k)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${keys.map((k) => `<td>${formatCell(r[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
-
 function genericHtml(d) {
   let out = "";
   if (d && typeof d === "object" && !Array.isArray(d)) {
     const scalars = Object.entries(d).filter(([, v]) => v === null || ["number", "string", "boolean"].includes(typeof v));
     if (scalars.length) {
       out += `<div class="card">${kpiGrid(scalars.slice(0, 6).map(([k, v]) => ({ label: k, value: formatScalar(v) })))}</div>`;
-      if (scalars.length > 6) {
-        out += `<div class="card">${kpiGrid(scalars.slice(6, 12).map(([k, v]) => ({ label: k, value: formatScalar(v) })))}</div>`;
-      }
+      if (scalars.length > 6) out += `<div class="card">${kpiGrid(scalars.slice(6, 12).map(([k, v]) => ({ label: k, value: formatScalar(v) })))}</div>`;
     }
-    for (const [k, v] of Object.entries(d)) {
-      if (Array.isArray(v) && v.length && typeof v[0] === "object") {
-        out += `<div class="section-label">${escapeHtml(k)} (${v.length} rows)</div>${tableHtml(v)}`;
-      }
-    }
+    for (const [k, v] of Object.entries(d)) if (Array.isArray(v) && v.length && typeof v[0] === "object") out += `<div class="section-label">${escapeHtml(k)} (${v.length} rows)</div>${tableHtml(v)}`;
   } else if (Array.isArray(d) && d.length && typeof d[0] === "object") {
     out += tableHtml(d);
   }
-  out += rawJsonBlock(d);
-  return out;
+  return out + rawJsonBlock(d);
 }
 
-// -- Live pipeline: the ask ----------------------------------------------------------
-
-let pipelineDefaults = null;
-let selectedMode = "fastest";
-
-// Fixed display order (fast -> thorough), independent of whatever order the server's
-// `modes` list happens to come back in. The server decides WHICH of these appear
-// (GET /api/pipeline/defaults -> `modes`); this only fixes their order. "default" and
-// "retarget" stay in MODE_INFO because the API still accepts them and a result can still
-// come back tagged with one -- they are just not offered as buttons.
-const MODE_ORDER = ["fastest", "thinking", "default", "retarget"];
-const MODE_INFO = {
-  fastest: {
-    name: "Fastest",
-    sub: "surrogate-hedged",
-    desc: "Spends one evaluation on a kNN-surrogate-guided jump before G3.2 refinement, then hands off with a smaller budget. Fewer simulator calls and a shorter wall clock — the surrogate only ever picks where to spend one evaluation, it never decides a result.",
-  },
-  default: {
-    name: "Default",
-    sub: "benchmarked",
-    desc: "The pre-registered PPO → G3.2 → verification pipeline, unchanged from the published benchmark.",
-  },
-  retarget: {
-    name: "Retarget",
-    sub: "second axis",
-    desc: "Default, plus one thing: when the boost control reaches a bound, probe the other design axes and resume the search along the best one. Measured to fire rarely — it is here for the cases where the primary axis is genuinely railed.",
-  },
-  thinking: {
-    name: "Thinking",
-    sub: "multi-start",
-    desc: "Runs PPO → G3.2 from up to 8 independent starting points, adds corpus-proposed starts if none of them reach target, and keeps whichever got closest. Costs more simulator calls and about a minute, and solves specs a single start misses outright.",
-  },
-};
-
-// The server has already scaled these to their display unit (watts -> mW, and so on);
-// all that is left is choosing decimals so 0.05 mm² and 100 mV both read cleanly.
-function prettySpec(v, unit) {
-  if (v === null || v === undefined) return "—";
-  const mag = Math.abs(v);
-  const dp = Number.isInteger(v) ? 0 : mag >= 1 ? 2 : 3;
-  return `${fmt(v, dp)} ${escapeHtml(unit)}`;
-}
-
-function renderParseTable(spec) {
-  const rows = spec.fields || [];
-  const conflicts = rows.filter((r) => r.conflict);
-  const body = rows.map((r) => {
-    const asked = prettySpec(r.asked_disp, r.unit);
-    // Three states, and the difference between them is the whole point of this table:
-    // applied (the run uses your number), matched (your number equals the frozen
-    // default, so nothing is lost), and overridden (the run ignores your number).
-    let tag, cls;
-    if (r.applied) { tag = "applied to this run"; cls = "pf-applied"; }
-    else if (r.conflict) { tag = `run enforces ${prettySpec(r.run_disp, r.unit)}`; cls = "pf-conflict"; }
-    else { tag = "matches the frozen default"; cls = "pf-same"; }
-    return `<tr><td class="mono">${escapeHtml(r.field)}</td><td class="num mono">${asked}</td><td class="${cls}">${tag}</td></tr>`;
-  }).join("");
-  const warn = conflicts.length
-    ? `<div class="parse-conflict">${conflicts.length} constraint${conflicts.length > 1 ? "s" : ""} you gave ${conflicts.length > 1 ? "are" : "is"} <strong>not</strong> applied. <code>pipeline.design()</code> is frozen to two inputs — target boost and channel loss — so the rest are scored at the benchmarked defaults shown above. The delivered circuit is not being optimised against ${conflicts.length > 1 ? "those numbers" : "that number"}.</div>`
-    : "";
-  // A word like "gain" has two referents in this circuit. The parser picks one to avoid
-  // refusing an ordinary request, and says so here: an interpretation the user cannot
-  // see and correct is not meaningfully different from an invented one.
-  const assumed = Object.entries(spec.assumptions || {});
-  const assumeNote = assumed.length
-    ? `<div class="parse-assume">${assumed.map(([f, why]) =>
-        `<strong>${escapeHtml(f)}</strong> — ${escapeHtml(why)}`).join("<br>")}</div>`
-    : "";
-  return `<div class="parse-head">[${escapeHtml(spec.source)}] read ${rows.length} field${rows.length === 1 ? "" : "s"} from your text. Anything you wrote that is not listed was not recognised, and anything not written at all is a default.</div>
-    <table class="parse-table"><thead><tr><th>Spec field</th><th class="num">You asked</th><th>What this run does</th></tr></thead><tbody>${body}</tbody></table>${assumeNote}${warn}`;
-}
-
-function renderModeHint() {
-  $("#pipeline-mode-hint").textContent = MODE_INFO[selectedMode]?.desc || "";
-}
-
-function selectMode(mode) {
-  selectedMode = mode;
-  $$(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
-  renderModeHint();
-}
-
-function renderModeRow() {
-  const row = $("#pipeline-mode-row");
-  const available = pipelineDefaults.modes && pipelineDefaults.modes.length
-    ? pipelineDefaults.modes : MODE_ORDER;
-  const ordered = MODE_ORDER.filter((m) => available.includes(m));
-  row.innerHTML = ordered.map((m) => {
-    const info = MODE_INFO[m] || { name: m, sub: "" };
-    return `<button type="button" class="mode-btn" data-mode="${escapeHtml(m)}">
-      <span class="mode-btn-name">${escapeHtml(info.name)}</span>
-      <span class="mode-btn-sub">${escapeHtml(info.sub)}</span>
-    </button>`;
-  }).join("");
-  $$(".mode-btn").forEach((b) => b.addEventListener("click", () => selectMode(b.dataset.mode)));
-  selectMode(pipelineDefaults.default_mode && available.includes(pipelineDefaults.default_mode)
-    ? pipelineDefaults.default_mode : ordered[0] || "fastest");
-}
-
-async function initPipeline() {
-  pipelineDefaults = await api("/api/pipeline/defaults");
-  renderModeRow();
-
-  const targetInput = $("#pipeline-target");
-  targetInput.min = pipelineDefaults.boost_db_min;
-  targetInput.max = pipelineDefaults.boost_db_max;
-  targetInput.value = pipelineDefaults.target_boost_db;
-  bindRangeFill(targetInput);
-  const updateTarget = () => { $("#pipeline-target-val").textContent = fmt(targetInput.value, 1); };
-  targetInput.addEventListener("input", updateTarget);
-  updateTarget();
-
-  const channelInput = $("#pipeline-channel");
-  channelInput.value = pipelineDefaults.channel_loss_db;
-  bindRangeFill(channelInput);
-  const updateChannel = () => { $("#pipeline-channel-val").textContent = fmt(channelInput.value, 1); };
-  channelInput.addEventListener("input", updateChannel);
-  updateChannel();
-
-  $("#pipeline-parse-btn").addEventListener("click", async () => {
-    const text = $("#pipeline-text").value.trim();
-    const note = $("#pipeline-parse-note");
-    if (!text) return;
-    const btn = $("#pipeline-parse-btn");
-    btn.disabled = true;
-    note.hidden = true;
-    try {
-      const spec = await postJSON("/api/pipeline/parse-spec", { text });
-      targetInput.value = spec.target_boost_db; updateTarget();
-      channelInput.value = spec.channel_loss_db; updateChannel();
-      bindRangeFill(targetInput); bindRangeFill(channelInput);
-      note.className = "parse-note parse-note-ok";
-      note.innerHTML = renderParseTable(spec);
-      note.hidden = false;
-    } catch (err) {
-      // A refused parse leaves the sliders exactly as they were -- deliberately. Showing
-      // a default target after an unrecognised request would look like understanding.
-      note.className = "parse-note parse-note-bad";
-      if (err.title) {
-        const label = err.label ? `<span class="err-code">${escapeHtml(err.label)}</span>` : "";
-        note.innerHTML = `<strong>${label}${escapeHtml(err.title)}</strong>${err.detail ? `<br>${escapeHtml(err.detail)}` : ""}${err.hint ? `<br><em>${escapeHtml(err.hint)}</em>` : ""}`;
-      } else {
-        note.textContent = err.message;
-      }
-      note.hidden = false;
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-  $("#pipeline-run-btn").addEventListener("click", runPipeline);
-}
-
-// -- Live pipeline: progress tracker --------------------------------------------------
-// The backend runs PPO -> G3.2 -> verification as one blocking call and reports only the
-// final result -- there is no per-stage progress feed. So while the request is in flight
-// every stage shows the same indeterminate "active" state (no fabricated percentages),
-// and only once the result is back are stages marked done/warn/skip from what the result
-// actually contains.
-
-function setStage(id, state) {
-  $(`#${id}`).className = `stage${state ? " " + state : ""}`;
-}
-
-function resetStages() {
-  ["stage-search", "stage-refine", "stage-verify"].forEach((id) => setStage(id, ""));
-  $("#stage-note").textContent = "";
-}
-
-function updateStagesFromResult(r) {
-  const statuses = pipelineDefaults.statuses;
-  const note = $("#stage-note");
-
-  if (r.status === statuses.fallback) {
-    setStage("stage-search", "warn");
-    setStage("stage-refine", "warn");
-    setStage("stage-verify", r.verification ? "done" : "skip");
-    note.textContent = "PPO → G3.2 found nothing guard-valid for this spec; a fixed fallback design was returned instead.";
-    return;
-  }
-  if (!r.design) {
-    setStage("stage-search", "done");
-    setStage("stage-refine", "warn");
-    setStage("stage-verify", "skip");
-    note.textContent = "The architecture ran and did not produce a guard-valid design for this spec.";
-    return;
-  }
-  setStage("stage-search", "done");
-  setStage("stage-refine", "done");
-  if (!r.verification) {
-    setStage("stage-verify", "skip");
-    note.textContent = "Design found; independent verification did not run.";
-  } else if (r.status === statuses.solved) {
-    setStage("stage-verify", "done");
-    note.textContent = "All three stages completed; independent verification passed.";
-  } else {
-    setStage("stage-verify", "warn");
-    note.textContent = "Design found and re-simulated, but independent verification did not pass.";
-  }
-}
-
-// -- Live pipeline: result -------------------------------------------------------------
-
-// Server-side scale table (server.py DESIGN_FIELDS): human = SI / scale. The pipeline
-// result's `design` object is in SI units (the same DesignVars the simulator takes), but
-// POST /api/schematic expects the human units the guard fields use -- so this mirrors
-// server.py's own conversion rather than guessing at it.
-const DESIGN_FIELD_SCALE = { w_in: 1e-6, l_in: 1e-6, i_tail: 1e-6, rs: 1e3, cs: 1e-15, r_load: 1.0, w_dfe: 1.0 };
-function designToHumanFields(dv) {
-  const out = {};
-  for (const [k, scale] of Object.entries(DESIGN_FIELD_SCALE)) {
-    if (dv[k] !== undefined && dv[k] !== null) out[k] = dv[k] / scale;
-  }
-  return out;
-}
-
-async function fetchResultSchematic(design, r) {
-  const isFallback = r.status === pipelineDefaults.statuses.fallback;
-  const subtitle = r.spec ? `target ${fmt(r.spec.target_boost_db, 1)} dB boost / ${fmt(r.spec.channel_loss_db, 1)} dB channel loss` : "";
-  const res = await fetch("/api/schematic", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fields: designToHumanFields(design),
-      title: isFallback ? "Fixed fallback design (not AI-generated)" : "Delivered design",
-      subtitle,
-    }),
-  });
-  if (!res.ok) {
-    // This endpoint returns SVG on success, so it cannot go through api(). Errors from it
-    // are still the structured JSON shape, so unpack them the same way rather than
-    // showing the reader a bare status code.
-    let parsed = null;
-    try { parsed = JSON.parse(await res.text()); } catch { /* not JSON */ }
-    const err = new Error(parsed && parsed.title ? parsed.title : `server returned ${res.status}`);
-    if (parsed && parsed.title) {
-      err.title = parsed.title;
-      err.detail = parsed.detail || null;
-      err.hint = parsed.hint || null;
-    }
-    throw err;
-  }
-  return res.text();
-}
-
-function statusBannerHtml(r) {
-  const statuses = pipelineDefaults.statuses;
-  const v = r.verification;
-  if (r.status === statuses.fallback) {
-    return `<div class="status-banner st-fallback">${ICONS.alertTriangle}<div>
-      <div class="status-title">Fixed fallback design — NOT AI-generated</div>
-      <div class="status-sub">The architecture found nothing guard-valid for this spec. What follows is a fixed, hand-verified design that ignores your requested target — it is not an output of the PPO/G3.2 search and must not be read as one.</div>
-    </div></div>`;
-  }
-  if (r.status === statuses.solved) {
-    // Deliberately does NOT say "G3.2 closed the target". `solved` means the ten hard
-    // checks pass on a fresh re-simulation, and one of those checks is boost-within-
-    // tolerance -- which is a weaker statement than G3.2's own internal reached_target
-    // flag. The two disagree often enough that claiming the strong one here would be
-    // contradicted by the "[target NOT reached]" line in the report a few centimetres
-    // below it. Say the thing that is actually verified.
-    const err = v && typeof v.abs_err_db === "number"
-      ? ` The delivered boost is ${fmt(v.abs_err_db, 2)} dB off the number you asked for, inside the ±${fmt(r.spec.boost_tol_db, 2)} dB tolerance.`
-      : "";
-    return `<div class="status-banner st-solved">${ICONS.checkCircle}<div>
-      <div class="status-title">Solved</div>
-      <div class="status-sub">An independent re-simulation of the delivered design passes all ten hard specs, boost included.${err}</div>
-    </div></div>`;
-  }
-  if (r.status === statuses.closed_not_verified) {
-    const fails = v && v.failing && v.failing.length ? ` — fails ${escapeHtml(v.failing.join(", "))}` : "";
-    return `<div class="status-banner st-closed">${ICONS.alertTriangle}<div>
-      <div class="status-title">Closed, but failed independent verification</div>
-      <div class="status-sub">The solver reported it reached the target, but the fresh re-simulation disagrees${fails}.</div>
-    </div></div>`;
-  }
-  return `<div class="status-banner st-unsolved">${ICONS.xCircle}<div>
-    <div class="status-title">Unsolved</div>
-    <div class="status-sub">The architecture ran and did not reach a guard-valid design for this spec.</div>
-  </div></div>`;
-}
-
-function headlineHtml(d, v) {
-  // Beside the numbers the drawing renders at about 0.68 of its natural size, which keeps
-  // the circuit and its sizing in one screenful but puts the device labels near 8px. The
-  // toggle drops the grid to one column so the schematic can be read at full size; it is
-  // a layout switch, nothing is re-fetched.
-  return `<div class="result-hero" id="result-hero">
-    <div class="schematic-holder" id="result-schematic-holder">
-      <button class="schematic-zoom" id="schematic-zoom" type="button">Enlarge</button>
-      <p class="artifact-meta">rendering schematic&hellip;</p>
-    </div>
-    <div class="headline-grid">
-      ${kpiGrid([
-        { label: "W_in", value: fmt(d.w_in * 1e6, 2) + " µm" },
-        { label: "L_in", value: fmt(d.l_in * 1e6, 4) + " µm" },
-        { label: "I_tail", value: fmt(d.i_tail * 1e6, 1) + " µA" },
-        { label: "R_s", value: fmt(d.rs / 1e3, 2) + " kΩ" },
-        { label: "C_s", value: fmt(d.cs * 1e15, 1) + " fF" },
-        { label: "R_load", value: fmt(d.r_load, 1) + " Ω" },
-      ])}
-      <div class="headline-power">${kpiGrid([
-        { label: "Power", value: v && v.measures ? fmt(v.measures.power_w * 1e3, 2) + " mW" : "—", accent: true },
-      ])}</div>
-    </div>
-  </div>`;
-}
-
-function secondaryBlockHtml(r) {
-  const v = r.verification;
-  if (!v || !v.measures) {
-    return `<div class="secondary-block"><p class="help-hint" style="margin:0;">${v ? `verification: GUARD REJECTED — ${escapeHtml(v.guard_check || "")}` : "verification: not run"}</p></div>`;
-  }
-  const m = v.measures;
-  return `<div class="secondary-block">
-    <div class="card-title">Verification detail</div>
-    ${kpiGrid([
-      { label: "Boost achieved", value: fmt(m.boost_db, 3) + " dB", help: `requested ${fmt(r.spec.target_boost_db, 2)} ±${fmt(r.spec.boost_tol_db, 2)} dB` },
-      { label: "Peak freq", value: fmt(m.peak_freq_ghz, 3) + " GHz" },
-      // eye_h is the HORIZONTAL opening, so it is the eye's width, in UI; eye_v is the
-      // VERTICAL opening, so it is its height, in mV. Naming them the other way round
-      // puts a time unit on a voltage, which is the first thing an analog engineer looks
-      // at here.
-      { label: "Eye width", value: fmt(m.eye_h_ui, 2) + " UI" },
-      { label: "Eye height", value: Math.round(m.eye_v_mv) + " mV" },
-      { label: "Noise", value: Math.round(m.noise_vrms * 1e6) + " µVrms" },
-      { label: "HD3", value: fmt(m.hd3_db, 1) + " dB" },
-      { label: "Area", value: fmt(m.area_mm2 * 1e3, 1) + " ×10⁻³ mm²" },
-    ])}
-    <div class="secondary-row">
-      <span>Guard verdict: <strong>${v.guard_valid ? "guard-valid" : `GUARD REJECTED — ${escapeHtml(v.guard_check || "")}`}</strong></span>
-      <span>Hard-spec check: <strong>${v.passed ? "all ten checks pass" : `fails ${(v.failing || []).join(", ")}`}</strong></span>
-    </div>
-  </div>`;
-}
-
-function guidanceHtml(r) {
-  // Why the run stopped where it did, keyed off the solver's own recorded reason. This is
-  // deliberately NOT a claim that no better circuit exists -- none of these solvers proves
-  // optimality, and the feasibility-wall case is exactly where something better does exist.
-  // See `_guidance` in eqrl/pipeline.py.
-  const g = r.guidance;
-  if (!g || !g.headline) return "";
-  const suggest = g.suggest_mode && g.suggest_mode !== r.mode
-    ? `<p class="help-hint" style="margin:6px 0 0;">Suggested next step: <button type="button" class="mode-suggest" data-mode="${escapeHtml(g.suggest_mode)}">try ${escapeHtml(MODE_INFO[g.suggest_mode]?.name || g.suggest_mode)} mode</button></p>`
-    : "";
-  return `<div class="secondary-block mode-detail-block">
-    <div class="card-title">${escapeHtml(g.headline)}</div>
-    <p class="help-hint" style="margin:0;">${escapeHtml(g.detail || "")}</p>
-    ${g.reason ? `<div class="kv-row"><span class="kv-k">Solver reason</span><span class="kv-v mono">${escapeHtml(g.reason)}</span></div>` : ""}
-    ${suggest}
-  </div>`;
-}
-
-function modeDetailHtml(r) {
-  const detail = r.provenance && r.provenance.mode_detail;
-  const mode = (detail && detail.mode) || r.mode || "default";
-  if (!detail || mode === "default") return "";
-
-  if (mode === "fastest") {
-    const h = detail.hedge || {};
-    const verdict = !h.attempted ? "not attempted"
-      : !h.evaluated ? "attempted — no candidate cleared the corpus safety radius"
-      : h.accepted ? "accepted" : "attempted — not accepted";
-    return `<div class="secondary-block mode-detail-block">
-      <div class="card-title">Fastest mode — surrogate hedge</div>
-      <div class="kv-row"><span class="kv-k">Outcome</span><span class="kv-v">${escapeHtml(verdict)}</span></div>
-      ${h.reason ? `<div class="kv-row"><span class="kv-k">Reason</span><span class="kv-v">${escapeHtml(h.reason)}</span></div>` : ""}
-    </div>`;
-  }
-
-  if (mode === "thinking") {
-    const rollouts = detail.rollouts || [];
-    const rows = rollouts.map((ro) => {
-      const isWinner = ro.start === detail.winner_start;
-      const kind = String(ro.start || "").startsWith("surrogate") ? "corpus-proposed start" : "PPO rollout";
-      return `<tr><td class="mono">${escapeHtml(ro.start)}${isWinner ? " <strong>(winner)</strong>" : ""}</td><td>${kind}</td><td class="num mono">${ro.best_abs_err_db === null || ro.best_abs_err_db === undefined ? "—" : fmt(ro.best_abs_err_db, 4) + " dB"}</td><td class="num mono">${ro.n_loose_pass}</td><td>${ro.reached_target ? "reached target" : "did not reach target"}</td></tr>`;
-    }).join("");
-    // The governor is worth surfacing: a run that stopped starting new restarts because
-    // it hit its wall-clock envelope searched less than the mode's nominal breadth, and
-    // the user should not read that as "everything was tried".
-    const gov = detail.governor_stopped
-      ? `<p class="help-hint" style="margin:6px 0 0;">Stopped launching further restarts at the ~60 s budget (${detail.measure_all_spent} measure_all spent). Fewer starting points were tried than this mode's maximum.</p>`
-      : "";
-    return `<div class="secondary-block mode-detail-block">
-      <div class="card-title">Thinking mode — ${detail.n_ppo_rollouts || 0} PPO rollout${(detail.n_ppo_rollouts || 0) === 1 ? "" : "s"}${detail.n_surrogate_starts ? ` + ${detail.n_surrogate_starts} corpus start${detail.n_surrogate_starts === 1 ? "" : "s"}` : ""}</div>
-      <table class="parse-table"><thead><tr><th>Start</th><th>Kind</th><th class="num">Best abs. error</th><th class="num">Loose passes</th><th>Target</th></tr></thead><tbody>${rows}</tbody></table>${gov}
-    </div>`;
-  }
-
-  if (mode === "retarget") {
-    const rt = detail.retarget || {};
-    return `<div class="secondary-block mode-detail-block">
-      <div class="card-title">Retarget mode — second-axis probe</div>
-      <div class="kv-row"><span class="kv-k">Outcome</span><span class="kv-v">${rt.fired ? `resumed along ${escapeHtml(rt.accepted_axis || "another axis")}` : "did not fire"}</span></div>
-      ${rt.fired ? "" : `<div class="kv-row"><span class="kv-k">Why not</span><span class="kv-v">${escapeHtml(rt.why_not || "—")}</span></div>`}
-    </div>`;
-  }
-
-  return "";
-}
-
-function costStripHtml(r, elapsedS) {
-  const c = r.cost;
-  return `<div class="cost-strip">
-    <span class="cs-item"><strong>${c.optimizer_evals}</strong> optimizer evals</span>
-    <span class="cs-item"><strong>${c.measure_all_total}</strong> measure_all calls (${c.measure_all_search} search + ${c.measure_all_verification} verify)</span>
-    <span class="cs-item"><strong>${c.spice_analyses_total}</strong> SPICE analyses</span>
-    <span class="cs-item"><strong>${c.budget_evals_unspent}</strong> budget unspent</span>
-    <span class="cs-item"><strong>${fmt(elapsedS, 1)}</strong> s wall clock (this request)</span>
-  </div>`;
-}
-
-async function renderPipelineResult(r, elapsedS) {
-  const box = $("#pipeline-result");
-  const d = r.design;
-
-  let html = statusBannerHtml(r);
-  html += d ? headlineHtml(d, r.verification)
-             : banner("warning", "alertTriangle", "No design: the architecture produced nothing guard-valid for this spec, and fallback was not allowed.");
-  if (d) html += secondaryBlockHtml(r);
-  html += guidanceHtml(r);
-  html += modeDetailHtml(r);
-  html += costStripHtml(r, elapsedS);
-  html += `<details class="explainer" style="margin-top:4px;"><summary>Full CLI-style report</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(r.describe_text)}</pre></div></details>`;
-  if (r.netlist) html += `<details class="explainer" style="margin-top:10px;"><summary>Final schematic (SPICE netlist)</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(r.netlist)}</pre></div></details>`;
-  html += `<details class="explainer" style="margin-top:10px;"><summary>Raw result JSON</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(JSON.stringify(r, null, 2))}</pre></div></details>`;
-
-  box.innerHTML = html;
-
-  // The suggestion button is written into `box` above, so it can only be wired after the
-  // assignment. It selects the mode; it does not re-run -- re-running on a click would
-  // spend simulator budget the user did not ask for.
-  const suggestBtn = box.querySelector(".mode-suggest");
-  if (suggestBtn) {
-    suggestBtn.addEventListener("click", () => {
-      const m = suggestBtn.dataset.mode;
-      if ($$(".mode-btn").some((b) => b.dataset.mode === m)) {
-        selectMode(m);
-        $("#pipeline-mode-row").scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    });
-  }
-
-  if (d) {
-    const holder = $("#result-schematic-holder");
-    try {
-      const svg = await fetchResultSchematic(d, r);
-      // The button lives inside the holder, so it has to be re-attached after the SVG
-      // replaces the placeholder.
-      holder.innerHTML = `<button class="schematic-zoom" id="schematic-zoom" type="button">Enlarge</button>${svg}`;
-      const zoom = $("#schematic-zoom");
-      zoom.addEventListener("click", () => {
-        const wide = $("#result-hero").classList.toggle("wide");
-        zoom.textContent = wide ? "Shrink" : "Enlarge";
-        if (wide) holder.scrollIntoView({ block: "start", behavior: "smooth" });
-      });
-    } catch (err) {
-      holder.innerHTML = errorBannerHtml(err, "Could not render the schematic");
-    }
-  }
-}
-
-// -- Live narration ---------------------------------------------------------------------
-// The run is a single blocking POST, so progress is read from a second endpoint while it
-// is in flight. Every line comes from the server having actually observed the frozen
-// pipeline do that thing -- there are no interpolated percentages and no fake steps; when
-// nothing is happening the log simply does not move.
-
-const STAGE_OF = { load: "stage-search", search: "stage-search", refine: "stage-refine", verify: "stage-verify" };
-const STAGE_LABEL = {
-  load: "Loading the frozen policy",
-  search: "Stage 1 of 3 · PPO search",
-  refine: "Stage 2 of 3 · G3.2 refinement",
-  verify: "Stage 3 of 3 · independent verification",
-};
-const STAGE_ORDER = ["stage-search", "stage-refine", "stage-verify"];
-
-function appendRunEvents(events) {
-  const log = $("#run-log");
-  if (!log) return;
-  for (const ev of events) {
-    const row = document.createElement("div");
-    row.className = `log-row log-${ev.kind}${ev.ok === false ? " log-rejected" : ""}`;
-    row.innerHTML = `<span class="log-t">${fmt(ev.t, 1)}s</span><span class="log-text">${escapeHtml(ev.text)}</span>`;
-    log.appendChild(row);
-  }
-  // Follow the tail: during a run the newest line is the only one worth looking at.
-  log.scrollTop = log.scrollHeight;
-}
-
-function markStagesLive(stage) {
-  const id = STAGE_OF[stage];
-  if (!id) return;
-  const at = STAGE_ORDER.indexOf(id);
-  STAGE_ORDER.forEach((s, i) => setStage(s, i < at ? "done" : i === at ? "active" : ""));
-}
-
-function pollRunProgress(state) {
-  return setInterval(async () => {
-    if (state.stopped) return;
-    try {
-      const p = await api(`/api/pipeline/progress?since=${state.cursor}`);
-      state.cursor = p.next;
-      if (p.events.length) appendRunEvents(p.events);
-      markStagesLive(p.stage);
-      // The note is a running tally, not a copy of the last log line -- the trace right
-      // below it already says what just happened.
-      state.simulated += p.events.filter((e) => e.kind === "candidate").length;
-      const label = STAGE_LABEL[p.stage] || "Running";
-      $("#stage-note").textContent =
-        `${label} · ${state.simulated} circuit${state.simulated === 1 ? "" : "s"} simulated · ${fmt(p.elapsed_s, 1)} s elapsed`;
-    } catch { /* a dropped poll is not a failed run; the next one catches up */ }
-  }, 350);
-}
-
-async function runPipeline() {
-  const btn = $("#pipeline-run-btn");
-  const box = $("#pipeline-result");
-  btn.disabled = true;
-  $$(".mode-btn").forEach((b) => { b.disabled = true; });
-  box.innerHTML = "";
-  $("#stage-tracker-wrap").hidden = false;
-  resetStages();
-  setStage("stage-search", "active");
-  $("#run-log").innerHTML = "";
-  $("#run-log-wrap").hidden = false;
-  $("#stage-note").textContent = "Starting — every line below is a real SKY130 simulation.";
-
-  const t0 = performance.now();
-  const state = { cursor: 0, stopped: false, simulated: 0 };
-  const timer = pollRunProgress(state);
-  try {
-    const result = await postJSON("/api/pipeline/run", {
-      target_boost_db: Number($("#pipeline-target").value),
-      channel_loss_db: Number($("#pipeline-channel").value),
-      spec_index: Number($("#pipeline-spec-index").value) || 0,
-      allow_fallback: $("#pipeline-fallback").checked,
-      mode: selectedMode,
-    });
-    const elapsedS = (performance.now() - t0) / 1000;
-    // Render FIRST, drain the log after. The answer is in hand the moment the POST
-    // resolves, and the closing log lines are a nicety -- making the schematic wait on
-    // one more round trip is the only latency this layer actually controls.
-    updateStagesFromResult(result);
-    await renderPipelineResult(result, elapsedS);
-    try {
-      const p = await api(`/api/pipeline/progress?since=${state.cursor}`);
-      if (p.events.length) appendRunEvents(p.events);
-    } catch { /* the result is already on screen; the log tail is cosmetic */ }
-  } catch (err) {
-    $("#stage-tracker-wrap").hidden = true;
-    box.innerHTML = errorBannerHtml(err, "Run failed");
-  } finally {
-    state.stopped = true;
-    clearInterval(timer);
-    btn.disabled = false;
-    $$(".mode-btn").forEach((b) => { b.disabled = false; });
-  }
-}
-
-// -- Design time ------------------------------------------------------------------------
-// Everything here is read from the recorded artifacts by /api/design-time. The panel leads
-// with the evaluation-count result (which the permutation tests support) and shows the
-// chance-matched negative on the strict column inline, rather than burying it.
+// -- Lab: design time -----------------------------------------------------------------------
 
 function statTile(value, unit, label, sub) {
-  return `<div class="stat-tile">
-    <div class="stat-value">${escapeHtml(value)}<span class="stat-unit">${escapeHtml(unit || "")}</span></div>
-    <div class="stat-label">${escapeHtml(label)}</div>
-    ${sub ? `<div class="stat-sub">${escapeHtml(sub)}</div>` : ""}
-  </div>`;
+  return `<div class="stat-tile"><div class="stat-value">${escapeHtml(value)}<span class="stat-unit">${escapeHtml(unit || "")}</span></div><div class="stat-label">${escapeHtml(label)}</div>${sub ? `<div class="stat-sub">${escapeHtml(sub)}</div>` : ""}</div>`;
 }
-
-function pFmt(p) {
-  if (p === null || p === undefined) return "&mdash;";
-  if (p < 1e-3) return p.toExponential(1);
-  return p.toFixed(3);
-}
+function pFmt(p) { if (p === null || p === undefined) return "n/a"; return p < 1e-3 ? p.toExponential(1) : p.toFixed(3); }
 
 function renderDesignTime(d) {
   const P = d.protocol, S = d.sweep, E = d.per_eval, DL = d.delivered;
-  let html = "";
-
-  html += `<div class="stat-row">
+  let html = `<div class="stat-row">
     ${statTile(String(DL.total_evals), " evals", "to size the delivered circuit", `${DL.stage1_ppo_evals} PPO + ${DL.stage2_evals} refinement`)}
-    ${statTile(S.total_points.toLocaleString(), " pts", "exhaustive sweep, actually run", `${S.elapsed_h} h · passed spec on ${S.spec_pass}`)}
+    ${statTile(S.total_points.toLocaleString(), " pts", "exhaustive sweep, actually run", `${S.elapsed_h} h, passed spec on ${S.spec_pass}`)}
     ${statTile(`${E.speedup.toFixed(0)}×`, "", "faster per evaluation", `${E.resident_median_s.toFixed(3)} s vs ${E.subprocess_median_s.toFixed(2)} s`)}
   </div>`;
-
-  // -- The defensible claim: evaluations at a matched budget --------------------------
-  html += `<div class="section-label">Evaluations to a solution — ${P.n_specs} held-out specs, ${P.budget}-evaluation budget for every arm</div>`;
-  html += `<div class="card"><table class="dt-table">
-    <thead><tr>
-      <th>Method</th>
-      <th class="num">Median evals<br/><span class="th-sub">to loose solve</span></th>
-      <th class="num">Solved<br/><span class="th-sub">loose</span></th>
-      <th class="num">p vs PPO<br/><span class="th-sub">permutation, loose</span></th>
-      <th class="num">Sim-matched<br/><span class="th-sub">evals → loose</span></th>
-      <th class="num">Solved<br/><span class="th-sub">strict</span></th>
-    </tr></thead><tbody>`;
+  html += `<div class="section-label">Evaluations to a solution: ${P.n_specs} held-out specs, ${P.budget}-evaluation budget for every arm</div>`;
+  html += `<div class="card"><div style="overflow-x:auto;"><table class="dt-table"><thead><tr><th>Method</th><th class="num">Median evals<br/><span class="th-sub">to loose solve</span></th><th class="num">Solved<br/><span class="th-sub">loose</span></th><th class="num">p vs PPO<br/><span class="th-sub">permutation, loose</span></th><th class="num">Sim-matched<br/><span class="th-sub">evals to loose</span></th><th class="num">Solved<br/><span class="th-sub">strict</span></th></tr></thead><tbody>`;
   let allStrictAtChance = true;
   for (const a of d.arms) {
     const sm = a.sim_matched;
     if (!(a.chance && a.chance.p_one_sided > 0.05)) allStrictAtChance = false;
-    html += `<tr class="${a.is_silq ? "dt-silq" : ""}">
-      <td><strong>${escapeHtml(a.name)}</strong>${a.is_silq ? ' <span class="dt-tag">SILQ</span>' : ""}</td>
-      <td class="num">${a.loose_median}</td>
-      <td class="num">${a.loose} / ${a.n_specs}</td>
-      <td class="num">${a.vs_ppo_loose_p === null || a.vs_ppo_loose_p === undefined ? "&mdash;" : pFmt(a.vs_ppo_loose_p)}</td>
-      <td class="num">${sm ? `${sm.evals} → ${sm.loose}` : "&mdash;"}</td>
-      <td class="num dt-dim" title="${a.chance ? `chance-matched control expected ${a.chance.expected.toFixed(1)}, p=${a.chance.p_one_sided}` : ""}">${a.strict} / ${a.n_specs}</td>
-    </tr>`;
+    html += `<tr class="${a.is_silq ? "dt-silq" : ""}"><td><strong>${escapeHtml(a.name)}</strong>${a.is_silq ? ' <span class="dt-tag">silQ</span>' : ""}</td><td class="num">${a.loose_median}</td><td class="num">${a.loose} / ${a.n_specs}</td><td class="num">${a.vs_ppo_loose_p === null || a.vs_ppo_loose_p === undefined ? "n/a" : pFmt(a.vs_ppo_loose_p)}</td><td class="num">${sm ? `${sm.evals} to ${sm.loose}` : "n/a"}</td><td class="num dt-dim" title="${a.chance ? `chance-matched control expected ${a.chance.expected.toFixed(1)}, p=${a.chance.p_one_sided}` : ""}">${a.strict} / ${a.n_specs}</td></tr>`;
   }
-  html += `</tbody></table>
-    <p class="help-hint" style="margin-top:12px;">
-      &ldquo;Loose&rdquo; and &ldquo;strict&rdquo; are the two preregistered solve criteria (tolerance ${P.tol_db} dB).
-      p-values are ${P.permutations.toLocaleString()}-permutation paired tests against the <strong>PPO</strong> arm,
-      which is the reference (so PPO itself shows no p, and PPO-restart is compared to it).
-      &ldquo;Sim-matched&rdquo; re-runs each arm at an equalised simulation count.
-    </p></div>`;
-
+  html += `</tbody></table></div><p class="help-hint" style="margin-top:12px;">"Loose" and "strict" are the two preregistered solve criteria (tolerance ${P.tol_db} dB). p-values are ${P.permutations.toLocaleString()}-permutation paired tests against the <strong>PPO</strong> arm, which is the reference. "Sim-matched" re-runs each arm at an equalised simulation count.</p></div>`;
   const ref = d.arms.find((a) => a.name === "PPO-restart");
   if (ref && ref.chance) {
-    html += banner("warning", "alertTriangle",
-      `Preregistered negative, reported: the strict solve <em>count</em> is greyed above because it is not distinguishable from a chance-matched control &mdash; SILQ scores ${ref.chance.observed} against an expectation of ${ref.chance.expected.toFixed(1)} (p = ${ref.chance.p_one_sided})${allStrictAtChance ? ", and the same is true of every other arm, so that column separates nothing" : ""}. The claim this panel makes is the <strong>evaluation count</strong>, not the number of specs solved.`);
+    html += banner("warning", "alertTriangle", `Preregistered negative, reported: the strict solve <em>count</em> is greyed above because it is not distinguishable from a chance-matched control. silQ scores ${ref.chance.observed} against an expectation of ${ref.chance.expected.toFixed(1)} (p = ${ref.chance.p_one_sided})${allStrictAtChance ? ", and the same is true of every other arm, so that column separates nothing" : ""}. The claim this panel makes is the <strong>evaluation count</strong>, not the number of specs solved.`);
   }
-
-  // -- Versus the sweep the brief names ------------------------------------------------
   html += `<div class="section-label">Versus sweeping the parameter space</div>`;
-  html += `<div class="card">
-    <p>A full-factorial grid over the six design variables was <strong>actually run</strong>, not estimated:
-    ${S.per_axis} points per axis = ${S.total_points.toLocaleString()} points, ${S.elapsed_h} hours of wall clock
-    at ${S.s_per_point} s per point. It was guard-valid on ${S.valid} and passed spec on
-    <strong>${S.spec_pass}</strong> of them; the first success came at point ${S.first_success_index.toLocaleString()}.</p>
-    <p class="help-hint">${escapeHtml(S.note)}</p>
-    <div class="section-label" style="margin-top:16px;">And that is the coarsest grid there is — refining it explodes</div>
+  html += `<div class="card"><p style="font-size:var(--fs-sm);">A full-factorial grid over the six design variables was <strong>actually run</strong>, not estimated: ${S.per_axis} points per axis = ${S.total_points.toLocaleString()} points, ${S.elapsed_h} hours of wall clock at ${S.s_per_point} s per point. It was guard-valid on ${S.valid} and passed spec on <strong>${S.spec_pass}</strong> of them; the first success came at point ${S.first_success_index.toLocaleString()}.</p><p class="help-hint">${escapeHtml(S.note)}</p>
+    <div class="section-label" style="margin-top:16px;">And that is the coarsest grid there is; refining it explodes</div>
     <table class="dt-table"><thead><tr><th>Points per axis</th><th class="num">Grid size</th><th class="num">Projected wall clock</th></tr></thead><tbody>`;
   for (const [k, hours] of Object.entries(S.extrapolation_hours)) {
     const n = Number(k);
-    html += `<tr><td>${n}</td><td class="num">${Math.pow(n, 6).toLocaleString()}</td><td class="num">${
-      hours < 48 ? `${hours.toFixed(1)} h` : `${(hours / 24).toFixed(0)} days`}</td></tr>`;
+    html += `<tr><td>${n}</td><td class="num">${Math.pow(n, 6).toLocaleString()}</td><td class="num">${hours < 48 ? `${hours.toFixed(1)} h` : `${(hours / 24).toFixed(0)} days`}</td></tr>`;
   }
   html += `</tbody></table></div>`;
-
-  // -- Per-evaluation cost --------------------------------------------------------------
   html += `<div class="section-label">Cost per evaluation</div>`;
-  html += `<div class="card"><p>Design time is evaluations &times; cost per evaluation, so the simulator loop was
-    optimised too: a resident libngspice server instead of one subprocess per design.
-    <strong>${E.resident_median_s.toFixed(4)} s</strong> vs <strong>${E.subprocess_median_s.toFixed(2)} s</strong>
-    &mdash; a ${E.speedup.toFixed(1)}× speedup. At that rate the delivered circuit's
-    ${DL.total_evals} evaluations are ${DL.wall_clock_s_at_resident_rate} s of simulation.</p>
-    <p class="help-hint">${escapeHtml(E.note)}</p></div>`;
-
-  // -- Caveats ---------------------------------------------------------------------------
+  html += `<div class="card"><p style="font-size:var(--fs-sm);">Design time is evaluations times cost per evaluation, so the simulator loop was optimised too: a resident libngspice server instead of one subprocess per design. <strong>${E.resident_median_s.toFixed(4)} s</strong> vs <strong>${E.subprocess_median_s.toFixed(2)} s</strong>, a ${E.speedup.toFixed(1)}× speedup. At that rate the delivered circuit's ${DL.total_evals} evaluations are ${DL.wall_clock_s_at_resident_rate} s of simulation.</p><p class="help-hint">${escapeHtml(E.note)}</p></div>`;
   html += `<div class="section-label">What these numbers do not say</div><div class="card"><ul class="dt-caveats">`;
   for (const c of d.caveats) html += `<li>${escapeHtml(c)}</li>`;
   html += `<li>${escapeHtml(DL.unit_warning)}</li></ul></div>`;
-
   $("#designtime-body").innerHTML = html;
 }
-
 async function initDesignTime() {
   const res = await fetch("/api/design-time");
   if (!res.ok) throw new Error(`server returned ${res.status}`);
   renderDesignTime(await res.json());
 }
 
-// -- Schematic (guard sandbox) -----------------------------------------------------------
-// The SVG is rendered server-side by eqrl.schematic from the same DesignVars the
-// simulator receives, so the picture cannot drift from the measured netlist. This powers
-// the "Schematic of these fields" strip inside the Guard layer sandbox dev tool.
-
-async function showSchematic(fetcher, label) {
-  const holder = $("#schematic-holder");
-  holder.innerHTML = `<p class="artifact-meta">rendering ${escapeHtml(label)}&hellip;</p>`;
-  try {
-    const svg = await fetcher();
-    holder.innerHTML = svg;
-  } catch (err) {
-    holder.innerHTML = banner("danger", "xCircle", `Could not render the schematic: ${escapeHtml(err.message)}`);
-  }
-}
-
-async function initSchematic() {
-  const delivered = async () => {
-    const res = await fetch("/api/schematic");
-    if (!res.ok) throw new Error(`server returned ${res.status}`);
-    return res.text();
-  };
-  const fromGuard = async () => {
-    const res = await fetch("/api/schematic", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fields: readGuardFields(),
-        title: "CTLE candidate",
-        subtitle: "drawn from the current Guard Layer fields — not the frozen delivered design",
-      }),
-    });
-    if (!res.ok) throw new Error(`server returned ${res.status}`);
-    return res.text();
-  };
-
-  $("#schematic-delivered-btn").addEventListener("click", () => showSchematic(delivered, "the delivered circuit"));
-  $("#schematic-guard-btn").addEventListener("click", () => showSchematic(fromGuard, "the guard-field candidate"));
-  await showSchematic(delivered, "the delivered circuit");
-}
-
-// -- Boot -----------------------------------------------------------------------------
+// -- Boot -----------------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
+  initViews();
+  runIntro(false);
   pollHealth();
-  initPipeline().catch((err) => { $("#pipeline-result").innerHTML = errorBannerHtml(err, "Failed to load pipeline defaults"); });
+  initExports();
+  initSpec()
+    .then(() => { initComposer(); initHistory(); })
+    .catch((err) => { $("#result").innerHTML = errorBannerHtml(err, "Failed to load pipeline defaults"); });
+  showDeliveredOnStage();
   initGuard().catch((err) => { $("#guard-result").innerHTML = `<div class="card">${errorBannerHtml(err, "Failed to load guard layer")}</div>`; });
-  initSchematic().catch((err) => { $("#schematic-holder").innerHTML = banner("danger", "xCircle", `Failed to load schematic: ${escapeHtml(err.message)}`); });
   initResults().catch((err) => { $("#results-detail").innerHTML = errorBannerHtml(err, "Failed to load results"); });
   initDesignTime().catch((err) => { $("#designtime-body").innerHTML = errorBannerHtml(err, "Failed to load design-time record"); });
 });

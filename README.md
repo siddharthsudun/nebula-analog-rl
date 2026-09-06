@@ -1,4 +1,4 @@
-# EqRL — RL-Driven Analog Equalizer Design
+# EqRL: RL-Driven Analog Equalizer Design
 
 **Nebula @ BITS Goa 2026 · Analog Track · Astera Labs**
 *AI/ML for Analog Circuit Design*
@@ -9,6 +9,25 @@ every candidate before the measurement is allowed to count toward a reward.
 
 Target circuit: **1-stage CTLE with source degeneration (variable Rs, Cs) + 1-tap DFE**,
 for a **PCIe Gen 2 (5.0 Gbps)** receiver front-end.
+
+## Run silQ (the product)
+
+silQ is the front end of this repo: type the equalizer spec the way you would say it to a
+colleague, and watch a verified SKY130 CTLE appear, redrawn for every simulated candidate.
+
+```bash
+python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
+pip install -r requirements.txt
+PYTHONPATH=src python -m uvicorn server:app --port 8000
+# open http://127.0.0.1:8000
+```
+
+What the page does, in order: a keyword reader parses the request on every keystroke and
+Claude (via the `claude` CLI or `ANTHROPIC_API_KEY`, optional) reads it on demand or right
+before a run, with every disagreement shown; the frozen PPO policy plus the G3.2 refinement
+stage size the circuit; an independent re-simulation scores it against the ten hard checks
+and against any limits you tightened or loosened. Modes: **Auto** (fast first, Thinking
+only if verification fails), **Fastest**, **Thinking**. `?nointro=1` skips the intro.
 
 ---
 
@@ -45,7 +64,7 @@ Full spec + interpretation in [`docs/PROBLEM.md`](docs/PROBLEM.md).
 
 ## What is distinctive about this entry
 
-The judges (Astera Labs) are not asking us to invent RL-for-analog — that lineage exists
+The judges (Astera Labs) are not asking us to invent RL-for-analog. That lineage exists
 (AutoCkt, GCN-RL Circuit Designer, DNN-Opt). They're asking for a **working flow on a real
 open PDK that hits a hard spec across PVT.** That is an execution problem, and the part of
 it we have executed is verification.
@@ -53,7 +72,7 @@ it we have executed is verification.
 1. **The scoring is guarded** (`src/eqrl/guards.py`). Twenty checks in five tiers run
    against the operating point of the actual candidate, and `measure_all` is sealed so no
    number can reach a reward unvalidated. This is not decoration: **86% of the designs
-   that pass all eight published specs are not valid circuits** — 24 of 28, measured
+   that pass all eight published specs are not valid circuits**: 24 of 28, measured
    twice with identical results (`results/pass_vs_valid.json`).
 2. **The delivered circuit passes all 45 PVT corners, and it is not being flattered.** 5
    process corners × VDD ±5% × {0, 27, 125} °C = 45 corners, with HD3 and input-referred
@@ -64,8 +83,8 @@ it we have executed is verification.
    corner result is an out-of-distribution measurement of one generated candidate, reported
    as such.
 3. **The simulator loop is fast enough to train on.** 77.5 ms per AC evaluation against
-   6370.5 ms for a fresh ngspice subprocess — a measured 82.2× (`results/speedup.json`).
-4. **LLM front-end (the bonus)** — natural-language spec → `Spec` object, with a keyword
+   6370.5 ms for a fresh ngspice subprocess, a measured 82.2× (`results/speedup.json`).
+4. **LLM front-end (the bonus)**: natural-language spec → `Spec` object, with a keyword
    fallback when no API key is set. (`src/eqrl/llm/spec_parser.py`)
 
 ## Architecture
@@ -98,21 +117,21 @@ it we have executed is verification.
 | Path | What lives here |
 |---|---|
 | `docs/` | Problem statement, roadmap, references, design decisions |
-| `src/eqrl/specs.py` | The `Spec` dataclass — target numbers as code |
+| `src/eqrl/specs.py` | The `Spec` dataclass, target numbers as code |
 | `src/eqrl/circuits/` | Parametric CTLE + DFE netlist generators |
 | `src/eqrl/sim/` | ngspice/PySpice runner + measurement extraction |
 | `src/eqrl/envs/` | Gymnasium environment wrapping the testbench |
 | `src/eqrl/agents/` | RL training + evaluation scripts |
-| `src/eqrl/guards.py` | The validation layer — 20 checks, 5 tiers, sealed measurement path |
+| `src/eqrl/guards.py` | The validation layer: 20 checks, 5 tiers, sealed measurement path |
 | `src/eqrl/baselines/` | Random + Bayesian (Optuna) sweeps; CMA-ES lives in `experiments/honest_benchmark.py` |
-| `src/eqrl/experiments/` | Measurement scripts — each writes its own artifact into `results/` |
+| `src/eqrl/experiments/` | Measurement scripts; each writes its own artifact into `results/` |
 | `src/eqrl/llm/` | Natural-language spec parser |
 | `testbench/` | Raw SPICE testbenches (hand-written, for debugging) |
 
 ## Quickstart
 
 ```bash
-# Phase 0 infra (do this FIRST — it is the real risk)
+# Phase 0 infra (do this FIRST, it is the real risk)
 brew install ngspice
 # install SKY130 PDK models (see docs/ROADMAP.md Phase 0)
 
@@ -138,7 +157,7 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
 - **PPO learns the feasible design space.** The frozen policy `results/seq_clean40k.zip`
   reaches a valid circuit in a median of **4 evaluations**, against **2,394** for the full
   parameter sweep the poster names as the baseline. It supplies feasibility, not sizing
-  precision — on its own it does not hit a *requested* boost above a matched-chance null,
+  precision; on its own it does not hit a *requested* boost above a matched-chance null,
   and that is reported as the boundary of the RL claim, not hidden.
 - **G3.2 closes the requested spec.** A constraint-aware numerical stage that refines the
   PPO handoff. On a 40-spec held-out set it cut median target error from **1.886 dB
@@ -158,9 +177,9 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
   subprocess, a measured **82.2×** (`results/speedup.json`).
 - Full 45-corner PVT engine, HD3 and noise at every corner. HD3/noise simulated when
   `fast=False`, which is the default.
-- **86% of the designs that pass all eight published specs are not valid circuits** — 24 of
+- **86% of the designs that pass all eight published specs are not valid circuits**: 24 of
   28, measured twice (`results/pass_vs_valid.json`). The guard is where that was found.
-- **The declared action space is 20.4% physically valid** — 51 of 250 uniform samples
+- **The declared action space is 20.4% physically valid**: 51 of 250 uniform samples
   (`results/space_validity.json`). The tail-current range was capped at 1 mA on measured
   physics (nothing valid above it across 90 samples); no other range was narrowed.
 - `area` cannot fail as a constraint: worst design anywhere is 0.0113 mm² against a
@@ -174,5 +193,5 @@ measurements and `HANDOVER.md` is the mid-project working log.
 
 ## References
 
-See [`docs/REFERENCES.md`](docs/REFERENCES.md). Start with AutoCkt (Berkeley) — it is the
+See [`docs/REFERENCES.md`](docs/REFERENCES.md). Start with AutoCkt (Berkeley); it is the
 closest published analogue to what this competition is asking for.

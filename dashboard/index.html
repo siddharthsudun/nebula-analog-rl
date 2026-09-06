@@ -3,150 +3,253 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SILQ Dashboard</title>
-<link rel="stylesheet" href="/static/styles.css?v=7" />
+<title>silQ</title>
+<meta name="description" content="silQ turns a written equalizer spec into a verified SKY130 CTLE circuit. Built for Astera Labs." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="/static/styles.css?v=21" />
+<script>
+  // Theme before first paint. Dark is the product's own identity; light is a stored choice.
+  try { var t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("silq_theme"); if (t === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+</script>
 </head>
 <body>
-<div class="page">
 
-  <!-- ================= HEADER ================= -->
-  <header class="top-header">
-    <div class="brand">
-      <!-- Monogram is S..Q, the first and last letter of SILQ. Not a typo for SI. -->
-      <div class="brand-mark">SQ</div>
-      <div class="brand-text">
-        <div class="brand-title">SILQ</div>
-        <div class="brand-sub">Sizes a CTLE amplifier for your target boost and channel loss — RL search, solver refinement, independent verification.</div>
+<!-- ================= INTRO ================= -->
+<div class="intro" id="intro" aria-label="silQ intro">
+  <video id="intro-video" muted playsinline preload="auto" src="/static/media/intro.mp4"></video>
+  <div class="intro-shade"></div>
+  <div class="intro-mask"></div>
+  <div class="intro-lockup" id="intro-lockup">
+    <div class="intro-word">sil<span class="q">Q</span></div>
+    <div class="intro-for">built for <img src="/static/media/astera-labs-logo-dark.png" alt="Astera Labs" /></div>
+  </div>
+  <button class="intro-skip" id="intro-skip" type="button">Skip intro</button>
+  <div class="intro-bar" id="intro-bar"></div>
+</div>
+
+<div class="app" id="app">
+
+  <!-- ================= NAV ================= -->
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#" id="brand-link">
+        <span class="brand-word">sil<span class="q">Q</span></span>
+        <span class="brand-for">built for
+          <img class="logo-dark" src="/static/media/astera-labs-logo-dark.png" alt="Astera Labs" />
+          <img class="logo-light" src="/static/media/astera-labs-logo-light.png" alt="Astera Labs" />
+        </span>
+      </a>
+      <nav class="nav-tabs" aria-label="Views">
+        <button class="nav-tab active" data-view="design" type="button">Design</button>
+        <button class="nav-tab" data-view="lab" type="button">Lab</button>
+      </nav>
+      <div class="nav-right">
+        <div class="status-pill" id="health-pill">
+          <span class="status-dot" id="health-dot"></span>
+          <span id="health-label">checking&hellip;</span>
+        </div>
+        <button class="icon-btn" id="theme-toggle" type="button" title="Switch theme" aria-label="Switch theme">
+          <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
       </div>
-    </div>
-    <div class="status-pill" id="health-pill">
-      <span class="status-dot" id="health-dot"></span>
-      <span id="health-label">checking&hellip;</span>
     </div>
   </header>
 
-  <main class="page-body">
+  <main>
+    <!-- ================= DESIGN VIEW ================= -->
+    <section class="view" id="view-design">
 
-    <!-- ================= HOW THIS WORKS ================= -->
-    <section class="how-it-works">
-      <ol>
-        <li><span class="step-num">1</span><span>You state the target &mdash; how much high-frequency boost you want, and how lossy the channel is.</span></li>
-        <li><span class="step-num">2</span><span>A trained RL policy searches for a feasible circuit, then a solver refines it onto your exact target.</span></li>
-        <li><span class="step-num">3</span><span>An independent re-simulation verifies the result before it is shown to you.</span></li>
-      </ol>
-    </section>
-
-    <div class="banner info compact">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-      <div>Inference only. Loads the frozen policy and never trains or edits a reward, bound, or guard threshold.</div>
-    </div>
-
-    <!-- ================= THE ASK ================= -->
-    <section class="card ask-panel">
-      <div class="mode-row" id="pipeline-mode-row" role="radiogroup" aria-label="Design mode"></div>
-      <div class="help-hint" id="pipeline-mode-hint" style="margin-bottom:16px;"></div>
-
-      <div class="ask-grid">
-        <div class="slider-field">
-          <div class="slider-head"><span class="field-label">Target boost</span><span class="slider-value"><span id="pipeline-target-val">9.0</span> dB</span></div>
-          <input type="range" id="pipeline-target" min="3" max="12" step="0.1" value="9.0" />
+      <div class="hero">
+        <div class="hero-bg" aria-hidden="true">
+          <video id="hero-video" muted loop playsinline preload="metadata" src="/static/media/hero-bg.mp4"></video>
         </div>
-        <div class="slider-field">
-          <div class="slider-head"><span class="field-label">Channel loss at Nyquist</span><span class="slider-value"><span id="pipeline-channel-val">12.0</span> dB</span></div>
-          <input type="range" id="pipeline-channel" min="6" max="20" step="0.1" value="12.0" />
+        <div class="wrap">
+          <div class="hero-inner">
+            <div class="eyebrow">Type to circuit</div>
+            <h1>Describe the equalizer. <em>Get the circuit.</em></h1>
+            <p class="hero-sub">Write the spec the way you would say it to a colleague. silQ reads it, a trained policy searches SKY130 for a CTLE that meets it, a solver lands it on your exact boost, and an independent re-simulation signs it off. Every number on screen is a real SPICE result.</p>
+
+            <div class="composer" id="composer">
+              <label for="spec-text" class="sr-only" hidden>Describe the equalizer</label>
+              <textarea id="spec-text" rows="3" placeholder="PCIe Gen2 receiver CTLE, about 9 dB of peaking over a 12 dB channel, under 12 mW, keep HD3 below -30 dB"></textarea>
+              <div class="composer-foot">
+                <span class="reader-badge" id="reader-badge"><span class="dot"></span><span id="reader-label">keyword reader</span></span>
+                <div class="composer-actions">
+                  <span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to design</span>
+                  <button class="btn" id="read-btn" type="button" title="Ask Claude to read the request as well">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>
+                    Read with Claude
+                  </button>
+                  <button class="btn btn-primary run-btn" id="run-btn" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12h4l2-6 4 12 2-6h4"/></svg>
+                    Design the circuit
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="examples" id="examples">
+              <span class="examples-label">Try</span>
+              <button class="example-chip" type="button" data-text="PCIe Gen2 CTLE, about 9 dB boost over a 12 dB channel, under 12 mW">PCIe Gen2, 9 dB, under 12 mW</button>
+              <button class="example-chip" type="button" data-text="USB 3.0 receiver equalizer with 6 dB of peaking for a 10 dB lossy link, eye height at least 250 mV">USB 3.0, 6 dB, 250 mV eye</button>
+              <button class="example-chip" type="button" data-text="Compensate a 14 dB channel with 11 dB of high frequency boost, HD3 better than -28 dB, noise under 1 mV">14 dB channel, 11 dB boost</button>
+              <button class="example-chip" type="button" data-text="Low power CTLE: 5 dB boost, 8 dB channel, power below 6 mW and area under 0.03 mm2">Low power, 5 dB</button>
+            </div>
+
+            <div class="parse-strip" id="parse-strip">
+              <div class="parse-empty">Start typing. Every quantity the readers recognise appears here, with which reader found it.</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <details class="explainer describe-toggle">
-        <summary><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h13"/></svg>Describe it in words instead</summary>
-        <div class="explainer-body">
-          <label class="field" style="margin-bottom:10px;">
-            <input type="text" id="pipeline-text" placeholder='e.g. "PCIe Gen2 CTLE with about 9 dB of peaking, under 12 mW"' />
-          </label>
-          <button class="btn" id="pipeline-parse-btn" type="button">Parse into the sliders above</button>
-          <div class="parse-note" id="pipeline-parse-note" hidden></div>
-          <div class="help-hint">Uses <code>eqrl.llm.spec_parser.parse_spec_verbose</code> &mdash; a keyword heuristic unless this machine has an Anthropic API key configured. A request it cannot read is refused and leaves the sliders untouched; it never invents a target.</div>
-        </div>
-      </details>
+      <div class="wrap">
+        <div class="workspace">
 
-      <details class="explainer">
-        <summary><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.3v.1"/></svg>Advanced</summary>
-        <div class="explainer-body advanced-body">
-          <label class="field">
-            <span class="field-label">Spec index</span>
-            <input type="number" id="pipeline-spec-index" min="0" max="999" step="1" value="0" />
-          </label>
-          <div class="help-hint" style="margin-bottom:14px;">Seeds stage 1's environment at 1000 + this. Recorded in the result so the run is reproducible.</div>
-          <label class="checkbox-field">
-            <input type="checkbox" id="pipeline-fallback" />
-            <span>
-              Allow fixed fallback design if nothing guard-valid comes out
-              <div class="hint">Off by default. When on, and only when PPO &rarr; G3.2 returns nothing guard-valid, a FIXED hand-verified design is returned instead. It ignores the requested target and is not an AI-generated result &mdash; a product escape hatch, never an output of the search.</div>
-            </span>
-          </label>
-        </div>
-      </details>
+          <!-- ---------- Spec panel ---------- -->
+          <aside class="spec-panel">
+            <div class="panel">
+              <div class="panel-head"><span class="panel-title">Target</span><span class="panel-meta">steers the search</span></div>
+              <div class="slider-field">
+                <div class="slider-head"><span class="field-label">Target boost</span><span class="slider-value"><span id="target-val">9.0</span><span class="u">dB</span></span></div>
+                <input type="range" id="target" min="3" max="12" step="0.1" value="9.0" />
+              </div>
+              <div class="slider-field">
+                <div class="slider-head"><span class="field-label">Channel loss at Nyquist</span><span class="slider-value"><span id="channel-val">12.0</span><span class="u">dB</span></span></div>
+                <input type="range" id="channel" min="6" max="20" step="0.1" value="12.0" />
+              </div>
+            </div>
 
-      <button class="btn btn-primary block ask-run-btn" id="pipeline-run-btn" type="button">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c2.5 2.5 4 5.9 4 9.5 0 2-1 4-2 5.5l-2 2-2-2c-1-1.5-2-3.5-2-5.5C8 7.9 9.5 4.5 12 2z"/><path d="M9.5 15.5L6 17l1.5-3.5"/><path d="M14.5 15.5L18 17l-1.5-3.5"/><circle cx="12" cy="10" r="1.6"/></svg>
-        Design the circuit
-      </button>
+            <div class="panel">
+              <div class="panel-head"><span class="panel-title">Acceptance limits</span><span class="panel-meta">scored at verification</span></div>
+              <div class="req-list" id="req-list"></div>
+              <div class="req-foot">
+                <span class="help-hint" id="req-summary">All at the competition defaults.</span>
+                <button class="link-btn" id="req-reset" type="button">Reset all</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><span class="panel-title">Mode</span></div>
+              <div class="mode-seg" id="mode-seg" role="radiogroup" aria-label="Design mode"></div>
+              <div class="mode-copy"><div class="mode-tag" id="mode-tag"></div><div class="mode-detail" id="mode-detail"></div></div>
+              <details class="adv">
+                <summary>Advanced</summary>
+                <div class="adv-body">
+                  <label class="field"><span class="field-label">Spec index</span><input type="number" id="spec-index" min="0" max="999" step="1" value="0" /></label>
+                  <div class="help-hint">Seeds stage 1's environment at 1000 + this. Recorded in the result so the run is reproducible.</div>
+                  <label class="checkbox-field"><input type="checkbox" id="allow-fallback" /><span>Allow a fixed fallback design<div class="hint">Only if nothing guard-valid comes out. The fallback ignores your target and is not an AI result; it is labelled as such.</div></span></label>
+                </div>
+              </details>
+            </div>
+          </aside>
+
+          <!-- ---------- Stage ---------- -->
+          <div class="stage">
+            <div class="stage-card">
+              <div class="stage-head">
+                <div>
+                  <div class="stage-title" id="stage-title">Delivered CTLE</div>
+                  <div class="stage-sub" id="stage-sub">the frozen reference design, drawn from its manifest</div>
+                </div>
+                <div class="stage-right">
+                  <span class="state-chip" id="state-chip"><span class="dot"></span><span id="state-label">idle</span></span>
+                  <button class="btn sm" id="export-svg" type="button" disabled>SVG</button>
+                  <button class="btn sm" id="export-netlist" type="button" disabled>Netlist</button>
+                  <button class="btn sm" id="export-json" type="button" disabled>JSON</button>
+                </div>
+              </div>
+              <div class="stage-body">
+                <div class="schematic-holder" id="schematic-holder"><div class="placeholder"><span class="spinner"></span>loading the delivered circuit</div></div>
+                <div class="params" id="params">
+                  <div class="params-title">Device sizing</div>
+                  <div class="param"><span class="k">W_in</span><span class="v" data-p="w_in">n/a</span></div>
+                  <div class="param"><span class="k">L_in</span><span class="v" data-p="l_in">n/a</span></div>
+                  <div class="param"><span class="k">I_tail</span><span class="v" data-p="i_tail">n/a</span></div>
+                  <div class="param"><span class="k">R_s</span><span class="v" data-p="rs">n/a</span></div>
+                  <div class="param"><span class="k">C_s</span><span class="v" data-p="cs">n/a</span></div>
+                  <div class="param"><span class="k">R_load</span><span class="v" data-p="r_load">n/a</span></div>
+                  <div class="divider"></div>
+                  <div class="readout">
+                    <span class="k" id="readout-k">Boost</span>
+                    <span class="big" id="readout-v">n/a</span>
+                    <span class="sub" id="readout-sub"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stage-card" id="trace-card" hidden>
+              <div class="trace">
+                <div>
+                  <div class="trace-title"><span>Search</span><span id="trace-count"></span></div>
+                  <div class="stepper" id="stepper">
+                    <span class="step" data-stage="search"><span class="sd"></span>PPO search</span>
+                    <span class="step-arrow">&rsaquo;</span>
+                    <span class="step" data-stage="refine"><span class="sd"></span>G3.2 refinement</span>
+                    <span class="step-arrow">&rsaquo;</span>
+                    <span class="step" data-stage="verify"><span class="sd"></span>Verification</span>
+                  </div>
+                  <div class="chart-container" id="trace-chart"></div>
+                </div>
+                <div>
+                  <div class="trace-title"><span>Live trace</span><span id="trace-elapsed"></span></div>
+                  <div class="run-log" id="run-log"><div class="log-empty">waiting for the first simulation</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="result" id="result"></div>
+          </div>
+        </div>
+
+        <section class="history" id="history">
+          <div class="history-head"><h2>Recent designs</h2><button class="link-btn" id="history-clear" type="button">Clear</button></div>
+          <div class="history-list" id="history-list"><div class="hist-empty">Runs you make on this machine are kept here, so a design can be reopened without spending simulator budget again.</div></div>
+        </section>
+      </div>
     </section>
 
-    <!-- ================= PROGRESS ================= -->
-    <section class="stage-tracker-wrap" id="stage-tracker-wrap" hidden>
-      <div class="stage-tracker" id="stage-tracker">
-        <div class="stage" id="stage-search"><span class="stage-dot"></span><span class="stage-label">PPO search</span></div>
-        <div class="stage-connector"></div>
-        <div class="stage" id="stage-refine"><span class="stage-dot"></span><span class="stage-label">G3.2 refinement</span></div>
-        <div class="stage-connector"></div>
-        <div class="stage" id="stage-verify"><span class="stage-dot"></span><span class="stage-label">Independent verification</span></div>
-      </div>
-      <div class="stage-note" id="stage-note"></div>
-      <!-- The running commentary. Each line is one thing the server watched the frozen
-           pipeline do; a circuit the guard layer threw out is marked as such, because
-           that rejection rate is the point of the guard layer. -->
-      <div class="run-log-wrap" id="run-log-wrap" hidden>
-        <div class="run-log-head">Live trace</div>
-        <div class="run-log" id="run-log"></div>
-      </div>
-    </section>
+    <!-- ================= LAB VIEW ================= -->
+    <section class="view" id="view-lab" hidden>
+      <div class="wrap">
+        <div class="lab-head">
+          <div class="eyebrow">Lab</div>
+          <h1>Look under the hood.</h1>
+          <p>The guard layer that throws away broken circuits, the raw artifacts behind every claim, and the benchmark record against sweeping the parameter space.</p>
+        </div>
+        <div class="lab-nav">
+          <a class="btn sm" href="#lab-guard">Guard sandbox</a>
+          <a class="btn sm" href="#lab-results">Results explorer</a>
+          <a class="btn sm" href="#lab-bench">Benchmark record</a>
+        </div>
 
-    <!-- ================= RESULT ================= -->
-    <section id="pipeline-result"></section>
-
-    <!-- ================= SECONDARY TOOLS ================= -->
-    <section class="dev-tools">
-      <div class="dev-tools-label">Developer &amp; inspection tools</div>
-
-      <!-- -- Guard layer sandbox -- -->
-      <details class="explainer dev-tool">
-        <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 5-3.2 7.8-7 9-3.8-1.2-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>Guard layer sandbox</summary>
-        <div class="explainer-body dev-tool-body">
-          <p class="dev-tool-intro">Five tiers sit between raw SPICE output and any metric this project reports. Run one candidate design through the real evaluator and see exactly which tier it lives or dies on.</p>
-
-          <details class="explainer nested">
-            <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><circle cx="12" cy="8.3" r="0.4" fill="currentColor"/></svg>What is this checking, and why does it stop early?</summary>
+        <div class="lab-section" id="lab-guard">
+          <h2>Guard layer sandbox</h2>
+          <p class="lab-intro">Five tiers sit between raw SPICE output and any metric this project reports. Run one candidate design through the real evaluator and see exactly which tier it lives or dies on.</p>
+          <details class="explainer">
+            <summary>What is this checking, and why does it stop early?</summary>
             <div class="explainer-body">
-              <p><code>src/eqrl/guards.py</code> sits between the simulator and every downstream number. A run returns exactly one of two things: <strong>Valid</strong> (trusted metrics) or <strong>Invalid</strong> (exactly which check failed, and why) — there is no silent third option where a broken run reports a plausible-looking zero.</p>
+              <p><code>src/eqrl/guards.py</code> sits between the simulator and every downstream number. A run returns exactly one of two things: <strong>Valid</strong> (trusted metrics) or <strong>Invalid</strong> (exactly which check failed, and why). There is no silent third option where a broken run reports a plausible-looking zero.</p>
               <p>A single evaluation runs its tiers <strong>in order and stops at the first failure</strong>, so this page can only ever show you <em>where</em> a design died, not a full scorecard of all five:</p>
               <ol>
-                <li><strong>Run integrity</strong> — did the simulator actually exit cleanly and produce output?</li>
-                <li><strong>Circuit sanity</strong> — is the input pair in saturation, is the tail current the one requested, are node voltages inside the supply rails, is a device parameter pinned at a PDK bound?</li>
-                <li><strong>Corner integrity</strong> — do the process-corner model files actually differ from each other? A one-time startup check, not a per-design one — see the button below.</li>
-                <li><strong>Physical plausibility</strong> — is the DC gain, peaking, power, noise, HD3, and eye opening actually physically reachable — e.g. is "DC gain" secretly negative (an attenuator, not an amplifier) while "boost" (peak minus DC) inflates for free?</li>
-                <li><strong>Search pathology</strong> — watches a whole <em>sequence</em> of designs for suspicious patterns (parameters pinned at a range edge, identical metrics from different designs, reward rising while eye height falls). It has no meaning for one design evaluated in isolation, so it cannot be demoed here — see <code>eqrl.guards.SearchMonitor</code> if you want to read it.</li>
+                <li><strong>Run integrity</strong>: did the simulator exit cleanly and produce output?</li>
+                <li><strong>Circuit sanity</strong>: is the input pair in saturation, is the tail current the one requested, are node voltages inside the rails, is a device pinned at a PDK bound?</li>
+                <li><strong>Corner integrity</strong>: do the process-corner model files actually differ? A one-time startup check, see the button below.</li>
+                <li><strong>Physical plausibility</strong>: is the DC gain, peaking, power, noise, HD3 and eye opening physically reachable, or is "DC gain" secretly negative while "boost" inflates for free?</li>
+                <li><strong>Search pathology</strong>: watches a whole sequence of designs for suspicious patterns. It has no meaning for one design in isolation, so it cannot be demoed here; see <code>eqrl.guards.SearchMonitor</code>.</li>
               </ol>
             </div>
           </details>
-
           <div class="section-label">1. Pick a candidate design</div>
           <div class="preset-row" id="guard-presets"></div>
-
           <div class="split">
             <div class="stack">
               <div class="card">
-                <div class="card-title">Design variables — eqrl.circuits.ctle.DesignVars</div>
+                <div class="card-title">Design variables (eqrl.circuits.ctle.DesignVars)</div>
                 <div class="field-grid" id="guard-fields"></div>
               </div>
               <div class="card">
@@ -154,82 +257,58 @@
                 <label class="field" style="margin-bottom:14px;">
                   <span class="field-label">Process corner</span>
                   <select id="guard-corner">
-                    <option value="tt">tt — typical-typical</option>
-                    <option value="ss">ss — slow-slow</option>
-                    <option value="ff">ff — fast-fast</option>
-                    <option value="sf">sf — slow-fast</option>
-                    <option value="fs">fs — fast-slow</option>
+                    <option value="tt">tt, typical-typical</option>
+                    <option value="ss">ss, slow-slow</option>
+                    <option value="ff">ff, fast-fast</option>
+                    <option value="sf">sf, slow-fast</option>
+                    <option value="fs">fs, fast-slow</option>
                   </select>
                 </label>
                 <div class="slider-field" style="margin-bottom:16px;">
-                  <div class="slider-head"><span class="field-label">VDD</span><span class="slider-value"><span id="guard-vdd-val">1.80</span> V</span></div>
+                  <div class="slider-head"><span class="field-label">VDD</span><span class="slider-value"><span id="guard-vdd-val">1.80</span><span class="u">V</span></span></div>
                   <input type="range" id="guard-vdd" min="1.71" max="1.89" step="0.01" value="1.80" />
                   <div class="help-hint" id="guard-vdd-hint"></div>
                 </div>
                 <div class="stack" style="gap:8px;">
-                  <button class="btn btn-primary block" id="guard-evaluate-btn" type="button">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v5.5L5.5 16a2 2 0 0 0 1.7 3h9.6a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8.5 14h7"/></svg>
-                    Evaluate this design
-                  </button>
-                  <button class="btn block" id="guard-corner-check-btn" type="button">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-                    Check corner integrity (Tier 3, one-time)
-                  </button>
+                  <button class="btn btn-primary block" id="guard-evaluate-btn" type="button">Evaluate this design</button>
+                  <button class="btn block" id="guard-corner-check-btn" type="button">Check corner integrity (Tier 3, one-time)</button>
+                  <button class="btn block" id="schematic-guard-btn" type="button">Draw these fields on the stage</button>
                 </div>
               </div>
             </div>
-
             <div id="guard-result">
-              <div class="card">
-                <div class="empty-state">
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
-                  <p>Pick a design and click <strong>Evaluate this design</strong> to run it through the real guard layer.</p>
-                </div>
-              </div>
+              <div class="card"><div class="empty-state"><p>Pick a design and click <strong>Evaluate this design</strong> to run it through the real guard layer.</p></div></div>
             </div>
-          </div>
-
-          <div class="section-label">Schematic of these fields</div>
-          <div class="preset-row" style="margin-bottom:14px;">
-            <button class="btn" id="schematic-delivered-btn" type="button">Delivered circuit</button>
-            <button class="btn" id="schematic-guard-btn" type="button">Draw what&rsquo;s in the fields above</button>
-            <a class="btn" id="schematic-download" href="/api/schematic" download="silq_delivered_schematic.svg">Download SVG</a>
-          </div>
-          <div id="schematic-holder" class="schematic-holder">
-            <p class="artifact-meta">loading schematic&hellip;</p>
           </div>
         </div>
-      </details>
 
-      <!-- -- Results explorer -- -->
-      <details class="explainer dev-tool">
-        <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>Results explorer</summary>
-        <div class="explainer-body dev-tool-body">
-          <p class="dev-tool-intro" id="results-browsing">Browse the raw artifact files behind this project's headline claims.</p>
-          <div class="artifact-picker">
-            <select id="results-picker"></select>
-            <span class="artifact-meta" id="results-count"></span>
-          </div>
+        <div class="lab-section" id="lab-results">
+          <h2>Results explorer</h2>
+          <p class="lab-intro">Browse the raw artifact files behind this project's headline claims.</p>
+          <div class="artifact-picker"><select id="results-picker"></select><span class="artifact-meta" id="results-count"></span></div>
           <div id="results-detail"></div>
         </div>
-      </details>
 
-      <!-- -- Benchmark record -- -->
-      <details class="explainer dev-tool">
-        <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M9 2h6"/></svg>Benchmark record</summary>
-        <div class="explainer-body dev-tool-body">
-          <p class="dev-tool-intro">The brief asks for device sizing that uses <em>fewer search spaces</em> and takes significantly less time than sweeping the MOS/R/C/L parameter space. Design time is evaluation count &times; cost per evaluation, so both are measured here &mdash; against real baselines at a matched budget, and against an actual exhaustive sweep that was run, not estimated.</p>
-          <div id="designtime-body">
-            <p class="artifact-meta">loading design-time record&hellip;</p>
-          </div>
+        <div class="lab-section" id="lab-bench">
+          <h2>Benchmark record</h2>
+          <p class="lab-intro">The brief asks for device sizing that uses fewer search spaces and takes significantly less time than sweeping the MOS/R/C/L parameter space. Design time is evaluation count times cost per evaluation, so both are measured here: against real baselines at a matched budget, and against an exhaustive sweep that was actually run, not estimated.</p>
+          <div id="designtime-body"><p class="artifact-meta">loading design-time record&hellip;</p></div>
         </div>
-      </details>
+      </div>
     </section>
-
   </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span><strong>silQ</strong> for the Nebula 2026 Astera Labs analog track. Inference only: the frozen policy is loaded, never trained.</span>
+      <span class="spacer"></span>
+      <button class="link-btn" id="replay-intro" type="button">Replay intro</button>
+    </div>
+  </footer>
 </div>
 
-<script src="/static/charts.js?v=4"></script>
-<script src="/static/app.js?v=10"></script>
+<script src="/static/vendor/gsap.min.js"></script>
+<script src="/static/charts.js?v=21"></script>
+<script src="/static/app.js?v=21"></script>
 </body>
 </html>

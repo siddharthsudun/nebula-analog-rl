@@ -72,7 +72,47 @@ FALLBACK = "fallback_fixed_design_not_ai"   #: see `design(..., allow_fallback=T
 #: which replaces stage 1 with a corpus lookup; see `eqrl.experiments.fastest_hedge`.
 #: "default" is byte-identical to this module's pre-mode behaviour: r = fc.PREREG["r"],
 #: stop_abs_err_db left at None so g32_solve reads fc.PREREG itself.
-MODES = ("default", "fastest", "thinking", "retarget")
+MODES = ("default", "fastest", "thinking", "retarget", "auto")
+
+#: Auto: run "fastest" and, only if it did not come back SOLVED, escalate to "thinking".
+#: This is the mode a person who has not read this file should be on: the n=32 sweep
+#: (results/mode_sweep_seed99.json) has fastest solving 22/32 in a median of a few
+#: seconds and thinking solving 30/32 at roughly ten times the simulator cost, so paying
+#: thinking's price only on the specs fastest misses is strictly better than either alone.
+#: Nothing new is searched: it is the two frozen modes, in sequence, with the first
+#: attempt's cost and verdict kept in the result rather than discarded.
+AUTO_FIRST, AUTO_ESCALATE = "fastest", "thinking"
+
+#: Acceptance constraints a caller may set alongside the target and channel. These are
+#: exactly the fields `hard_pass` reads, so setting one changes what "verified" means for
+#: this run and NOTHING else: the guard evaluator still runs on DEFAULT_SPEC (device
+#: physics is not the user's to relax), and the frozen search still steers on boost.
+#: Every result records the full diff against the competition specification, and when a
+#: requirement was relaxed the competition verdict is reported alongside the user one so
+#: a loosened bar can never be mistaken for the benchmark's.
+REQUIREMENT_FIELDS = ("power_w_max", "noise_vrms_max", "hd3_db_max", "area_mm2_max",
+                      "eye_h_ui_min", "eye_v_mv_min", "boost_db_min", "boost_db_max",
+                      "peak_freq_lo_ghz", "peak_freq_hi_ghz", "dc_gain_db_min")
+
+#: For each requirement, the direction that makes it STRICTER than the default: a lower
+#: ceiling or a higher floor. Used to label a user's value "tighter" or "looser".
+_TIGHTER_IS_LOWER = frozenset({"power_w_max", "noise_vrms_max", "hd3_db_max",
+                               "area_mm2_max", "boost_db_max", "peak_freq_hi_ghz"})
+
+#: How many alternative designs from the search trace the requirement-aware selection
+#: may re-verify. Each costs one measure_all. Bounded so a user constraint the search did
+#: not steer on cannot turn a five-evaluation run into a fifty-evaluation one.
+REQUIREMENT_RESELECT_CAP = 4
+
+#: Optional progress hook: `notify(stage, text)`. The dashboard installs one so events
+#: that happen INSIDE design() (auto-mode escalation, requirement re-selection) reach
+#: the live trace. None means silent. Never affects what is computed.
+notify = None
+
+
+def _note(stage: str, text: str) -> None:
+    if notify is not None:
+        notify(stage, text)
 
 #: "accurate" WAS a mode here -- same feasibility gate, r = 30, stop = 0.05 dB. It was
 #: removed 06 Sep 2026 after `scratchpad/mode_bench32.py` measured it against `default` on
@@ -117,13 +157,41 @@ THINKING_SEED_OFFSETS = (0, 4001, 9007, 15013, 23021, 31033, 42043, 55049)
 #: PPO's five.
 THINKING_SURROGATE_STARTS = 4
 
-#: Wall-clock governor, in `measure_all` units. The requested envelope is ~60 s and a
-#: `measure_all` costs ~0.55 s (DESIGN_MODES_V2 section 0), so ~100 is the budget. Without
+#: Search-depth governor, in `measure_all` units. NOT a wall-clock guarantee, and an
+#: earlier version of this comment claimed one -- corrected 06 Sep 2026. The ~0.55 s per
+#: `measure_all` in DESIGN_MODES_V2 section 0 is an IDLE machine; measured under the
+#: contention this repo actually creates (a bench and the dashboard both driving ngspice)
+#: it is ~2.6 s, so 100 measure_all was ~268 s on spec 10, not the ~55 s first claimed.
+#: The cap is kept in measure_all rather than seconds on purpose: a deterministic budget
+#: makes the search reproducible, where a wall-clock stop would make its depth depend on
+#: the machine. Without
 #: this, 8 rollouts x (5 + 25) is 240 measure_all -- over two minutes -- in the worst case,
 #: which is the case where nothing is working and the user is waiting longest. No restart
 #: is STARTED once the spend reaches this; a restart already running is always finished, so
 #: this trims the search rather than truncating a solve into a misleading partial answer.
 THINKING_MEASURE_ALL_BUDGET = 100
+
+#: Corner-robustness tiebreak. Thinking finishes up to 8 candidates and reports one; until
+#: now it picked purely on TT accuracy. Measured 06 Sep 2026 over the 84 designs already in
+#: results/pvt_*.json (`scratchpad/dcgain_proxy.py`, no new simulation), against the number
+#: of corners whose HARD DEVICE GUARDS hold -- 82% of the frozen pool's failing corners:
+#:
+#:     predictor                 all corners passed      guard-valid corners
+#:     TT abs_err                 -0.65 / -0.54           -0.21 / -0.12
+#:     TT DC-gain headroom        +0.27 / +0.24           +0.60 / +0.59   (pearson/spearman)
+#:
+#: So error ranks spec drift and headroom ranks device robustness, and the old key saw only
+#: the first. The first column runs the other way because `boost_target` is itself one of
+#: the ten corner checks, which makes a high-error design fail corners almost by
+#: construction -- so trading real accuracy for headroom would lose more than it wins.
+#:
+#: Hence a BAND, not a replacement: only candidates within this many dB of the most
+#: accurate one are treated as interchangeable, and headroom decides among those. The value
+#: is not fitted -- it is `final_comparison.PREREG["stop_abs_err_db"]`, the distance below
+#: which the frozen solver itself stops distinguishing outcomes. No headroom threshold is
+#: applied: the quartile data suggests a cliff near 0.9 dB, but fitting a cutoff on the same
+#: 84 points that motivated the rule is exactly the trap `g32_headroom.py` warns about.
+THINKING_TIEBREAK_BAND_DB = 0.25
 
 #: Retarget: DEFAULT, plus one thing -- when G3.2's boost axis is pinned at a bound, probe
 #: the other axes and resume the line search along the best one
@@ -162,17 +230,64 @@ def _fc():
     return fc
 
 
-def spec_for(target_boost_db: float, channel_loss_db: float, tol: float) -> Spec:
+def clean_requirements(requirements: dict | None) -> dict[str, float]:
+    """Validate a caller's acceptance constraints. Unknown fields are an error, not a
+    silent drop: a constraint the caller believes is in force but is not would be the
+    quietest possible way to mislead them."""
+    if not requirements:
+        return {}
+    bad = sorted(set(requirements) - set(REQUIREMENT_FIELDS))
+    if bad:
+        raise ValueError(f"unknown requirement field(s) {bad}; "
+                         f"settable fields are {REQUIREMENT_FIELDS}")
+    out = {k: float(v) for k, v in requirements.items() if v is not None}
+    if "dc_gain_db_min" in out and out["dc_gain_db_min"] < DEFAULT_SPEC.dc_gain_db_min:
+        # The guard's own floor (guards.DC_GAIN_DB_MIN) rejects any design below 0 dB
+        # before hard_pass ever sees it, so a lower floor here would be a number with no
+        # effect. It is clamped rather than refused so the request still runs.
+        out["dc_gain_db_min"] = DEFAULT_SPEC.dc_gain_db_min
+    return out
+
+
+def requirements_diff(spec: Spec) -> list[dict[str, Any]]:
+    """Every acceptance constraint on `spec` that differs from the competition default,
+    labelled by whether the user made it tighter or looser."""
+    out = []
+    for k in REQUIREMENT_FIELDS:
+        v, d = getattr(spec, k), getattr(DEFAULT_SPEC, k)
+        if v is None or d is None or abs(float(v) - float(d)) <= 1e-12:
+            continue
+        lower = float(v) < float(d)
+        out.append({"field": k, "value": float(v), "default": float(d),
+                    "direction": ("tighter" if lower == (k in _TIGHTER_IS_LOWER)
+                                  else "looser")})
+    return out
+
+
+def spec_for(target_boost_db: float, channel_loss_db: float, tol: float,
+             requirements: dict | None = None) -> Spec:
     """The requirement set the result is verified against.
 
     DEFAULT_SPEC plus this run's target and channel, with `boost_target_tol_db` ON. That
     tenth check is what `results/delivered_circuit.json` was scored on, and what makes
     "meets the specification" mean the REQUESTED boost rather than anywhere in 3-12 dB.
     `dc_gain_db_min` is already 0.0 in DEFAULT_SPEC and is left alone.
+
+    `requirements` (see REQUIREMENT_FIELDS) overrides individual acceptance constraints.
+    Without it the result is the competition specification exactly.
     """
     return dataclasses.replace(DEFAULT_SPEC, target_boost_db=target_boost_db,
                                channel_loss_db=channel_loss_db,
-                               boost_target_tol_db=tol)
+                               boost_target_tol_db=tol,
+                               **clean_requirements(requirements))
+
+
+def competition_spec(spec: Spec) -> Spec:
+    """The same target, channel and tolerance with every acceptance constraint at the
+    competition default. What `spec` would have been with no user requirements."""
+    return dataclasses.replace(DEFAULT_SPEC, target_boost_db=spec.target_boost_db,
+                               channel_loss_db=spec.channel_loss_db,
+                               boost_target_tol_db=spec.boost_target_tol_db)
 
 
 def verify(dv: DesignVars, spec: Spec) -> dict[str, Any]:
@@ -181,6 +296,10 @@ def verify(dv: DesignVars, spec: Spec) -> dict[str, Any]:
     Independent of the search: a new evaluator, a new measurement, no cached record. The
     guard runs first, so a design that is not a real circuit fails here even if every
     number it reported looked good.
+
+    When `spec` carries user requirements that differ from the competition defaults, the
+    same measurement is ALSO scored against the competition specification and reported
+    under `competition_*`, so a relaxed bar and the benchmark's bar are never conflated.
     """
     from eqrl.evaluator import build_evaluator
 
@@ -193,10 +312,16 @@ def verify(dv: DesignVars, spec: Spec) -> dict[str, Any]:
                 "passed": False, "checks": None, "measures": None}
     m = verdict.unwrap()
     ok, checks = hard_pass(m, spec)
-    return {"guard_valid": True, "guard_check": None, "passed": bool(ok),
-            "checks": checks, "failing": [c for c, good in checks.items() if not good],
-            "measures": m.as_dict(),
-            "abs_err_db": abs(m.boost_db - spec.target_boost_db)}
+    out = {"guard_valid": True, "guard_check": None, "passed": bool(ok),
+           "checks": checks, "failing": [c for c, good in checks.items() if not good],
+           "measures": m.as_dict(),
+           "abs_err_db": abs(m.boost_db - spec.target_boost_db)}
+    if requirements_diff(spec):
+        cok, cchecks = hard_pass(m, competition_spec(spec))
+        out["competition_passed"] = bool(cok)
+        out["competition_checks"] = cchecks
+        out["competition_failing"] = [c for c, good in cchecks.items() if not good]
+    return out
 
 
 def _cost(fc, k: int, info: dict, left: int, c1: dict, c2: dict) -> dict[str, Any]:
@@ -333,11 +458,110 @@ def _guidance(mode: str, info: dict, arm_b: dict, target_boost_db: float) -> dic
             "suggest_mode": None, "actionable": False, "reason": reason}
 
 
+def _auto(target_boost_db, channel_loss_db, kw) -> dict[str, Any]:
+    """AUTO_FIRST, then AUTO_ESCALATE only if the first attempt was not SOLVED."""
+    _note("search", "Auto mode: trying the corpus-seeded fast search first.")
+    first = design(target_boost_db, channel_loss_db, mode=AUTO_FIRST, **kw)
+    if first["status"] == SOLVED:
+        first["auto"] = {"escalated": False, "first_mode": AUTO_FIRST,
+                         "first_status": SOLVED}
+        first["mode"] = "auto"
+        return first
+    why = first["guidance"]["headline"]
+    _note("search", f"Fast search did not verify ({why}). Escalating to Thinking: "
+                    f"multiple independent restarts with a larger budget.")
+    final = design(target_boost_db, channel_loss_db, mode=AUTO_ESCALATE, **kw)
+    fc1 = first["cost"]
+    final["auto"] = {
+        "escalated": True, "first_mode": AUTO_FIRST, "first_status": first["status"],
+        "first_guidance": first["guidance"],
+        "first_best_boost_db": first["solver"].get("best_boost_db"),
+        "first_cost": {"optimizer_evals": fc1["optimizer_evals"],
+                       "measure_all_total": fc1["measure_all_total"],
+                       "spice_analyses_total": fc1["spice_analyses_total"]},
+        "escalated_mode": AUTO_ESCALATE,
+    }
+    # The first attempt's simulator work is real work this request paid for. It is added
+    # to the totals under its own key so the escalated run's own figures stay comparable
+    # to a plain Thinking run.
+    c = final["cost"]
+    c["measure_all_prior_attempts"] = fc1["measure_all_total"]
+    c["spice_analyses_prior_attempts"] = fc1["spice_analyses_total"]
+    c["optimizer_evals_prior_attempts"] = fc1["optimizer_evals"]
+    c["measure_all_total"] += fc1["measure_all_total"]
+    c["spice_analyses_total"] += fc1["spice_analyses_total"]
+    final["mode"] = "auto"
+    return final
+
+
+def _reselect_for_requirements(result: dict, trace: list, spec: Spec, tol: float,
+                               counting) -> None:
+    """If the most accurate design fails a USER requirement the search never steered on,
+    re-verify the next most accurate guard-valid designs from the same trace and take the
+    first that passes. Bounded by REQUIREMENT_RESELECT_CAP; every extra measurement is
+    counted and reported. Mutates `result` in place."""
+    v = result["verification"]
+    if v["passed"] or not v.get("guard_valid"):
+        return
+    # Only a failure on a check the user tightened is a reason to look again. A failure
+    # on the boost target or a competition default is the search's verdict, not a
+    # selection problem.
+    diff = {d["field"] for d in requirements_diff(spec)}
+    check_of = {"power_w_max": "power", "noise_vrms_max": "noise", "hd3_db_max": "hd3",
+                "area_mm2_max": "area", "eye_h_ui_min": "eye_h", "eye_v_mv_min": "eye_v",
+                "boost_db_min": "boost_range", "boost_db_max": "boost_range",
+                "peak_freq_lo_ghz": "peak_in_band", "peak_freq_hi_ghz": "peak_in_band",
+                "dc_gain_db_min": "dc_gain"}
+    user_checks = {check_of[f] for f in diff}
+    if not set(v.get("failing") or []) <= user_checks:
+        return
+    chosen = result["design"]
+    pool = [e for e in trace if e and e["loose_pass"] and e.get("design")
+            and e["design"] != chosen
+            and abs(e["boost_db"] - spec.target_boost_db) <= tol]
+    pool.sort(key=lambda e: abs(e["boost_db"] - spec.target_boost_db))
+    tried = []
+    for e in pool[:REQUIREMENT_RESELECT_CAP]:
+        dv = DesignVars(**e["design"])
+        _note("verify", f"Best design fails your {', '.join(sorted(user_checks))} "
+                        f"requirement; re-verifying the next candidate "
+                        f"({e['boost_db']:.2f} dB).")
+        with counting() as c:
+            v2 = verify(dv, spec)
+        _add_verification_cost_extra(result["cost"], c)
+        tried.append({"boost_db": e["boost_db"], "passed": bool(v2["passed"]),
+                      "failing": v2.get("failing")})
+        if v2["passed"]:
+            result["design"] = dict(e["design"])
+            result["verification"] = v2
+            result["solver"] = dict(result["solver"],
+                                    best_design=dict(e["design"]),
+                                    best_boost_db=e["boost_db"],
+                                    best_abs_err=abs(e["boost_db"] - spec.target_boost_db))
+            break
+    result["provenance"]["requirement_reselection"] = {
+        "reason": sorted(v.get("failing") or []), "tried": tried,
+        "applied": bool(tried) and tried[-1]["passed"]}
+
+
+def _add_verification_cost_extra(cost: dict[str, Any], c: dict) -> None:
+    cost["measure_all_verification"] += c["measure_all"]
+    cost["measure_all_total"] += c["measure_all"]
+    cost["spice_analyses_verification"] += c["analysis"]
+    cost["spice_analyses_total"] += c["analysis"]
+
+
 def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
            *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
            peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
-           allow_fallback: bool = False, mode: str = "default") -> dict[str, Any]:
+           allow_fallback: bool = False, mode: str = "default",
+           requirements: dict | None = None) -> dict[str, Any]:
     """Run the delivered architecture for one specification.
+
+    `requirements` optionally overrides acceptance constraints (REQUIREMENT_FIELDS). The
+    result's `spec.requirements` lists every override with its direction, and
+    `spec.scored_against` says in words whether the verdict is the competition
+    specification's or a user-modified one.
 
     `spec_index` seeds stage 1's environment (`1000 + spec_index`), exactly as the
     benchmark does. It is the only knob that changes which circuit comes out for a given
@@ -365,10 +589,18 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     """
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
+    requirements = clean_requirements(requirements)
+    if mode == "auto":
+        return _auto(target_boost_db, channel_loss_db, dict(
+            model=model, spec_index=spec_index, tol=tol, peak_probe=peak_probe,
+            rescue_probe=rescue_probe, allow_fallback=allow_fallback,
+            requirements=requirements))
     fc = _fc()
     fc._check_constants()
     k = fc.PREREG["k"]
     tol = fc.PREREG["tol"] if tol is None else tol
+    user_spec = spec_for(target_boost_db, channel_loss_db, tol, requirements)
+    req_diff = requirements_diff(user_spec)
 
     plane = fc.plane_from_probe(peak_probe)
     ladder = fc.rescue_order_from_probe(rescue_probe)
@@ -469,12 +701,49 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
                 if _close([x0], [rec0], None, "surrogate:%d" % n_surrogate):
                     break
 
+        # ---- winner selection: accuracy first, then corner robustness ---------------
+        # See THINKING_TIEBREAK_BAND_DB for the measurement this rests on. Accuracy is
+        # still the primary key; headroom only decides between candidates the frozen
+        # solver's own stopping tolerance would not distinguish.
+        from eqrl.guards import DC_GAIN_DB_MIN
+
+        def _headroom(c):
+            """DC-gain headroom, in dB, of the design this candidate would report.
+
+            Picks the same record `fc.summarize` does -- min |boost - target| over the
+            loose passes of the same trace -- restated here only because summarize is
+            frozen and carries no dc_gain_db. Headroom is the guard's own bound and not a
+            fitted quantity (`eqrl.experiments.g32_headroom`): DC_GAIN_DB_MIN is 0.0 dB.
+            """
+            ok = [e for e in c["s1_only"] + c["g2"] if e and e["loose_pass"]]
+            if not ok:
+                return None
+            best = min(ok, key=lambda e: abs(e["boost_db"] - target_boost_db))
+            return float(best["dc_gain_db"]) - DC_GAIN_DB_MIN
+
         def _rank(c):
             has_design = c["arm"]["best_design"] is not None
             err = c["arm"]["best_abs_err"]
             return (0 if has_design else 1, err if err is not None else float("inf"))
 
-        winner = min(candidates, key=_rank)
+        for c in candidates:
+            c["headroom_db"] = _headroom(c)
+
+        most_accurate = min(candidates, key=_rank)
+        best_err = most_accurate["arm"]["best_abs_err"]
+        band = [] if best_err is None else [
+            c for c in candidates
+            if c["arm"]["best_design"] is not None
+            and c["arm"]["best_abs_err"] <= best_err + THINKING_TIEBREAK_BAND_DB]
+        if len(band) > 1:
+            # Highest headroom wins; a candidate with no headroom to report cannot win the
+            # tiebreak, and remaining ties fall back to the more accurate one.
+            winner = max(band, key=lambda c: (
+                c["headroom_db"] if c["headroom_db"] is not None else float("-inf"),
+                -c["arm"]["best_abs_err"]))
+        else:
+            winner = most_accurate
+        tiebreak_applied = winner is not most_accurate
         s1, s1_only, term_at = winner["s1"], winner["s1_only"], winner["term_at"]
         g2, info, left = winner["g2"], winner["info"], winner["left"]
         arm_b = winner["arm"]
@@ -485,9 +754,29 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         mode_detail["rollouts"] = [
             {"start": c["start"], "best_abs_err_db": c["arm"]["best_abs_err"],
              "n_loose_pass": c["arm"]["n_loose_pass"],
+             "headroom_db": c["headroom_db"],
              "reached_target": bool(c["info"]["reached_target"])}
             for c in candidates]
         mode_detail["winner_start"] = winner["start"]
+        # Recorded so the tiebreak can be audited rather than assumed: how often it fires
+        # at all, and what accuracy it gave up when it did. The `retarget` arm fired 0/32
+        # on a fresh seed; nothing here should be trusted until this says otherwise.
+        mode_detail["tiebreak"] = {
+            "band_db": THINKING_TIEBREAK_BAND_DB,
+            "n_in_band": len(band),
+            "applied": tiebreak_applied,
+            "winner_headroom_db": winner["headroom_db"],
+            "most_accurate_start": most_accurate["start"],
+            "most_accurate_headroom_db": most_accurate["headroom_db"],
+            # The design the tiebreak DISPLACED, kept only when it actually displaced one.
+            # Without it the firing cannot be audited after the fact -- the corner sweep
+            # that decides whether this rule helps needs both sides of the swap, and
+            # re-deriving the loser would mean re-running the whole search.
+            "most_accurate_design": (most_accurate["arm"]["best_design"]
+                                     if tiebreak_applied else None),
+            "abs_err_given_up_db": (
+                None if not tiebreak_applied or best_err is None
+                else winner["arm"]["best_abs_err"] - best_err)}
         mode_detail["n_ppo_rollouts"] = n_ppo
         mode_detail["n_surrogate_starts"] = n_surrogate
         mode_detail["measure_all_spent"] = _spent()
@@ -546,11 +835,11 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
                     stop_abs_err_db=None)
             mode_detail["retarget"] = info.get("retarget")
         else:
-            r, stop = fc.PREREG["r"], None
+            # Called exactly as the benchmark calls it: no stop kwarg, so g32_solve reads
+            # fc.PREREG itself and "default" stays byte-identical to the frozen record.
             with counting() as c2:
                 g2, info, _x_f, _rec_f, left = fc.g32_solve(
-                    evaluate, xs, s1, target_boost_db, plane, ladder, r,
-                    stop_abs_err_db=stop)
+                    evaluate, xs, s1, target_boost_db, plane, ladder, fc.PREREG["r"])
 
         arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
 
@@ -561,8 +850,17 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         "mode": mode,
         "spec": {"target_boost_db": target_boost_db, "channel_loss_db": channel_loss_db,
                  "boost_tol_db": tol, "spec_index": spec_index,
-                 "requirement_set": "eqrl.specs.Spec defaults + this target/channel; "
-                                    "dc_gain_db_min=0.0 and boost_target_tol_db both ON"},
+                 "requirement_set": ("eqrl.specs.Spec defaults + this target/channel; "
+                                     "dc_gain_db_min=0.0 and boost_target_tol_db both ON"
+                                     if not req_diff else
+                                     "USER-MODIFIED: this target/channel plus %d "
+                                     "acceptance constraint(s) changed from the "
+                                     "competition defaults; see `requirements`"
+                                     % len(req_diff)),
+                 "requirements": req_diff,
+                 "scored_against": ("the competition specification" if not req_diff
+                                    else "user-modified requirements, not the "
+                                         "competition specification")},
         "provenance": {
             "is_ai_generated": True,
             "policy": model,
@@ -596,11 +894,15 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     # ---- independent verification -----------------------------------------------------
     if arm_b["best_design"] is not None:
         dv = DesignVars(**arm_b["best_design"])
-        spec = spec_for(target_boost_db, channel_loss_db, tol)
+        spec = user_spec
         with counting() as c3:
             v = verify(dv, spec)
         result["verification"] = v
         _add_verification_cost(result["cost"], c3)
+        if req_diff:
+            _reselect_for_requirements(result, s1_only + g2, spec, tol, counting)
+            v = result["verification"]
+            dv = DesignVars(**result["design"])
         result["netlist"] = netlist(dv, vdd=spec.vdd_nominal, temp_c=27.0, corner="tt",
                                     analysis="ac", models="sky130")
         result["status"] = SOLVED if v["passed"] else CLOSED_NOT_VERIFIED
@@ -611,7 +913,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         from eqrl.baselines.robust import robust_design
 
         dv = robust_design()
-        spec = spec_for(target_boost_db, channel_loss_db, tol)
+        spec = user_spec
         with counting() as c3:
             v = verify(dv, spec)
         _add_verification_cost(result["cost"], c3)
@@ -683,5 +985,20 @@ def describe(r: dict[str, Any]) -> str:
         out.append("  verification  ALL TEN CHECKS PASS (independent re-measurement)")
     else:
         out.append("  verification  FAILS: %s" % ", ".join(v["failing"]))
+    reqs = r.get("spec", {}).get("requirements") or []
+    if reqs:
+        out.append("  requirements  USER-MODIFIED (%d): %s"
+                   % (len(reqs), ", ".join("%s=%g (%s)" % (q["field"], q["value"],
+                                                          q["direction"]) for q in reqs)))
+        if v and "competition_passed" in v:
+            out.append("  competition   %s" % ("PASSES the unmodified specification too"
+                                               if v["competition_passed"] else
+                                               "FAILS the unmodified specification: "
+                                               + ", ".join(v["competition_failing"])))
+    auto = r.get("auto")
+    if auto:
+        out.append("  auto          %s" % (
+            "fastest verified on the first attempt" if not auto["escalated"] else
+            "fastest returned %s; escalated to thinking" % auto["first_status"]))
     out.append("  status        %s" % r["status"])
     return "\n".join(out)
