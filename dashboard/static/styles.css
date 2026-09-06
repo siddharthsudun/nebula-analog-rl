@@ -858,3 +858,19 @@ details.explainer.dev-tool > summary { font-size: var(--fs-sm); }
   background: color-mix(in srgb, var(--warning) 12%, transparent);
   color: var(--ink); font-size: 12px; line-height: 1.55;
 }
+
+/* Inline "try Thinking mode" affordance inside the guidance card. Styled as a link
+   rather than a primary button on purpose: it selects a mode, it does not launch a run,
+   and a button that looks like the Run button would imply it spends simulator budget. */
+.mode-suggest {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent, #2563eb);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.mode-suggest:hover { text-decoration-thickness: 2px; }
+.mode-suggest:focus-visible { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; border-radius: 2px; }

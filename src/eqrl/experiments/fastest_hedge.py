@@ -183,7 +183,7 @@ def fastest_stage2(evaluate, xs, s1trace, target: float, plane: dict, ladder, bu
     `floor_budget`, per docs/RESULTS_INFERENCE_MODES.md section 6.3 ("give fastest a
     floor"): when the hedge is not accepted -- rejected, or never attempted -- `g32_solve`
     is handed `floor_budget` instead of the small remaining fast budget. This is a budget
-    NUMBER passed to the unmodified `g32_solve`, exactly like `accurate` and `thinking`
+    NUMBER passed to the unmodified `g32_solve`, exactly like `thinking`
     already pass their own `r`; no control flow of `g32_solve` changes. It bounds fastest's
     downside: a rejected hedge now costs at most one wasted evaluation relative to running
     `default` directly, instead of leaving the rest of the search to a fraction of

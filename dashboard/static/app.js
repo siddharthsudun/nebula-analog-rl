@@ -590,11 +590,14 @@ function genericHtml(d) {
 // -- Live pipeline: the ask ----------------------------------------------------------
 
 let pipelineDefaults = null;
-let selectedMode = "default";
+let selectedMode = "fastest";
 
 // Fixed display order (fast -> thorough), independent of whatever order the server's
-// `modes` list happens to come back in.
-const MODE_ORDER = ["fastest", "default", "accurate", "thinking"];
+// `modes` list happens to come back in. The server decides WHICH of these appear
+// (GET /api/pipeline/defaults -> `modes`); this only fixes their order. "default" and
+// "retarget" stay in MODE_INFO because the API still accepts them and a result can still
+// come back tagged with one -- they are just not offered as buttons.
+const MODE_ORDER = ["fastest", "thinking", "default", "retarget"];
 const MODE_INFO = {
   fastest: {
     name: "Fastest",
@@ -606,15 +609,15 @@ const MODE_INFO = {
     sub: "benchmarked",
     desc: "The pre-registered PPO → G3.2 → verification pipeline, unchanged from the published benchmark.",
   },
-  accurate: {
-    name: "Accurate",
-    sub: "tighter tolerance",
-    desc: "Same PPO → G3.2 pipeline with a larger refinement budget and a tighter internal stopping tolerance, trading more evaluations for a closer boost match.",
+  retarget: {
+    name: "Retarget",
+    sub: "second axis",
+    desc: "Default, plus one thing: when the boost control reaches a bound, probe the other design axes and resume the search along the best one. Measured to fire rarely — it is here for the cases where the primary axis is genuinely railed.",
   },
   thinking: {
     name: "Thinking",
-    sub: "multi-rollout",
-    desc: "Runs PPO → G3.2 independently from 3 different seeds and keeps whichever got closest to target. Costs roughly 3× the evaluations, and can solve specs a single rollout misses.",
+    sub: "multi-start",
+    desc: "Runs PPO → G3.2 from up to 8 independent starting points, adds corpus-proposed starts if none of them reach target, and keeps whichever got closest. Costs more simulator calls and about a minute, and solves specs a single start misses outright.",
   },
 };
 
@@ -680,7 +683,7 @@ function renderModeRow() {
   }).join("");
   $$(".mode-btn").forEach((b) => b.addEventListener("click", () => selectMode(b.dataset.mode)));
   selectMode(pipelineDefaults.default_mode && available.includes(pipelineDefaults.default_mode)
-    ? pipelineDefaults.default_mode : "default");
+    ? pipelineDefaults.default_mode : ordered[0] || "fastest");
 }
 
 async function initPipeline() {
@@ -920,17 +923,28 @@ function secondaryBlockHtml(r) {
   </div>`;
 }
 
+function guidanceHtml(r) {
+  // Why the run stopped where it did, keyed off the solver's own recorded reason. This is
+  // deliberately NOT a claim that no better circuit exists -- none of these solvers proves
+  // optimality, and the feasibility-wall case is exactly where something better does exist.
+  // See `_guidance` in eqrl/pipeline.py.
+  const g = r.guidance;
+  if (!g || !g.headline) return "";
+  const suggest = g.suggest_mode && g.suggest_mode !== r.mode
+    ? `<p class="help-hint" style="margin:6px 0 0;">Suggested next step: <button type="button" class="mode-suggest" data-mode="${escapeHtml(g.suggest_mode)}">try ${escapeHtml(MODE_INFO[g.suggest_mode]?.name || g.suggest_mode)} mode</button></p>`
+    : "";
+  return `<div class="secondary-block mode-detail-block">
+    <div class="card-title">${escapeHtml(g.headline)}</div>
+    <p class="help-hint" style="margin:0;">${escapeHtml(g.detail || "")}</p>
+    ${g.reason ? `<div class="kv-row"><span class="kv-k">Solver reason</span><span class="kv-v mono">${escapeHtml(g.reason)}</span></div>` : ""}
+    ${suggest}
+  </div>`;
+}
+
 function modeDetailHtml(r) {
   const detail = r.provenance && r.provenance.mode_detail;
   const mode = (detail && detail.mode) || r.mode || "default";
   if (!detail || mode === "default") return "";
-
-  if (mode === "accurate") {
-    return `<div class="secondary-block mode-detail-block">
-      <div class="card-title">Accurate mode</div>
-      <p class="help-hint" style="margin:0;">Ran with a larger G3.2 refinement budget and a tighter internal stopping tolerance than Default, trading more evaluations for a closer boost match.</p>
-    </div>`;
-  }
 
   if (mode === "fastest") {
     const h = detail.hedge || {};
@@ -947,12 +961,28 @@ function modeDetailHtml(r) {
   if (mode === "thinking") {
     const rollouts = detail.rollouts || [];
     const rows = rollouts.map((ro) => {
-      const isWinner = ro.seed_offset === detail.winner_seed_offset;
-      return `<tr><td class="mono">${ro.seed_offset}${isWinner ? " <strong>(winner)</strong>" : ""}</td><td class="num mono">${fmt(ro.best_abs_err_db, 3)} dB</td><td class="num mono">${ro.n_loose_pass}</td><td>${ro.reached_target ? "reached target" : "did not reach target"}</td></tr>`;
+      const isWinner = ro.start === detail.winner_start;
+      const kind = String(ro.start || "").startsWith("surrogate") ? "corpus-proposed start" : "PPO rollout";
+      return `<tr><td class="mono">${escapeHtml(ro.start)}${isWinner ? " <strong>(winner)</strong>" : ""}</td><td>${kind}</td><td class="num mono">${ro.best_abs_err_db === null || ro.best_abs_err_db === undefined ? "—" : fmt(ro.best_abs_err_db, 4) + " dB"}</td><td class="num mono">${ro.n_loose_pass}</td><td>${ro.reached_target ? "reached target" : "did not reach target"}</td></tr>`;
     }).join("");
+    // The governor is worth surfacing: a run that stopped starting new restarts because
+    // it hit its wall-clock envelope searched less than the mode's nominal breadth, and
+    // the user should not read that as "everything was tried".
+    const gov = detail.governor_stopped
+      ? `<p class="help-hint" style="margin:6px 0 0;">Stopped launching further restarts at the ~60 s budget (${detail.measure_all_spent} measure_all spent). Fewer starting points were tried than this mode's maximum.</p>`
+      : "";
     return `<div class="secondary-block mode-detail-block">
-      <div class="card-title">Thinking mode — ${rollouts.length} independent rollouts</div>
-      <table class="parse-table"><thead><tr><th>Seed offset</th><th class="num">Best abs. error</th><th class="num">Loose passes</th><th>Target</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="card-title">Thinking mode — ${detail.n_ppo_rollouts || 0} PPO rollout${(detail.n_ppo_rollouts || 0) === 1 ? "" : "s"}${detail.n_surrogate_starts ? ` + ${detail.n_surrogate_starts} corpus start${detail.n_surrogate_starts === 1 ? "" : "s"}` : ""}</div>
+      <table class="parse-table"><thead><tr><th>Start</th><th>Kind</th><th class="num">Best abs. error</th><th class="num">Loose passes</th><th>Target</th></tr></thead><tbody>${rows}</tbody></table>${gov}
+    </div>`;
+  }
+
+  if (mode === "retarget") {
+    const rt = detail.retarget || {};
+    return `<div class="secondary-block mode-detail-block">
+      <div class="card-title">Retarget mode — second-axis probe</div>
+      <div class="kv-row"><span class="kv-k">Outcome</span><span class="kv-v">${rt.fired ? `resumed along ${escapeHtml(rt.accepted_axis || "another axis")}` : "did not fire"}</span></div>
+      ${rt.fired ? "" : `<div class="kv-row"><span class="kv-k">Why not</span><span class="kv-v">${escapeHtml(rt.why_not || "—")}</span></div>`}
     </div>`;
   }
 
@@ -978,6 +1008,7 @@ async function renderPipelineResult(r, elapsedS) {
   html += d ? headlineHtml(d, r.verification)
              : banner("warning", "alertTriangle", "No design: the architecture produced nothing guard-valid for this spec, and fallback was not allowed.");
   if (d) html += secondaryBlockHtml(r);
+  html += guidanceHtml(r);
   html += modeDetailHtml(r);
   html += costStripHtml(r, elapsedS);
   html += `<details class="explainer" style="margin-top:4px;"><summary>Full CLI-style report</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(r.describe_text)}</pre></div></details>`;
@@ -985,6 +1016,20 @@ async function renderPipelineResult(r, elapsedS) {
   html += `<details class="explainer" style="margin-top:10px;"><summary>Raw result JSON</summary><div class="explainer-body" style="padding-left:16px;"><pre class="code-block">${escapeHtml(JSON.stringify(r, null, 2))}</pre></div></details>`;
 
   box.innerHTML = html;
+
+  // The suggestion button is written into `box` above, so it can only be wired after the
+  // assignment. It selects the mode; it does not re-run -- re-running on a click would
+  // spend simulator budget the user did not ask for.
+  const suggestBtn = box.querySelector(".mode-suggest");
+  if (suggestBtn) {
+    suggestBtn.addEventListener("click", () => {
+      const m = suggestBtn.dataset.mode;
+      if ($$(".mode-btn").some((b) => b.dataset.mode === m)) {
+        selectMode(m);
+        $("#pipeline-mode-row").scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  }
 
   if (d) {
     const holder = $("#result-schematic-holder");

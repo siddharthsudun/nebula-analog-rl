@@ -556,6 +556,13 @@ class ParseSpecRequest(BaseModel):
     text: str
 
 
+#: The two modes the dashboard offers, in display order. Fastest is the landing choice --
+#: it is the one that answers in seconds -- and Thinking is the one to escalate to.
+#: `MODES` (eqrl.pipeline) stays wider; see the comment in `pipeline_defaults` for why
+#: "default" survives in the API but not in the UI.
+UI_MODES = ("fastest", "thinking")
+
+
 @app.get("/api/pipeline/defaults")
 def pipeline_defaults():
     return {
@@ -566,8 +573,17 @@ def pipeline_defaults():
         "boost_tol_db": DEFAULT_SPEC.boost_tol_db,
         "statuses": {"solved": SOLVED, "closed_not_verified": CLOSED_NOT_VERIFIED,
                      "unsolved": UNSOLVED, "fallback": FALLBACK},
-        "modes": list(MODES),
-        "default_mode": "default",
+        # What the UI OFFERS is deliberately narrower than what the API ACCEPTS.
+        # `MODES` still carries "default" and "retarget" and `/api/pipeline/run` still
+        # takes them -- "default" in particular is the arm every measured claim in this
+        # repo describes (the equivalence gate, REPRODUCE.md section 20, the 45-corner PVT
+        # sign-off), so removing its code path would make the frozen record
+        # unreproducible. It is simply not a button any more: on spec-seed 137 it returned
+        # no design at all on 8 of 32 specs where Thinking returned a verified one, and a
+        # product should not lead with that.
+        "modes": list(UI_MODES),
+        "all_modes": list(MODES),
+        "default_mode": "fastest",
     }
 
 

@@ -68,17 +68,21 @@ UNSOLVED = "unsolved"             #: the architecture ran and did not reach the 
 FALLBACK = "fallback_fixed_design_not_ai"   #: see `design(..., allow_fallback=True)`
 
 #: Every mode runs the SAME frozen `g32_solve`. Stage 1 is also the same frozen PPO
-#: rollout for "default", "accurate", "thinking" and "retarget" -- but NOT for "fastest",
+#: rollout for "default", "thinking" and "retarget" -- but NOT for "fastest",
 #: which replaces stage 1 with a corpus lookup; see `eqrl.experiments.fastest_hedge`.
 #: "default" is byte-identical to this module's pre-mode behaviour: r = fc.PREREG["r"],
 #: stop_abs_err_db left at None so g32_solve reads fc.PREREG itself.
-MODES = ("default", "accurate", "fastest", "thinking", "retarget")
+MODES = ("default", "fastest", "thinking", "retarget")
 
-#: Accurate: same feasibility gate, a bigger stage-2 budget and a tighter stopping test on
-#: the SAME bisection loop. Nothing here is a new search -- just more of the existing one,
-#: asked to stop closer to the target than PREREG's own 0.25 dB.
-ACCURATE_R = 30
-ACCURATE_STOP_ABS_ERR_DB = 0.05
+#: "accurate" WAS a mode here -- same feasibility gate, r = 30, stop = 0.05 dB. It was
+#: removed 06 Sep 2026 after `scratchpad/mode_bench32.py` measured it against `default` on
+#: spec-seed 137 and found it produced an IDENTICAL result, to four decimal places, on
+#: every spec: its larger budget and tighter tolerance changed nothing because neither
+#: budget nor tolerance was the binding constraint. A mode that never differs from another
+#: mode is a label, not a mode. What section 4 of docs/DESIGN_MODES_V2.md actually proposed
+#: for it -- relaxing the DC-gain floor so the search may cross the feasibility wall -- was
+#: never implemented and is the only thing that would have made it distinct. That remains
+#: unbuilt; do not resurrect the name without it.
 
 #: Fastest: stage 1 is a corpus lookup (eqrl.experiments.fastest_hedge.surrogate_stage1) --
 #: no PPO rollout, one real evaluation instead of PREREG["k"]=5 -- then the unmodified
@@ -89,15 +93,37 @@ ACCURATE_STOP_ABS_ERR_DB = 0.05
 #: `default`'s r=10.
 FASTEST_BUDGET = 3
 
-#: Thinking: THINKING_ROLLOUTS independent PPO stage-1 rollouts, each closed by G3.2 at
-#: Accurate's tolerance, the best of the N kept. Diversity comes from calling the frozen
-#: `stage1_rollout` with N different spec indices -- it seeds its env at `1000 + i`, so a
-#: different `i` is a different rollout without touching its seeding rule. The offsets are
-#: fixed and arbitrary, chosen only to be distinct and reproducible.
-THINKING_ROLLOUTS = 3
-THINKING_R = 15
-THINKING_STOP_ABS_ERR_DB = 0.05
-THINKING_SEED_OFFSETS = (0, 4001, 9007)
+#: Thinking: up to THINKING_ROLLOUTS independent PPO stage-1 rollouts, each closed by the
+#: frozen G3.2, best of N kept; then, only if none of them reached target, up to
+#: THINKING_SURROGATE_STARTS corpus-proposed starts (`eqrl.experiments.thinking_starts`).
+#: Diversity in the PPO phase comes from calling the frozen `stage1_rollout` with N
+#: different spec indices -- it seeds its env at `1000 + i`, so a different `i` is a
+#: different rollout without touching its seeding rule. The offsets are fixed and
+#: arbitrary, chosen only to be distinct and reproducible.
+#:
+#: The three numbers below are docs/DESIGN_MODES_V2.md section 3 item 1 and item 3:
+#: 3 -> 8 rollouts, r 15 -> 25, stop 0.05 -> 0.01 dB. The stop tolerance is deliberately
+#: TIGHTER than the mode's own accuracy goal (+-0.1 dB): the mode should stop because the
+#: bisection converged, not because it hit its own tolerance and gave up early.
+THINKING_ROLLOUTS = 8
+THINKING_R = 25
+THINKING_STOP_ABS_ERR_DB = 0.01
+THINKING_SEED_OFFSETS = (0, 4001, 9007, 15013, 23021, 31033, 42043, 55049)
+
+#: Corpus-proposed restarts, tried ONLY after every PPO rollout has failed to reach target.
+#: Motivated by the n=32 measurement in DESIGN_MODES_V2 section 6: 8 of 32 specs failed
+#: because no start ever reached the feasible set, which is a start-quality problem that
+#: more budget from the same start cannot fix. Each costs ONE real evaluation instead of
+#: PPO's five.
+THINKING_SURROGATE_STARTS = 4
+
+#: Wall-clock governor, in `measure_all` units. The requested envelope is ~60 s and a
+#: `measure_all` costs ~0.55 s (DESIGN_MODES_V2 section 0), so ~100 is the budget. Without
+#: this, 8 rollouts x (5 + 25) is 240 measure_all -- over two minutes -- in the worst case,
+#: which is the case where nothing is working and the user is waiting longest. No restart
+#: is STARTED once the spend reaches this; a restart already running is always finished, so
+#: this trims the search rather than truncating a solve into a misleading partial answer.
+THINKING_MEASURE_ALL_BUDGET = 100
 
 #: Retarget: DEFAULT, plus one thing -- when G3.2's boost axis is pinned at a bound, probe
 #: the other axes and resume the line search along the best one
@@ -238,6 +264,75 @@ def _add_verification_cost(cost: dict[str, Any], c3: dict) -> None:
     cost["spice_analyses_total"] = cost["spice_analyses_search"] + c3["analysis"]
 
 
+def _guidance(mode: str, info: dict, arm_b: dict, target_boost_db: float) -> dict:
+    """What to tell the user about WHY this run stopped where it did.
+
+    docs/DESIGN_MODES_V2.md section 3. The user asked Thinking to say "default already
+    found the best circuit" when nothing better is available. **That claim cannot be made
+    honestly** -- none of these solvers proves global optimality, and asserting it would be
+    the single easiest way for this project to be caught overclaiming. What CAN be said is
+    the mechanism, which `g32_solve` already records in `info["reason"]` at no cost, and
+    each reason licenses a different, true statement.
+
+    The `wall` case is the one that matters most and is the one a naive implementation gets
+    backwards: converging onto the feasibility wall does NOT mean nothing better exists. It
+    means something better exists and costs DC gain below the guard's floor. Telling the
+    user "this is the best possible" there would be false. It routes to Accurate instead.
+
+    `actionable` is the flag a UI should use to decide whether to offer another mode; it is
+    False exactly when no other mode in this codebase is known to help.
+    """
+    reason = info.get("reason") or ""
+    err = arm_b.get("best_abs_err")
+    got = arm_b.get("best_boost_db")
+    near = "" if got is None else " Closest achievable found: %.2f dB." % got
+
+    if info.get("reached_target"):
+        return {"headline": "Target reached inside the feasible set.",
+                "detail": "The design meets the boost target and passes the feasibility "
+                          "guard. Nothing further is required.",
+                "suggest_mode": None, "actionable": False, "reason": reason}
+    if "feasibility wall" in reason:
+        # Measured, not assumed: on spec-seed 137 Thinking cleared two of default's three
+        # wall cases (3.92 -> 0.0007, 2.28 -> 0.0007) WITHOUT relaxing the guard, because a
+        # different restart lands in a basin where the wall is not binding. So the honest
+        # advice here is a different start, not a weaker guard.
+        return {"headline": "Stopped at the feasibility wall, not at the best circuit.",
+                "detail": "Getting closer to %.2f dB from THIS starting point requires DC "
+                          "gain below the guard's 0 dB floor, which is refused.%s That is "
+                          "a statement about this basin, not about the circuit family -- "
+                          "Thinking mode restarts from other starting points and clears "
+                          "most walls without weakening the guard."
+                          % (target_boost_db, near),
+                "suggest_mode": None if mode == "thinking" else "thinking",
+                "actionable": mode != "thinking", "reason": reason}
+    if "no admissible step" in reason:
+        return {"headline": "The boost control is at its limit for this channel.",
+                "detail": "The primary boost axis has reached a bound, so the line search "
+                          "has no admissible step left.%s This target may not be reachable "
+                          "with this topology. Retarget mode probes the other axes, though "
+                          "it is measured to fire rarely." % near,
+                "suggest_mode": "retarget", "actionable": True, "reason": reason}
+    if "budget exhausted" in reason:
+        return {"headline": "Ran out of evaluation budget before converging.",
+                "detail": "The search was still improving when its budget ran out.%s "
+                          "Thinking mode spends a larger budget on the same search."
+                          % near,
+                "suggest_mode": None if mode == "thinking" else "thinking",
+                "actionable": mode != "thinking", "reason": reason}
+    if arm_b.get("best_design") is None:
+        return {"headline": "No design passed the feasibility guard.",
+                "detail": "Neither the policy nor the repair ladder produced a "
+                          "guard-valid circuit for this request, so there is nothing to "
+                          "report rather than a circuit that does not hold up. Thinking "
+                          "mode tries additional and corpus-proposed starting points.",
+                "suggest_mode": None if mode == "thinking" else "thinking",
+                "actionable": mode != "thinking", "reason": reason}
+    return {"headline": "Stopped short of the target.",
+            "detail": "Solver reason: %s.%s" % (reason or "unrecorded", near),
+            "suggest_mode": None, "actionable": False, "reason": reason}
+
+
 def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
            *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
            peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
@@ -248,7 +343,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     benchmark does. It is the only knob that changes which circuit comes out for a given
     target, and it is recorded in the result so any run is reproducible.
 
-    `mode` selects one of `MODES`. For "default", "accurate", "thinking" and "retarget"
+    `mode` selects one of `MODES`. For "default", "thinking" and "retarget"
     this changes only the stage-2 budget/tolerance (and, for "thinking", how many
     independent stage-1 rollouts are tried) -- stage 1 is always the same frozen PPO
     rollout. "fastest" is the one exception: it replaces stage 1 itself with a corpus
@@ -256,7 +351,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     instead of PPO's `k` rollout evaluations, because that rollout, not stage 2, was
     measured to be the majority of the wall-clock cost a "fast" mode is supposed to cut.
     No mode ever changes the PPO policy itself, the guard, `hard_pass`, or `g32_solve`'s
-    control flow -- see the module-level `MODES`/`ACCURATE_*`/`FASTEST_*`/`THINKING_*`
+    control flow -- see the module-level `MODES`/`FASTEST_*`/`THINKING_*`
     constants for exactly what each preset is. "default" reproduces this function's
     pre-mode behaviour bit for bit.
 
@@ -297,21 +392,27 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         # ---- N independent PPO rollouts, each closed by the frozen G3.2 -------------
         # Adaptive (docs/RESULTS_INFERENCE_MODES.md section 6.2): offsets are spent in
         # order and stop the moment one reaches target. Restart diversity is worth its
-        # cost only when the rollout so far did NOT land on target -- paying for two more
+        # cost only when the rollout so far did NOT land on target -- paying for more
         # independent rollouts after the first already solved it recovers nothing (the
-        # winner is already picked by _rank below) and only adds SPICE cost. When no
-        # rollout reaches target this still runs all of THINKING_SEED_OFFSETS, so the
-        # worst case is unchanged from the non-adaptive form.
+        # winner is already picked by _rank below) and only adds SPICE cost.
+        #
+        # Two things bound the worst case, which is the case where nothing works and the
+        # user is waiting longest: THINKING_ROLLOUTS caps how many restarts exist, and
+        # THINKING_MEASURE_ALL_BUDGET stops NEW ones being started once the run has spent
+        # its wall-clock envelope. A restart already under way is always finished -- a
+        # truncated solve would report a partial search as if it were a converged one.
+        from eqrl.experiments.thinking_starts import diverse_seeds
+
         candidates = []
         c1 = {"measure_all": 0, "analysis": 0}
         c2 = {"measure_all": 0, "analysis": 0}
-        for offset in THINKING_SEED_OFFSETS:
-            with counting() as c1_i:
-                xs_i, s1_i, term_i = fc.stage1_rollout(
-                    evaluate, policy, env, spec_index + offset, target_boost_db,
-                    channel_loss_db, k)
-            for key in c1:
-                c1[key] += c1_i[key]
+        governor_stopped = False
+
+        def _spent() -> int:
+            return c1["measure_all"] + c2["measure_all"]
+
+        def _close(xs_i, s1_i, term_i, label):
+            """Run the frozen g32_solve from one start and record the candidate."""
             s1_only_i = [e for e in s1_i if e]
             with counting() as c2_i:
                 g2_i, info_i, _xf, _rf, left_i = fc.g32_solve(
@@ -320,11 +421,53 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             for key in c2:
                 c2[key] += c2_i[key]
             candidates.append({
-                "seed_offset": offset, "xs": xs_i, "s1": s1_i, "s1_only": s1_only_i,
+                "start": label, "xs": xs_i, "s1": s1_i, "s1_only": s1_only_i,
                 "term_at": term_i, "g2": g2_i, "info": info_i, "left": left_i,
                 "arm": fc.summarize(s1_only_i + g2_i, target_boost_db, tol)})
-            if info_i["reached_target"]:
+            return info_i["reached_target"]
+
+        for offset in THINKING_SEED_OFFSETS[:THINKING_ROLLOUTS]:
+            if candidates and _spent() >= THINKING_MEASURE_ALL_BUDGET:
+                governor_stopped = True
                 break
+            with counting() as c1_i:
+                xs_i, s1_i, term_i = fc.stage1_rollout(
+                    evaluate, policy, env, spec_index + offset, target_boost_db,
+                    channel_loss_db, k)
+            for key in c1:
+                c1[key] += c1_i[key]
+            if _close(xs_i, s1_i, term_i, "ppo:%d" % offset):
+                break
+
+        # ---- corpus-proposed starts, ONLY if no PPO rollout reached target -----------
+        # See eqrl.experiments.thinking_starts: the failures this addresses are ones where
+        # no start ever reached the feasible set, which more budget from the same start
+        # cannot fix. Each start costs ONE real guarded evaluation, not PPO's five, and the
+        # corpus never judges -- g32_solve and the verifier still decide.
+        n_surrogate = 0
+        if candidates and not any(c["info"]["reached_target"] for c in candidates):
+            try:
+                from eqrl.experiments.fastest_hedge import load_fastest_assets
+
+                surrogate, _cx, _rad = load_fastest_assets()
+                tried = np.array([x for c in candidates for x in c["xs"]],
+                                 dtype=np.float64)
+                seeds = diverse_seeds(target_boost_db, surrogate,
+                                      spec_for(target_boost_db, channel_loss_db, tol),
+                                      THINKING_SURROGATE_STARTS, exclude=tried)
+            except Exception:
+                seeds = []          # no corpus on disk -> Thinking is just best-of-N PPO
+            for x0 in seeds:
+                if _spent() >= THINKING_MEASURE_ALL_BUDGET:
+                    governor_stopped = True
+                    break
+                with counting() as c1_i:
+                    rec0, _s, _g = evaluate(x0, target_boost_db)
+                for key in c1:
+                    c1[key] += c1_i[key]
+                n_surrogate += 1
+                if _close([x0], [rec0], None, "surrogate:%d" % n_surrogate):
+                    break
 
         def _rank(c):
             has_design = c["arm"]["best_design"] is not None
@@ -335,14 +478,23 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         s1, s1_only, term_at = winner["s1"], winner["s1_only"], winner["term_at"]
         g2, info, left = winner["g2"], winner["info"], winner["left"]
         arm_b = winner["arm"]
-        k_eff = k * len(candidates)
+        # Stage 1 cost is charged per PPO rollout at k, plus one per corpus start. Counting
+        # every candidate at k would overstate what the corpus starts actually spent.
+        n_ppo = len(candidates) - n_surrogate
+        k_eff = k * n_ppo + n_surrogate
         mode_detail["rollouts"] = [
-            {"seed_offset": c["seed_offset"], "best_abs_err_db": c["arm"]["best_abs_err"],
+            {"start": c["start"], "best_abs_err_db": c["arm"]["best_abs_err"],
              "n_loose_pass": c["arm"]["n_loose_pass"],
              "reached_target": bool(c["info"]["reached_target"])}
             for c in candidates]
-        mode_detail["winner_seed_offset"] = winner["seed_offset"]
-        mode_detail["adaptive_stopped_early"] = len(candidates) < len(THINKING_SEED_OFFSETS)
+        mode_detail["winner_start"] = winner["start"]
+        mode_detail["n_ppo_rollouts"] = n_ppo
+        mode_detail["n_surrogate_starts"] = n_surrogate
+        mode_detail["measure_all_spent"] = _spent()
+        mode_detail["governor_stopped"] = governor_stopped
+        mode_detail["adaptive_stopped_early"] = (
+            n_ppo < min(THINKING_ROLLOUTS, len(THINKING_SEED_OFFSETS))
+            and not governor_stopped)
 
     elif mode == "fastest":
         # ---- stage 1 REPLACEMENT: corpus lookup, no PPO, one real evaluation ---------
@@ -394,8 +546,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
                     stop_abs_err_db=None)
             mode_detail["retarget"] = info.get("retarget")
         else:
-            r = ACCURATE_R if mode == "accurate" else fc.PREREG["r"]
-            stop = ACCURATE_STOP_ABS_ERR_DB if mode == "accurate" else None
+            r, stop = fc.PREREG["r"], None
             with counting() as c2:
                 g2, info, _x_f, _rec_f, left = fc.g32_solve(
                     evaluate, xs, s1, target_boost_db, plane, ladder, r,
@@ -433,6 +584,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             "fallback_invoked": False,
             "hand_tuning": "none",
         },
+        "guidance": _guidance(mode, info, arm_b, target_boost_db),
         "cost": _cost(fc, k_eff, info, left, c1, c2),
         "solver": arm_b,
         "design": arm_b["best_design"],
