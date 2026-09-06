@@ -346,8 +346,50 @@ step size to the solver. That one change is the difference between 1.172 dB and 
 Guard validity is still required — a guard-invalid probe measured nothing, so it says nothing
 about its axis. (`r_load −0.24` was rejected on `T4.10` in exactly this run.)
 
-**Still to do:** report this arm on a fresh nonzero `--spec-seed` at n≥32 before claiming it
-generally. n=1 fired case is a demonstration, not a rate.
+### ❌ MEASURED AT n=32 ON A FRESH SEED — it fires 0/32. Read this before building on it.
+
+`scratchpad/retarget_ab32.py`, spec-seed 137 (a draw that appears nowhere else in this repo),
+32 specs, `retarget` against `default` at identical budget and tolerance:
+
+```
+retarget fired on 0/32 specs
+better 0   worse 0   unchanged 32
+inert on every non-fired spec  (+0 measure_all on all 32)
+```
+
+**The n=8 result above does not generalise, and the reason is a selection effect I created.**
+Spec 11.0/12.5 was in that set *because* it was the known pinned case. Removing that choice
+removes the entire effect: in 32 unseen specs the exit `no admissible step remains` — the only
+condition this arm acts on — **never occurred once**.
+
+Bucketing all 32 by why the arm stayed inert is the useful output, because it says where the
+error actually lives:
+
+| specs | why `retarget` could not act | owner | error behind it |
+|---:|---|---|---|
+| 15 | target already reached | — | all ≤ 0.246 dB |
+| 6 | never reached the feasible set | repair stage | **6 unsolved** |
+| 6 | **budget exhausted before a 2nd axis could be tried** | §3 Thinking (larger `r`) | 5.02, 4.11, 2.00 dB |
+| 3 | **feasibility wall** (`rs` not at a bound) | §4 Accurate (DC-gain floor) | 3.92, 2.31, 2.28 dB |
+| 2 | no guard-valid design at all | stage 1 | both unsolved |
+| **0** | **axis pinned at a bound** | **§6, this arm** | — |
+
+Default on this seed: 18/32 within 0.5 dB, 8 unsolved.
+
+**Three conclusions, in order of what they change.**
+
+1. **§6 was the wrong thing to implement first.** §3 and §4 own 9 of the 9 addressable failures
+   here; §6 owns none. Build those.
+2. **This arm is budget-starved, not merely useless.** Six specs could not fire because the
+   first pass had already spent the budget — that is a *different* block from "the axis was
+   fine". If §3 Thinking raises `r`, the pinned exit may start appearing and this arm may
+   start firing. Untested, and it is the one thing that would revive §6. Do not assume it.
+3. **Keep the arm; it is free.** 32/32 identical outputs and +0 `measure_all` everywhere it
+   does not fire. It is safe to leave in the tree and re-measure once §3 lands. It is not a
+   result to quote.
+
+**Do not cite the 1.936 → 0.187 dB improvement as a rate.** It is one demonstration on one
+hand-picked spec, and it is the only fired case that exists.
 
 ---
 
