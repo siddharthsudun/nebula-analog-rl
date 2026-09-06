@@ -67,11 +67,12 @@ CLOSED_NOT_VERIFIED = "closed_but_failed_verification"
 UNSOLVED = "unsolved"             #: the architecture ran and did not reach the target
 FALLBACK = "fallback_fixed_design_not_ai"   #: see `design(..., allow_fallback=True)`
 
-#: Every mode runs the SAME frozen PPO stage 1 and the SAME frozen `g32_solve` -- see that
-#: function's docstring and `eqrl.experiments.fastest_hedge` for what actually differs.
+#: Every mode runs the SAME frozen `g32_solve`. Stage 1 is also the same frozen PPO
+#: rollout for "default", "accurate", "thinking" and "retarget" -- but NOT for "fastest",
+#: which replaces stage 1 with a corpus lookup; see `eqrl.experiments.fastest_hedge`.
 #: "default" is byte-identical to this module's pre-mode behaviour: r = fc.PREREG["r"],
 #: stop_abs_err_db left at None so g32_solve reads fc.PREREG itself.
-MODES = ("default", "accurate", "fastest", "thinking")
+MODES = ("default", "accurate", "fastest", "thinking", "retarget")
 
 #: Accurate: same feasibility gate, a bigger stage-2 budget and a tighter stopping test on
 #: the SAME bisection loop. Nothing here is a new search -- just more of the existing one,
@@ -79,10 +80,14 @@ MODES = ("default", "accurate", "fastest", "thinking")
 ACCURATE_R = 30
 ACCURATE_STOP_ABS_ERR_DB = 0.05
 
-#: Fastest: one surrogate-guided real evaluation (eqrl.experiments.fastest_hedge), then the
-#: unmodified `g32_solve` with whatever budget is left. 4 is 1 hedge + 3 for G3.2 -- roughly
-#: a third of default's r=10, which is where the time saving comes from.
-FASTEST_BUDGET = 4
+#: Fastest: stage 1 is a corpus lookup (eqrl.experiments.fastest_hedge.surrogate_stage1) --
+#: no PPO rollout, one real evaluation instead of PREREG["k"]=5 -- then the unmodified
+#: `g32_solve` with this fixed budget. No floor-budget escalation: that safety net (used
+#: while stage 1 was still the full PPO rollout) traded speed for accuracy-parity with
+#: default, which is the opposite of what this mode is now for. A rejected/weak seed costs
+#: at most this many evaluations, same as any other spec -- it does not fall back to
+#: `default`'s r=10.
+FASTEST_BUDGET = 3
 
 #: Thinking: THINKING_ROLLOUTS independent PPO stage-1 rollouts, each closed by G3.2 at
 #: Accurate's tolerance, the best of the N kept. Diversity comes from calling the frozen
@@ -93,6 +98,14 @@ THINKING_ROLLOUTS = 3
 THINKING_R = 15
 THINKING_STOP_ABS_ERR_DB = 0.05
 THINKING_SEED_OFFSETS = (0, 4001, 9007)
+
+#: Retarget: DEFAULT, plus one thing -- when G3.2's boost axis is pinned at a bound, probe
+#: the other axes and resume the line search along the best one
+#: (`eqrl.experiments.axis_retarget`). Budget and stopping tolerance are deliberately left
+#: at Default's own `fc.PREREG` values so that ANY difference between this mode and
+#: "default" is attributable to the second axis and to nothing else. That is what makes
+#: this arm measurable; do not "improve" it by also raising r.
+RETARGET_PROBE_EVALS = 3
 
 
 def _plain(o: Any) -> Any:
@@ -235,12 +248,17 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     benchmark does. It is the only knob that changes which circuit comes out for a given
     target, and it is recorded in the result so any run is reproducible.
 
-    `mode` selects one of `MODES` and changes ONLY the stage-2 budget/tolerance (and, for
-    "thinking", how many independent stage-1 rollouts are tried). It never changes the PPO
-    policy, the guard, `hard_pass`, or `g32_solve`'s control flow -- see the module-level
-    `MODES`/`ACCURATE_*`/`FASTEST_*`/`THINKING_*` constants for exactly what each preset is,
-    and `eqrl.experiments.fastest_hedge` for Fastest's one new mechanism. "default"
-    reproduces this function's pre-mode behaviour bit for bit.
+    `mode` selects one of `MODES`. For "default", "accurate", "thinking" and "retarget"
+    this changes only the stage-2 budget/tolerance (and, for "thinking", how many
+    independent stage-1 rollouts are tried) -- stage 1 is always the same frozen PPO
+    rollout. "fastest" is the one exception: it replaces stage 1 itself with a corpus
+    lookup plus a single real evaluation (`eqrl.experiments.fastest_hedge.surrogate_stage1`)
+    instead of PPO's `k` rollout evaluations, because that rollout, not stage 2, was
+    measured to be the majority of the wall-clock cost a "fast" mode is supposed to cut.
+    No mode ever changes the PPO policy itself, the guard, `hard_pass`, or `g32_solve`'s
+    control flow -- see the module-level `MODES`/`ACCURATE_*`/`FASTEST_*`/`THINKING_*`
+    constants for exactly what each preset is. "default" reproduces this function's
+    pre-mode behaviour bit for bit.
 
     `allow_fallback` is OFF by default and is not part of the architecture. When on, and
     only when PPO -> G3.2 produced nothing guard-valid at all, the fixed
@@ -262,7 +280,9 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
 
     ev = fc.Evaluation()
     evaluate = ev.make_eval(channel_loss_db)
-    policy, env = fc.load_policy(model)
+    # "fastest" never rolls out PPO -- see the mode dispatch below -- so it has no use for
+    # the policy/env pair, and loading them would be pure overhead this mode exists to cut.
+    policy, env = (None, None) if mode == "fastest" else fc.load_policy(model)
 
     # Cost is COUNTED at the two chokepoints REPRODUCE.md section 13 defines, never
     # derived from a per-evaluation factor. The factor is what went wrong before: this
@@ -275,6 +295,13 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
 
     if mode == "thinking":
         # ---- N independent PPO rollouts, each closed by the frozen G3.2 -------------
+        # Adaptive (docs/RESULTS_INFERENCE_MODES.md section 6.2): offsets are spent in
+        # order and stop the moment one reaches target. Restart diversity is worth its
+        # cost only when the rollout so far did NOT land on target -- paying for two more
+        # independent rollouts after the first already solved it recovers nothing (the
+        # winner is already picked by _rank below) and only adds SPICE cost. When no
+        # rollout reaches target this still runs all of THINKING_SEED_OFFSETS, so the
+        # worst case is unchanged from the non-adaptive form.
         candidates = []
         c1 = {"measure_all": 0, "analysis": 0}
         c2 = {"measure_all": 0, "analysis": 0}
@@ -296,6 +323,8 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
                 "seed_offset": offset, "xs": xs_i, "s1": s1_i, "s1_only": s1_only_i,
                 "term_at": term_i, "g2": g2_i, "info": info_i, "left": left_i,
                 "arm": fc.summarize(s1_only_i + g2_i, target_boost_db, tol)})
+            if info_i["reached_target"]:
+                break
 
         def _rank(c):
             has_design = c["arm"]["best_design"] is not None
@@ -306,13 +335,43 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         s1, s1_only, term_at = winner["s1"], winner["s1_only"], winner["term_at"]
         g2, info, left = winner["g2"], winner["info"], winner["left"]
         arm_b = winner["arm"]
-        k_eff = k * len(THINKING_SEED_OFFSETS)
+        k_eff = k * len(candidates)
         mode_detail["rollouts"] = [
             {"seed_offset": c["seed_offset"], "best_abs_err_db": c["arm"]["best_abs_err"],
              "n_loose_pass": c["arm"]["n_loose_pass"],
              "reached_target": bool(c["info"]["reached_target"])}
             for c in candidates]
         mode_detail["winner_seed_offset"] = winner["seed_offset"]
+        mode_detail["adaptive_stopped_early"] = len(candidates) < len(THINKING_SEED_OFFSETS)
+
+    elif mode == "fastest":
+        # ---- stage 1 REPLACEMENT: corpus lookup, no PPO, one real evaluation ---------
+        # See eqrl.experiments.fastest_hedge.surrogate_stage1's docstring for why this is
+        # sound with no channel awareness in the corpus, and why exactly one real
+        # evaluation (not zero) is spent before g32_solve ever sees the candidate.
+        from eqrl.experiments.fastest_hedge import load_fastest_assets, surrogate_stage1
+
+        surrogate, _corpus_X, _radius = load_fastest_assets()
+        seed_spec = spec_for(target_boost_db, channel_loss_db, tol)
+        with counting() as c1:
+            xs, s1, term_at = surrogate_stage1(evaluate, target_boost_db, surrogate,
+                                               seed_spec)
+        s1_only = [e for e in s1 if e]
+        k_eff = 1  # one real evaluation was spent (confirming the corpus candidate), not
+                   # PREREG["k"]=5 -- `optimizer_evals`/`stage1_evals` must say so honestly
+
+        # ---- stage 2: the SAME frozen g32_solve, fixed small budget, no floor --------
+        with counting() as c2:
+            g2, info, _x_f, _rec_f, left = fc.g32_solve(
+                evaluate, xs, s1, target_boost_db, plane, ladder, FASTEST_BUDGET)
+        seed_rec = s1[0]
+        mode_detail["surrogate_seed"] = {
+            "candidate_boost_db": None if seed_rec is None else seed_rec["boost_db"],
+            "target_boost_db": target_boost_db,
+            "candidate_guard_valid": seed_rec is not None,
+            "candidate_loose_pass": bool(seed_rec and seed_rec["loose_pass"]),
+        }
+        arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
 
     else:
         # ---- stage 1: the frozen PPO policy, k evaluations ---------------------------
@@ -323,15 +382,17 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         k_eff = k
 
         # ---- stage 2: G3.2 constrained refinement, mode-dependent budget -------------
-        if mode == "fastest":
-            from eqrl.experiments.fastest_hedge import fastest_stage2, load_fastest_assets
+        if mode == "retarget":
+            from eqrl.experiments.axis_retarget import (RETARGET_SURROGATE_OPTIONAL,
+                                                        retarget_stage2)
 
-            surrogate, corpus_X, radius = load_fastest_assets()
+            surrogate = RETARGET_SURROGATE_OPTIONAL()
             with counting() as c2:
-                g2, info, _x_f, _rec_f, left = fastest_stage2(
-                    evaluate, xs, s1, target_boost_db, plane, ladder, FASTEST_BUDGET,
-                    surrogate=surrogate, corpus_X=corpus_X, safety_radius=radius)
-            mode_detail["hedge"] = info.get("hedge")
+                g2, info, _x_f, _rec_f, left = retarget_stage2(
+                    evaluate, xs, s1, target_boost_db, plane, ladder, fc.PREREG["r"],
+                    surrogate=surrogate, probe_evals=RETARGET_PROBE_EVALS,
+                    stop_abs_err_db=None)
+            mode_detail["retarget"] = info.get("retarget")
         else:
             r = ACCURATE_R if mode == "accurate" else fc.PREREG["r"]
             stop = ACCURATE_STOP_ABS_ERR_DB if mode == "accurate" else None

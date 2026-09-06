@@ -32,6 +32,15 @@ This mechanism differs in exactly the ways that remove the failure mode the gate
 The corpus is a ranker here in the same sense `docs/REPRODUCE.md` section 16 always meant:
 it never appears in a pass/fail decision, and the design it proposes is verified by the
 same guarded, independent evaluator every other arm uses.
+
+UPDATE -- Fastest mode now replaces stage 1 itself, not just one stage-2 jump. Measured
+wall time showed the frozen PPO rollout (`stage1_rollout`, k=5 real SPICE evaluations)
+was the majority of Fastest's cost, and this hedge -- one guided jump AFTER that rollout
+still ran -- could not touch it. `propose_seed`/`surrogate_stage1` below are the new
+stage 1: a corpus lookup (no SPICE) plus exactly one real evaluation, in place of PPO's
+five. `propose_jump`/`fastest_stage2` stay in this file -- `scratch_compare_fastest_floor.py`
+still calls them, and the H2-contrast argument above still holds for what they do -- but
+`eqrl.pipeline.design` no longer calls them for live `mode="fastest"` runs.
 """
 from __future__ import annotations
 
@@ -81,6 +90,61 @@ def load_fastest_assets(corpus_path: str | None = None) -> tuple[Any, np.ndarray
     return _ASSET_CACHE[path]
 
 
+def propose_seed(target: float, surrogate, spec=None) -> np.ndarray:
+    """A cold-start candidate design for Fastest's stage 1, with NO PPO rollout and NO
+    real SPICE evaluation spent choosing it.
+
+    `eqrl.surrogate`'s own module docstring is explicit that `boost_db`, `dc_gain_db` and
+    `peak_freq_ghz` are AC metrics of the design's own transfer function -- not of a
+    channel. `channel_loss_db` only enters through the requested SPEC, never through what
+    the corpus records. So picking the corpus design whose OWN recorded `boost_db` --
+    ground truth from an already-paid-for SPICE run, not a kNN average -- is nearest
+    `target` is not a channel mismatch; it is the one question the corpus's `Y` actually
+    answers, at whatever channel this run was asked to hit.
+
+    `spec` (the checked spec, DEFAULT_SPEC-shaped) narrows the search to corpus rows the
+    surrogate CAN see are plausible on the two other AC checks it also has ground truth
+    for -- `dc_gain_db_min` and the peak-frequency band -- before ranking by boost
+    distance. `loose_pass`'s other checks (eye height/width, noise, HD3, power, area) are
+    channel- and guard-dependent and the corpus does not carry them; that is exactly why
+    the one real evaluation below is mandatory rather than decorative. If the narrowed set
+    is empty (band is a tight ask, corpus is not exhaustive), it degrades to the
+    unnarrowed corpus rather than raising -- a wider candidate is still strictly better
+    than none.
+    """
+    Y = surrogate.Y
+    dc_gain, boost, peak = Y[:, 0], Y[:, 1], Y[:, 2]
+    mask = np.ones(len(Y), dtype=bool)
+    if spec is not None:
+        mask &= dc_gain >= spec.dc_gain_db_min
+        mask &= (peak >= spec.peak_freq_lo_ghz) & (peak <= spec.peak_freq_hi_ghz)
+        if not mask.any():
+            mask = np.ones(len(Y), dtype=bool)
+    err = np.where(mask, np.abs(boost - target), np.inf)
+    j = int(np.argmin(err))
+    return np.asarray(surrogate.X[j], dtype=np.float64)
+
+
+def surrogate_stage1(evaluate, target: float, surrogate, spec=None):
+    """Fastest's stage 1, replacing the frozen PPO rollout entirely for this mode only.
+
+    Returns `(xs, s1trace, term_at)` -- the exact shape `stage1_rollout` returns -- so
+    every caller downstream (`g32_solve`'s "already feasible" / "guard-valid but off
+    target" / "guard-invalid, rescue" cases, `summarize`, the cost accounting in
+    `pipeline.design`) sees this as just a one-point stage 1 and needs no special case.
+    `term_at` is always `None`: that field records where a PPO episode terminated, and
+    there is no episode here.
+
+    Exactly ONE real, guarded SPICE evaluation is spent, on `propose_seed`'s candidate --
+    the corpus proposes, it never gets to decide (`eqrl.surrogate`: "IT IS A RANKER, NEVER
+    A JUDGE"). Whatever the guard says about that candidate (feasible, off-target but
+    guard-valid, or guard-invalid) is exactly what `g32_solve` is built to start from.
+    """
+    x0 = propose_seed(target, surrogate, spec)
+    rec, _score, _gcheck = evaluate(x0, target)
+    return [x0], [rec], None
+
+
 def propose_jump(x_f, target: float, plane: dict, surrogate, safety_radius: float,
                  *, step_cap: float = PREREG["step_cap"], grid: int = 41):
     """One candidate design along `plane["boost_axis"]`, or `None` if nothing is safe.
@@ -107,13 +171,24 @@ def propose_jump(x_f, target: float, plane: dict, surrogate, safety_radius: floa
 
 
 def fastest_stage2(evaluate, xs, s1trace, target: float, plane: dict, ladder, budget: int,
-                   *, surrogate=None, corpus_X=None, safety_radius: float | None = None):
+                   *, surrogate=None, corpus_X=None, safety_radius: float | None = None,
+                   floor_budget: int | None = None):
     """Fastest mode's stage 2. See module docstring for why this differs from H2.
 
     Spends at most one evaluation deciding where to jump, then hands off to the UNCHANGED,
     frozen `g32_solve` with whatever budget remains. Returns exactly what `g32_solve`
     returns -- `(trace, info, x_f, rec_f, budget_left)` -- with one extra key, `info["hedge"]`,
     recording what the hedge attempted and why, for the provenance record.
+
+    `floor_budget`, per docs/RESULTS_INFERENCE_MODES.md section 6.3 ("give fastest a
+    floor"): when the hedge is not accepted -- rejected, or never attempted -- `g32_solve`
+    is handed `floor_budget` instead of the small remaining fast budget. This is a budget
+    NUMBER passed to the unmodified `g32_solve`, exactly like `accurate` and `thinking`
+    already pass their own `r`; no control flow of `g32_solve` changes. It bounds fastest's
+    downside: a rejected hedge now costs at most one wasted evaluation relative to running
+    `default` directly, instead of leaving the rest of the search to a fraction of
+    `default`'s budget. When the hedge IS accepted, the small fast budget is kept -- that
+    speed is the entire point of this mode, and is only spent when the bet paid off.
     """
     xs = list(xs)
     s1trace = list(s1trace)
@@ -142,6 +217,12 @@ def fastest_stage2(evaluate, xs, s1trace, target: float, plane: dict, ladder, bu
             hedge["reason"] = ("accepted" if hedge["accepted"] else
                                "candidate not guard/spec valid; G3.2 will still see and "
                                "may reject or repair it")
+
+    if not hedge["accepted"] and floor_budget is not None and floor_budget > budget:
+        budget = floor_budget
+        hedge["floor_applied"] = True
+    else:
+        hedge["floor_applied"] = False
 
     # Called through the module object, not a name bound at import time: `server.py`'s
     # live-narration wrapper monkey-patches `final_comparison.g32_solve` as a module
