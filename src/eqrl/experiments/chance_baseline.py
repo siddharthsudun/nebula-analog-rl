@@ -31,12 +31,18 @@ from pathlib import Path
 import numpy as np
 
 
-def make_targets_exact(n: int) -> list[float]:
-    """The same held-out targets policy_rollout and target_audit use: default_rng(0),
+def make_targets_exact(n: int, seed: int = 0) -> list[float]:
+    """The same held-out targets policy_rollout and target_audit use: default_rng(seed),
     uniform(5, 11) for the target then uniform(8, 16) for the channel, per spec. The draw
     ORDER matters -- consuming the channel draw keeps the stream aligned, so target i here
-    is target i there. Verified against the recorded targets in the rollout artifacts."""
-    rng = np.random.default_rng(0)
+    is target i there. Verified against the recorded targets in the rollout artifacts.
+
+    `seed` defaults to 0, the historical set, so every number REPRODUCE.md quotes from
+    this tool still reproduces untouched. Pass another seed to score a DIFFERENT spec
+    draw: a chance line is only a reference for the targets it was computed on, so a
+    benchmark run on spec-seed 137 must be compared against the 137 line, not this one.
+    Mirrors `target_audit.make_specs(n, seed)` exactly."""
+    rng = np.random.default_rng(seed)
     out = []
     for _ in range(n):
         t = float(rng.uniform(5, 11))
@@ -53,6 +59,8 @@ def main() -> None:
     p.add_argument("--tol", type=float, default=1.5)
     p.add_argument("--budgets", default="1,4,20",
                    help="evaluation budgets to report the spec-blind expectation for")
+    p.add_argument("--spec-seed", type=int, default=0,
+                   help="spec draw to score; 0 is the historical set REPRODUCE.md quotes")
     p.add_argument("--out", default="results/chance_baseline.json")
     args = p.parse_args()
 
@@ -61,7 +69,7 @@ def main() -> None:
     if len(pool) < 5:
         raise SystemExit("pool has only %d usable boosts; refusing to report a chance "
                          "rate from that" % len(pool))
-    targets = make_targets_exact(args.specs)
+    targets = make_targets_exact(args.specs, args.spec_seed)
 
     ps = [sum(abs(b - t) <= args.tol for b in pool) / len(pool) for t in targets]
     budgets = [int(x) for x in args.budgets.split(",")]
@@ -70,8 +78,8 @@ def main() -> None:
     print("  pool            : %d achieved boosts from %s" % (len(pool), args.pool))
     print("  pool range      : %.2f - %.2f dB   median %.2f" % (min(pool), max(pool),
                                                                 st.median(pool)))
-    print("  targets         : %d, range %.2f - %.2f dB" % (len(targets), min(targets),
-                                                            max(targets)))
+    print("  targets         : %d, range %.2f - %.2f dB   (spec seed %d)"
+          % (len(targets), min(targets), max(targets), args.spec_seed))
     print("  tolerance       : +/-%.1f dB" % args.tol)
     print()
     print("  per-target hit probability of ONE spec-blind draw:")
@@ -90,6 +98,7 @@ def main() -> None:
 
     Path(args.out).write_text(json.dumps(
         {"pool_source": args.pool, "pool_n": len(pool), "tol_db": args.tol,
+         "spec_seed": args.spec_seed,
          "n_targets": len(targets), "per_target_p": ps,
          "expected_solves_by_budget": {str(k): v for k, v in exp.items()}}, indent=1))
     print("\nwrote", args.out)

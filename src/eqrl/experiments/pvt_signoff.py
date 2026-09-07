@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -296,10 +297,69 @@ def main() -> None:
     win, how = flagship(pool)
     if win is not None and how == "PVT-clean" and not args.limit:
         dv = DesignVars(**win["design"])
-        sp = Path("results/pvt_signoff_flagship.spice")
-        sp.write_text(netlist(dv, vdd=DEFAULT_SPEC.vdd_nominal, temp_c=27.0,
-                              corner="tt", analysis="ac", models="sky130"))
+        deck = netlist(dv, vdd=DEFAULT_SPEC.vdd_nominal, temp_c=27.0,
+                       corner="tt", analysis="ac", models="sky130")
+        sp = write_flagship(deck, args.source, args.arm)
         print("flagship netlist -> %s" % sp)
+
+
+#: `freeze_delivered.py:87` writes this same path as part of the delivery freeze, and
+#: records its sha256 inside `results/delivered_circuit.json` alongside the deck itself.
+#: This module writes it too, on any full run whose flagship is PVT-clean -- so a
+#: sign-off run against a different --source or --arm used to silently replace the
+#: DELIVERED netlist with a different circuit while the delivery record went on
+#: asserting the old hash.  Observed, not hypothesised: the working tree carried a deck
+#: whose every device parameter differed from the frozen one (Rs 1490 vs 3287 ohm).
+FLAGSHIP = "results/pvt_signoff_flagship.spice"
+DELIVERY = "results/delivered_circuit.json"
+
+
+def frozen_flagship_sha() -> str | None:
+    """The sha256 the delivery record claims for FLAGSHIP, or None if there is no
+    delivery record to protect."""
+    d = Path(DELIVERY)
+    if not d.exists():
+        return None
+    try:
+        return json.loads(d.read_text()).get("checksums", {}).get(FLAGSHIP)
+    except (ValueError, OSError):
+        return None
+
+
+def write_flagship(deck: str, source: str, arm: str) -> Path:
+    """Write this run's flagship netlist WITHOUT clobbering a frozen delivery.
+
+    If FLAGSHIP currently holds the exact bytes the delivery record checksummed, and
+    this run would change them, the delivered netlist is left alone and the deck goes to
+    a run-specific sidecar instead.  Re-delivering is `freeze_delivered.py`'s job -- it
+    is the only thing that updates the netlist and its recorded hash together, and
+    letting a sign-off run do half of that is what breaks the pair.
+    """
+    sp = Path(FLAGSHIP)
+    frozen = frozen_flagship_sha()
+    if frozen is not None and sp.exists():
+        # The recorded sha is over the file's BYTES, so it answers "is this file the
+        # frozen delivery".  Whether this run would CHANGE it has to be asked in text:
+        # write_text applies the platform's newline translation, so hashing deck.encode()
+        # and comparing to on-disk bytes reports a difference on Windows even when the
+        # deck is identical -- which would sidecar every legitimate re-run of the
+        # canonical sign-off.
+        is_delivered = hashlib.sha256(sp.read_bytes()).hexdigest() == frozen
+        if is_delivered and deck != sp.read_text():
+            side = sp.with_name("pvt_signoff_flagship__%s__arm%s.spice"
+                                % (Path(source).stem, arm))
+            side.write_text(deck)
+            print()
+            print("REFUSING to overwrite the DELIVERED netlist %s." % FLAGSHIP)
+            print("  It matches the sha256 recorded in %s, and this run's flagship is a"
+                  % DELIVERY)
+            print("  DIFFERENT circuit (source=%s arm=%s)." % (source, arm))
+            print("  Wrote this run's deck to %s instead." % side)
+            print("  To re-deliver, run freeze_delivered -- it updates the netlist and"
+                  " its recorded hash together.")
+            return side
+    sp.write_text(deck)
+    return sp
 
 
 if __name__ == "__main__":
