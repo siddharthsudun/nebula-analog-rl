@@ -119,7 +119,7 @@ def sweep_one(ev, dv: DesignVars, vdd: float, spec10: Spec, spec9: Spec) -> dict
     return rec
 
 
-def run(pool: list[dict], out: Path, log_every: int = 1) -> dict:
+def run(pool: list[dict], out: Path, prereg: dict, log_every: int = 1) -> dict:
     """§3.  Process corner is the OUTER loop: get_server reloads models on a corner
     change (~15 s), so any other ordering pays that 45 times instead of 5."""
     grid = corner_grid(DEFAULT_SPEC, mode="full")
@@ -131,7 +131,7 @@ def run(pool: list[dict], out: Path, log_every: int = 1) -> dict:
     for c in pool:
         c["corners"] = {}
     evs: dict[tuple, object] = {}
-    report = {"prereg": PREREG, "grid": {"procs": procs, "vdds": vdds, "temps": temps},
+    report = {"prereg": prereg, "grid": {"procs": procs, "vdds": vdds, "temps": temps},
               "n_candidates": len(pool), "n_corners": 45, "complete": False,
               "candidates": pool}
     done = t0 = 0
@@ -272,8 +272,13 @@ def main() -> None:
         return
 
     pool = load_pool(args.source, args.arm)
+    # PREREG is the doc-transcribed constant; --source/--arm are the two fields this CLI
+    # actually lets you override, so the reported prereg must reflect what was USED, not
+    # the doc's own default -- otherwise a run against a different source silently
+    # mislabels its own artifact and console banner as seed23/arm-b regardless.
+    run_prereg = {**PREREG, "source": args.source, "arm": args.arm}
     print("PVT SIGN-OFF | docs/PREREG_PVT_SIGNOFF.md")
-    for k, v in PREREG.items():
+    for k, v in run_prereg.items():
         print("  %-20s %s" % (k, v))
     print("  pool: %d strict-solved arm-%s candidates x 45 corners = %d evaluations"
           % (len(pool), args.arm, len(pool) * 45))
@@ -284,7 +289,7 @@ def main() -> None:
         print("\nPOOL IS EMPTY: no strict-solved candidate in arm %s." % args.arm)
         return
 
-    run(pool, out)
+    run(pool, out, run_prereg)
     report_text(pool)
     print("\nartifact -> %s" % out)
 
