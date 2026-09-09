@@ -236,6 +236,8 @@ function setRunButtonWarming(warming) {
   const btn = $("#run-btn");
   btn.disabled = warming || running;
   btn.title = warming ? "Waiting for the server to finish loading device models" : "";
+  const galleryBtn = $("#gallery-run");
+  if (galleryBtn) galleryBtn.disabled = warming || galleryRunning;
 }
 async function checkHealthOnce() {
   try {
@@ -614,6 +616,142 @@ function showFieldsOnStage(fieldsHuman, title, subtitle) {
   scheduleSchematic(fieldsHuman, title, subtitle);
 }
 
+// -- Candidate gallery --------------------------------------------------------------------
+// The existing stage remains the one live, coalesced schematic. This separate gallery is a
+// bounded comparison surface: each card gets its own static SVG and only the eye matrix that
+// the explicitly requested guarded gallery route returns.
+
+let galleryCatalog = [];
+let galleryRunning = false;
+const galleryRefresh = { pending: null, inflight: false, retryTimer: null };
+
+function galleryMetric(value, unit) {
+  return typeof value === "number" ? `${fmt(value, 2)}${unit ? ` ${unit}` : ""}` : "unavailable";
+}
+function galleryCardHtml(candidate) {
+  const c = candidate.binding_constraint || {};
+  return `<article class="gallery-card" data-gallery-id="${escapeHtml(candidate.id)}">
+    <div class="gallery-card-head"><div><div class="gallery-card-title">${escapeHtml(candidate.label)}</div><div class="gallery-card-kind">${escapeHtml(candidate.kind || "candidate")}</div></div><span class="state-chip"><span class="dot"></span><span class="gallery-guard">awaiting guard</span></span></div>
+    <div class="gallery-schematic"><div class="placeholder"><span class="spinner"></span>drawing schematic</div></div>
+    <div class="gallery-eye"><div class="eye-empty">Run a full guarded measurement to load the eye trace.</div><div class="gallery-eye-meta"></div></div>
+    <div class="gallery-metrics"><div class="gallery-metric"><span class="gallery-metric-k">Boost</span><span class="gallery-metric-v gallery-boost">unavailable</span></div><div class="gallery-metric"><span class="gallery-metric-k">Target error</span><span class="gallery-metric-v gallery-error">unavailable</span></div></div>
+    <div class="gallery-details"><div><span class="gallery-detail-k">Binding constraint</span><div class="gallery-detail-v"><strong>${escapeHtml(c.label || "not recorded")}</strong><br/>${escapeHtml(c.detail || "")}</div></div><div><span class="gallery-detail-k">Scope</span><div class="gallery-detail-v gallery-scope">${escapeHtml(candidate.historical_context || "")}</div></div></div>
+  </article>`;
+}
+function galleryCard(id) { return $(`[data-gallery-id="${CSS.escape(id)}"]`); }
+function renderGalleryCards(candidates) {
+  const grid = $("#gallery-grid");
+  grid.innerHTML = candidates.map(galleryCardHtml).join("");
+  candidates.forEach(async (candidate) => {
+    const holder = $(".gallery-schematic", galleryCard(candidate.id));
+    try { holder.innerHTML = await fetchSchematic(candidate.fields, candidate.label, "candidate gallery"); }
+    catch (err) { holder.innerHTML = errorBannerHtml(err, "Could not render gallery schematic"); }
+  });
+}
+function applyGalleryMeasurements(records, scope) {
+  if (records.some((record) => !galleryCard(record.id))) renderGalleryCards(records);
+  for (const record of records) {
+    const card = galleryCard(record.id);
+    if (!card) continue;
+    const guard = record.guard || {};
+    card.classList.toggle("guard-valid", guard.valid === true);
+    card.classList.toggle("guard-invalid", guard.valid === false);
+    const guardLabel = guard.valid === true ? "guard valid" : guard.valid === false ? `rejected, Tier ${guard.tier}` : "awaiting guard";
+    $(".gallery-guard", card).textContent = guardLabel;
+    $(".gallery-boost", card).textContent = galleryMetric(record.boost_db, "dB");
+    $(".gallery-error", card).textContent = galleryMetric(record.target_error_db, "dB");
+    const eyeMount = $(".gallery-eye", card);
+    renderEyeChart(eyeMount, record.eye, { ariaLabel: `eye diagram for ${record.label}` });
+    const eyeMeta = el("div", { class: "gallery-eye-meta" });
+    const eye = record.eye || {};
+    const signed = typeof eye.signed_opening_v === "number" ? `signed opening ${fmt(eye.signed_opening_v * 1e3, 1)} mV` : "signed opening unavailable";
+    const ber = typeof eye.ber === "number" ? `behavioral BER ${eye.ber.toExponential(2)} (${eye.errors}/${eye.count})` : "behavioral BER unavailable";
+    eyeMeta.textContent = `${signed}; ${ber}. ${eye.label || ""}`;
+    eyeMount.appendChild(eyeMeta);
+    const detail = $(".gallery-scope", card);
+    detail.textContent = `${guard.reason || record.historical_context || ""} ${record.metric_scope || ""} ${eye.scope || ""}`.trim();
+  }
+  if (scope) $("#gallery-scope").textContent = scope;
+}
+async function runCatalogGallery() {
+  if (galleryRunning || serverWarming || !galleryCatalog.length) return;
+  galleryRunning = true;
+  setRunButtonWarming(serverWarming);
+  $("#gallery-notice").className = "gallery-notice busy";
+  $("#gallery-notice").textContent = "Running full guarded measurements for the selected comparison set.";
+  try {
+    const result = await postJSON("/api/candidate-gallery/evaluate", { candidate_ids: galleryCatalog.map((candidate) => candidate.id) });
+    applyGalleryMeasurements(result.candidates || [], result.measurement_scope);
+    $("#gallery-notice").className = "gallery-notice";
+    $("#gallery-notice").textContent = "Gallery measurement complete.";
+  } catch (err) {
+    $("#gallery-notice").className = "gallery-notice error";
+    $("#gallery-notice").textContent = err.detail || err.message || "Could not measure the gallery.";
+  } finally {
+    galleryRunning = false;
+    setRunButtonWarming(serverWarming);
+    pumpLiveGallery();
+  }
+}
+function liveGalleryCandidate(design, state, label) {
+  return { id: `live-${state.simulated}-${state.galleryCandidates.length}`, label, design,
+    target_boost_db: state.target, channel_loss_db: state.channel };
+}
+function queueLiveGallery(candidates) {
+  // A run owns the shared simulator lock. Keep only its newest bounded snapshot and perform
+  // one POST after the run releases the lock, instead of polling into repeated 409 responses.
+  galleryRefresh.pending = candidates.slice(-6);
+  pumpLiveGallery();
+}
+async function pumpLiveGallery() {
+  if (galleryRefresh.inflight || running || galleryRunning || !galleryRefresh.pending || serverWarming) return;
+  const candidates = galleryRefresh.pending;
+  galleryRefresh.pending = null;
+  galleryRefresh.inflight = true;
+  $("#gallery-notice").className = "gallery-notice busy";
+  $("#gallery-notice").textContent = "Refreshing the latest pipeline candidates after the search lock released.";
+  try {
+    const result = await postJSON("/api/candidate-gallery/evaluate", { live_candidates: candidates });
+    applyGalleryMeasurements(result.candidates || [], result.measurement_scope);
+    $("#gallery-notice").className = "gallery-notice";
+    $("#gallery-notice").textContent = "Latest pipeline candidate gallery measured.";
+  } catch (err) {
+    if (err.status === 409) {
+      galleryRefresh.pending = candidates;
+      clearTimeout(galleryRefresh.retryTimer);
+      galleryRefresh.retryTimer = setTimeout(pumpLiveGallery, 700);
+    } else {
+      $("#gallery-notice").className = "gallery-notice error";
+      $("#gallery-notice").textContent = err.detail || err.message || "Could not refresh the live candidate gallery.";
+    }
+  } finally {
+    galleryRefresh.inflight = false;
+    if (galleryRefresh.pending && !running) pumpLiveGallery();
+  }
+}
+async function initCandidateGallery() {
+  const data = await api("/api/candidate-gallery");
+  galleryCatalog = (data.candidates || []).slice(0, Math.min(data.max_candidates || 6, 6));
+  renderGalleryCards(galleryCatalog);
+  $("#gallery-scope").textContent = data.measurement_scope || "";
+  $("#gallery-run").addEventListener("click", runCatalogGallery);
+  setRunButtonWarming(serverWarming);
+  // `?gallery=measure` is a headless-verification flag in the same family as `nointro`
+  // and `nomotion`: the measured state of these cards is the one thing no unit test can
+  // reach, because it needs a real browser to run the fetch and draw the eye canvases.
+  // It is explicit opt-in and it waits for warm-up rather than racing it -- an early POST
+  // would take a 409 from the warm-up's own hold on the simulator lock and prove nothing.
+  if (urlFlags.get("gallery") === "measure") {
+    const start = Date.now();
+    const armed = () => {
+      if (!serverWarming) { runCatalogGallery(); return; }
+      if (Date.now() - start > 120000) return;   // bounded: never a permanent retry loop
+      setTimeout(armed, 500);
+    };
+    armed();
+  }
+}
+
 // -- Run ----------------------------------------------------------------------------------
 
 let running = false;
@@ -651,6 +789,8 @@ function handleRunEvents(state, events) {
         pass: ev.ok !== false && /passes all/.test(ev.text || ""), label: ev.text });
       state.simulated += 1;
       if (ev.design) {
+        state.galleryCandidates.push(liveGalleryCandidate(ev.design, state, `Pipeline candidate ${state.simulated}`));
+        if (state.galleryCandidates.length > 6) state.galleryCandidates.shift();
         setParams(ev.design);
         setStageTitle(`Candidate ${state.simulated}`, STAGE_LABEL[ev.stage] || "simulating");
         scheduleSchematic(designToHumanFields(ev.design), `Candidate ${state.simulated}`,
@@ -707,7 +847,7 @@ async function runDesign() {
   setStageTitle("Searching", "every candidate below is a real SKY130 simulation");
 
   const target = Number($("#target").value), channel = Number($("#channel").value);
-  const state = { cursor: 0, stopped: false, simulated: 0, points: [], target, tol: defaults.boost_tol_db };
+  const state = { cursor: 0, stopped: false, simulated: 0, points: [], galleryCandidates: [], target, channel, tol: defaults.boost_tol_db };
   renderTraceChart($("#trace-chart"), [], { target, tol: state.tol });
   const t0 = performance.now();
   const timer = pollRunProgress(state);
@@ -732,6 +872,11 @@ async function runDesign() {
       renderTraceChart($("#trace-chart"), state.points, { target, tol: state.tol });
     }
     await presentResult(result, elapsedS, { text, target, channel });
+    if (result.design) {
+      state.galleryCandidates.push(liveGalleryCandidate(result.design, state, "Pipeline final candidate"));
+      if (state.galleryCandidates.length > 6) state.galleryCandidates.shift();
+    }
+    if (state.galleryCandidates.length) queueLiveGallery(state.galleryCandidates);
     pushHistory({ ts: Date.now(), text, target, channel, mode: selectedMode, status: result.status,
       boost: result.verification && result.verification.measures ? result.verification.measures.boost_db : null,
       elapsed: elapsedS, result });
@@ -745,6 +890,7 @@ async function runDesign() {
     btn.classList.remove("running");
     btn.disabled = serverWarming;
     $$(".mode-btn").forEach((b) => { b.disabled = false; });
+    pumpLiveGallery();
   }
 }
 
@@ -781,6 +927,34 @@ function checksHtml(checks, measures, title) {
   return `<div class="panel"><div class="panel-head"><span class="panel-title">${escapeHtml(title)}</span><span class="panel-meta">${Object.values(checks).filter(Boolean).length} of ${Object.keys(checks).length} pass</span></div><div class="checks">${items}</div></div>`;
 }
 
+// A netlist that leaves this page loses its on-screen banner, so a failed design could
+// be read later as a delivered one. Stamp the verdict into the file itself as SPICE
+// comments. Verification is corner="tt" only (pipeline.py:306) -- the header says so
+// rather than letting "verified" imply a PVT sign-off it never ran.
+function netlistWithVerdict(r) {
+  if (!r || !r.netlist) return "";
+  const st = defaults.statuses, v = r.verification;
+  const L = ["*", "* ---------------- SILQ provenance ----------------"];
+  if (r.status === st.solved) {
+    L.push("* VERIFIED at the TYPICAL CORNER ONLY (tt, 27 C, nominal Vdd), by an",
+           "* independent re-simulation against every hard spec.",
+           "* This is NOT a PVT sign-off: no corner sweep was run on this design.");
+  } else if (r.status === st.fallback) {
+    L.push("* NOT AN AI RESULT. Fixed, hand-verified fallback that ignores the requested",
+           "* target. Must never be reported as an output of the SILQ search.");
+  } else if (r.status === st.closed_not_verified) {
+    L.push("* FAILED INDEPENDENT VERIFICATION -- DO NOT USE.",
+           "* The solver reported it reached target; a fresh re-simulation disagreed.",
+           "* Failing checks: " + ((v && v.failing || ["(unreported)"]).join(", ")),
+           "* This design does not meet the requested specification.");
+  } else {
+    L.push("* UNSOLVED. No guard-valid design was found for this specification.");
+  }
+  if (v && v.guard_valid === false) L.push("* GUARD REJECTED on re-simulation: " + v.guard_check);
+  L.push("* -------------------------------------------------", "*");
+  return L.join("\n") + "\n" + r.netlist;
+}
+
 function verdictHtml(r) {
   const st = defaults.statuses;
   const v = r.verification;
@@ -790,8 +964,8 @@ function verdictHtml(r) {
     cls = "bad"; icon = "alertTriangle"; title = "Fixed fallback design, not an AI result";
     sub = "The architecture found nothing guard-valid for this spec. What is shown is a fixed, hand-verified design that ignores your requested target. It is not an output of the search and must not be read as one.";
   } else if (r.status === st.solved) {
-    cls = "ok"; icon = "checkCircle"; title = "Verified";
-    sub = `An independent re-simulation of the delivered design passes every hard check, boost included.${v && typeof v.abs_err_db === "number" ? ` The delivered boost is ${fmt(v.abs_err_db, 2)} dB from the number you asked for, inside the ±${fmt(r.spec.boost_tol_db, 2)} dB tolerance.` : ""}`;
+    cls = "ok"; icon = "checkCircle"; title = "Verified at the typical corner";
+    sub = `An independent re-simulation at the typical corner (tt, 27 C, nominal Vdd) passes every hard check, boost included. This is not a PVT sign-off — no corner sweep was run on this design.${v && typeof v.abs_err_db === "number" ? ` The delivered boost is ${fmt(v.abs_err_db, 2)} dB from the number you asked for, inside the ±${fmt(r.spec.boost_tol_db, 2)} dB tolerance.` : ""}`;
   } else if (r.status === st.closed_not_verified) {
     cls = "warn"; icon = "alertTriangle"; title = "Closed, but failed independent verification";
     sub = `The solver reported it reached the target; the fresh re-simulation disagrees${v && v.failing && v.failing.length ? `, failing ${v.failing.join(", ")}` : ""}.`;
@@ -913,7 +1087,7 @@ async function presentResult(r, elapsedS, ctx) {
   html += modeDetailHtml(r);
   html += costStripHtml(r, elapsedS);
   html += `<details class="explainer"><summary>Full report</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(r.describe_text || "")}</pre></div></details>`;
-  if (r.netlist) html += `<details class="explainer"><summary>SPICE netlist</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(r.netlist)}</pre></div></details>`;
+  if (r.netlist) html += `<details class="explainer"><summary>SPICE netlist</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(netlistWithVerdict(r))}</pre></div></details>`;
   html += `<details class="explainer"><summary>Raw result JSON</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(JSON.stringify(r, null, 2))}</pre></div></details>`;
   box.innerHTML = html;
   const suggestBtn = box.querySelector(".mode-suggest");
@@ -925,13 +1099,13 @@ async function presentResult(r, elapsedS, ctx) {
   if (r.design) {
     setParams(r.design);
     const m = v && v.measures;
-    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${v.passed ? "verified" : "not verified"}`);
+    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${v.passed ? "verified (tt corner)" : "not verified"}`);
     else setReadout("Boost", "n/a", v ? "guard rejected the final design on re-simulation" : "verification did not run");
     const title = isFallback ? "Fixed fallback design (not AI-generated)" : "Delivered design";
     const sub = `target ${fmt(r.spec.target_boost_db, 1)} dB boost over a ${fmt(r.spec.channel_loss_db, 1)} dB channel`;
     setStageTitle(title, `${sub}${r.mode ? `, ${r.mode} mode` : ""}`);
     setStateChip(r.status === st.solved ? "ok" : isFallback ? "bad" : "warn",
-      r.status === st.solved ? "verified" : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
+      r.status === st.solved ? "verified (tt)" : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
     schematicQueue.pending = null;
     try { placeSvg(await fetchSchematic(designToHumanFields(r.design), title, sub)); }
     catch (err) { $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not render the schematic"); }
@@ -946,7 +1120,7 @@ async function presentResult(r, elapsedS, ctx) {
 
 function initExports() {
   $("#export-svg").addEventListener("click", () => { if (currentSvg) downloadText("silq_schematic.svg", currentSvg, "image/svg+xml"); });
-  $("#export-netlist").addEventListener("click", () => { if (currentResult && currentResult.netlist) downloadText("silq_ctle.cir", currentResult.netlist); });
+  $("#export-netlist").addEventListener("click", () => { if (currentResult && currentResult.netlist) downloadText("silq_ctle.cir", netlistWithVerdict(currentResult)); });
   $("#export-json").addEventListener("click", () => { if (currentResult) downloadText("silq_result.json", JSON.stringify(currentResult, null, 2), "application/json"); });
 }
 
@@ -967,7 +1141,7 @@ function renderHistory() {
   const st = defaults ? defaults.statuses : {};
   list.innerHTML = items.map((it, i) => {
     const cls = it.status === st.solved ? "ok" : it.status === st.fallback ? "bad" : "warn";
-    const label = it.status === st.solved ? "verified" : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
+    const label = it.status === st.solved ? "verified (tt)" : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
     const when = new Date(it.ts).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
     return `<button type="button" class="hist" data-i="${i}"><div class="hist-top"><span class="state-chip ${cls}"><span class="dot"></span>${label}</span><span class="hist-meta">${escapeHtml(when)}</span></div><div class="hist-text">${escapeHtml(it.text || `${fmt(it.target, 1)} dB over ${fmt(it.channel, 1)} dB`)}</div><div class="hist-meta"><span>target ${fmt(it.target, 1)} dB</span><span>got ${it.boost === null || it.boost === undefined ? "n/a" : fmt(it.boost, 2) + " dB"}</span><span>${escapeHtml(it.mode || "")}</span><span>${fmt(it.elapsed, 0)} s</span></div></button>`;
   }).join("");
@@ -1282,6 +1456,11 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch((err) => { $("#result").innerHTML = errorBannerHtml(err, "Failed to load pipeline defaults"); });
   showDeliveredOnStage();
   initGuard().catch((err) => { $("#guard-result").innerHTML = `<div class="card">${errorBannerHtml(err, "Failed to load guard layer")}</div>`; });
+  // The gallery is artifact-backed and measures nothing on load, so it boots beside the
+  // other panels rather than waiting on the simulator. Its failure must land IN the grid:
+  // the placeholder is a spinner, and an uncaught rejection here would leave the section
+  // spinning forever while claiming to be loading something.
+  initCandidateGallery().catch((err) => { $("#gallery-grid").innerHTML = errorBannerHtml(err, "Failed to load the candidate gallery"); });
   initResults().catch((err) => { $("#results-detail").innerHTML = errorBannerHtml(err, "Failed to load results"); });
   initDesignTime().catch((err) => { $("#designtime-body").innerHTML = errorBannerHtml(err, "Failed to load design-time record"); });
 });

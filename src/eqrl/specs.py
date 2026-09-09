@@ -104,9 +104,40 @@ def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
     Returns (all_pass, per-check dict).
 
     Eight checks, always. A ninth, `dc_gain`, appears ONLY when `spec.dc_gain_db_min` is
-    set — see the field's docstring for why it is off by default and what it closes. The
-    key is absent, not False, when the field is None, so callers that count the dict
-    (honest_benchmark's dense score does) see exactly the same eight entries as before.
+    set. The key is absent, not False, when the field is None, so a caller that counts the
+    dict sees eight entries in that case.
+
+    IT IS SET BY DEFAULT, and this paragraph used to say otherwise. `dc_gain_db_min`
+    entered as `None` in f600d2a86 (17 Aug 2026), and 2f3ec52b3 (18 Aug 2026, "The reward
+    never scored DC gain, so the policy learned to attenuate. Fix it.") changed the field's
+    default to 0.0 without updating this text; the description of the default was stale
+    from that day until it was corrected on 07 Sep 2026. The CODE was right throughout --
+    the flip was the deliberate fix for the attenuate-at-DC hole the field's own docstring
+    documents. Only this comment was wrong.
+
+    So the count callers see at DEFAULT_SPEC is NINE, not eight. WHICH call sites that
+    actually affects was audited on 07 Sep 2026, one file at a time, because an earlier
+    draft of this paragraph named six and two of them were wrong:
+
+      NINE (build their spec as `replace(DEFAULT_SPEC, target/channel)`, so they inherit
+      the 0.0 floor): final_comparison.py:427, hybrid_audit.py:151, search_audit.py:117.
+
+      EIGHT, deliberately: honest_benchmark.py -- `_DC_GAIN_DB_MIN` defaults to None
+      (:70-73) and threads through at :110, with runs that set it written to a separate
+      `_dcfloor` filename (:233). pass_vs_valid.py, which pins None explicitly; see the
+      note there for why the pin exists and what it repairs.
+
+      NOT IN THIS FAMILY AT ALL: diagnose_policy.py:51. Its `checks` is a
+      `collections.Counter` of guard-rejection reasons and it never calls `hard_pass`.
+      `sum(checks.values())` there counts STEPS, not passed checks. It was listed here in
+      error; the name collision is the whole trap.
+
+    The offset is not a constant you can subtract, which is why the audit was per-file
+    rather than arithmetic. `dc_gain` passes on settled designs -- 0 failures in 3735
+    PVT-audit corners -- but it is exactly what discriminates against attenuating designs
+    during the SEARCH, which is what 2f3ec52b3 turned it on for. Reading that 0% failure
+    rate as "inert" inverts the result and would invite deleting the check that stopped
+    the policy attenuating.
     """
     if not getattr(m, "ok", False):
         return False, {"sim_ok": False}
@@ -120,6 +151,12 @@ def hard_pass(m, spec: "Spec") -> tuple[bool, dict]:
         "eye_h": m.eye_h_ui >= spec.eye_h_ui_min,
         "eye_v": m.eye_v_mv >= spec.eye_v_mv_min,
     }
+    # DO NOT DELETE THIS AS DEAD WEIGHT. It fails 0 times in the 3735-corner PVT audit,
+    # and that statistic is the check WORKING, not the check being inert: by the time a
+    # design reaches a settled audit this check has already excluded the attenuating ones.
+    # Where it does work is the SEARCH, where those designs are generated -- 14 of the 28
+    # spec-passing designs in results/pass_vs_valid.json have DC gain below 0 dB. Removing
+    # it restores the hole 2f3ec52b3 closed, and the PVT table would not show that.
     if spec.dc_gain_db_min is not None:
         checks["dc_gain"] = m.dc_gain_db >= spec.dc_gain_db_min
     if spec.boost_target_tol_db is not None:

@@ -20,6 +20,16 @@ class DesignVars:
     """The RL action, decoded into physical device values (SI units)."""
     w_in: float = 20e-6     # input pair width  [m]
     l_in: float = 0.15e-6   # input pair length [m]
+    # DELIBERATELY OUTSIDE ACTION_SPACE: 2 mA against an upper bound of 1 mA. It predates
+    # the measured narrowing of that range (see the comment on ACTION_SPACE) and is kept
+    # only so ngspice_runner._selftest and scripts/smoke_test.py keep reproducing their
+    # historical output. DO NOT reach for it as a "sensible default" starting point: the
+    # search cannot produce this current, so a design built on it is unreachable and any
+    # quantity derived from it is off-distribution. Concretely, area_mm2 reads 0.001575
+    # mm^2 here versus 0.001095 at the same design's legal maximum current -- 44% high,
+    # because the mirror term scales with i_tail. (It is still under the 0.002227 mm^2
+    # supremum; a default outside the space need not exceed the space's bound, and this
+    # one does not.) Anything feeding a result path must take i_tail from ACTION_SPACE.
     i_tail: float = 2e-3    # tail current      [A]
     rs: float = 1e3         # degeneration R    [ohm]
     cs: float = 200e-15     # degeneration C    [F]
@@ -46,9 +56,27 @@ class DesignVars:
           overhead     ROUTING_UM2                    routing, guard rings, taps
 
         HONEST LIMIT: this makes area design-dependent rather than constant, but it does
-        not make the area spec reachable. Worst case over the whole action space is about
-        0.012 mm^2 against a 0.05 mm^2 budget, so `area` still cannot fail. Whether that
-        budget is the right one is a spec question, not a modelling one.
+        not make the area spec reachable. `area` still cannot fail. Whether that budget is
+        the right one is a spec question, not a modelling one.
+
+        THE WORST CASE IS 0.002227 mm^2, AND THIS PARAGRAPH USED TO SAY 0.012. That figure
+        came from the "at 20 mA" arithmetic three paragraphs up: 20 mA put 9600 um^2 into
+        the mirror term alone. `ACTION_SPACE["i_tail"]` was later narrowed to
+        0.05-1.0 mA -- measured, in the comment on that very table -- which cuts the mirror
+        term by the same factor, and nothing updated this number. Corrected 07 Sep 2026.
+
+        Every term is increasing in its own variable, so evaluating at the upper corner of
+        ACTION_SPACE gives the true supremum rather than a sample of one:
+
+            input pair 0.000200   mirror 0.000480   Cs 0.001000
+            Rs+R_load  0.000047   routing 0.000500        total 0.002227 mm^2
+
+        200k log-uniform random designs peak at 0.002069, consistent with that corner being
+        the max. So the margin against the 0.05 mm^2 budget is 22x, not 4x. The conclusion
+        is unchanged and in fact stronger -- but 0.012 must not be quoted, and it is a
+        BOUND over the space, strictly stronger than "0 failures in the corners we ran".
+        Reproduced by scratchpad/g32_acceptance_viability.py, which needs it as the reason
+        an area-aware seed filter is inert at the default spec.
         """
         MIM_DENSITY_F_PER_M2 = 2e-15 / 1e-12       # 2 fF/um^2 -> F/m^2
         RES_SHEET_OHM_SQ = 320.0                   # sky130 p+ poly precision resistor

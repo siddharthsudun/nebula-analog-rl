@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-09-05 10:14:51",
+  "iterations_seen": 39,
+  "steps": 40960,
+  "std": 0.83,
+  "entropy_loss": -7.42,
+  "explained_variance": 0.125,
+  "approx_kl": 0.030192636,
+  "value_loss": 28.2,
+  "invalid_rate_cumulative": 0.4057,
+  "invalid_rate_marginal": 0.2931937172774869,
+  "invalid_marginal_history": [
+    0.2967515364354697,
+    0.3557692307692308,
+    0.3382480485689506,
+    0.3436426116838488,
+    0.3347788378143972,
+    0.3183000867302689,
+    0.31790916880891174,
+    0.2931937172774869
+  ],
+  "healthy": false,
+  "breaches": [
+    {
+      "check": "stalled",
+      "detail": "heartbeat last written 33 min ago"
+    }
+  ],
+  "stop_attempted": true,
+  "stop_outcome": "pid 44116 was already gone"
+}

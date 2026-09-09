@@ -195,3 +195,74 @@ function renderTraceChart(container, points, opts = {}) {
   container.innerHTML = "";
   container.appendChild(svg);
 }
+
+/**
+ * Folded eye display from the eye engine. The roll is intentionally the same transform as
+ * experiments/eyeplot.py:_centered: the selected sampling phase becomes the centre column.
+ * `eye` is display data only; callers keep its guard and behavioral-measurement scope visible
+ * beside this chart rather than treating a dense trace as a sign-off.
+ */
+function renderEyeChart(container, eye, opts = {}) {
+  container.innerHTML = "";
+  if (!eye || !eye.available || !Array.isArray(eye.eye_matrix) || !eye.eye_matrix.length) {
+    const empty = document.createElement("div");
+    empty.className = "eye-empty";
+    empty.textContent = (eye && eye.reason) || "Eye trace unavailable.";
+    container.appendChild(empty);
+    return;
+  }
+
+  const matrix = eye.eye_matrix;
+  const M = matrix[0].length;
+  const phase = Number(eye.sample_phase);
+  if (!Number.isInteger(M) || M < 1 || !Number.isInteger(phase) || phase < 0 || phase >= M ||
+      matrix.some((row) => !Array.isArray(row) || row.length !== M)) {
+    const empty = document.createElement("div");
+    empty.className = "eye-empty";
+    empty.textContent = "Eye trace had an invalid matrix shape.";
+    container.appendChild(empty);
+    return;
+  }
+
+  const width = opts.width || 330;
+  const height = opts.height || 210;
+  const padLeft = 42, padRight = 10, padTop = 12, padBottom = 30;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+  const shift = Math.floor(M / 2) - phase; // same centre-and-fold convention as eyeplot.py
+  const finite = matrix.flat().filter(Number.isFinite);
+  let lo = Math.min(...finite), hi = Math.max(...finite);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) { lo = -0.5; hi = 0.5; }
+  const margin = Math.max((hi - lo) * 0.08, 0.002);
+  lo -= margin; hi += margin;
+  const sx = (index) => padLeft + (index / Math.max(M - 1, 1)) * plotW;
+  const sy = (value) => padTop + plotH - ((value - lo) / Math.max(hi - lo, Number.EPSILON)) * plotH;
+
+  const svg = svgEl("svg", {
+    viewBox: `0 0 ${width} ${height}`, class: "chart-svg eye-svg", role: "img",
+    "aria-label": opts.ariaLabel || "folded eye diagram centered on the sampling phase",
+  });
+  svg.appendChild(svgEl("line", { x1: padLeft, y1: sy(0), x2: padLeft + plotW, y2: sy(0), class: "grid-line" }));
+  svg.appendChild(svgEl("line", { x1: sx(Math.floor(M / 2)), y1: padTop, x2: sx(Math.floor(M / 2)), y2: padTop + plotH, class: "eye-sample-line" }));
+  svg.appendChild(svgEl("line", { x1: padLeft, y1: padTop + plotH, x2: padLeft + plotW, y2: padTop + plotH, class: "axis-line" }));
+  svg.appendChild(svgEl("line", { x1: padLeft, y1: padTop, x2: padLeft, y2: padTop + plotH, class: "axis-line" }));
+  svg.appendChild(textEl({ x: padLeft + plotW / 2, y: height - 5, "text-anchor": "middle", class: "axis-title" }, "time (UI, centred)"));
+  svg.appendChild(textEl({ x: -padTop - plotH / 2, y: 13, "text-anchor": "middle", class: "axis-title", transform: "rotate(-90)" }, "differential (V)"));
+
+  // The endpoint returns every folded row for auditability. Drawing all of them would
+  // obscure the aperture and waste the browser, so uniformly sample at most 220 rows.
+  const count = Math.min(matrix.length, opts.maxTraces || 220);
+  const stride = matrix.length / count;
+  for (let rowIndex = 0; rowIndex < count; rowIndex += 1) {
+    const row = matrix[Math.floor(rowIndex * stride)];
+    const points = [];
+    for (let column = 0; column < M; column += 1) {
+      const source = (column - shift + M) % M;
+      const value = row[source];
+      if (Number.isFinite(value)) points.push(`${sx(column)},${sy(value)}`);
+    }
+    if (points.length > 1) svg.appendChild(svgEl("polyline", { points: points.join(" "), class: "eye-trace" }));
+  }
+  svg.appendChild(textEl({ x: padLeft + 4, y: padTop + 12, class: "chart-note" }, "sample"));
+  container.appendChild(svg);
+}

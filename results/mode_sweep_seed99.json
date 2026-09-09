@@ -1,0 +1,1320 @@
+{
+ "n": 32,
+ "done": 32,
+ "summary": {
+  "default": {
+   "loose": 24,
+   "strict": 22,
+   "solved": 22,
+   "total_evals": 268
+  },
+  "accurate": {
+   "loose": 24,
+   "strict": 22,
+   "solved": 22,
+   "total_evals": 312
+  },
+  "fastest": {
+   "loose": 24,
+   "strict": 22,
+   "solved": 22,
+   "total_evals": 242
+  },
+  "thinking": {
+   "loose": 31,
+   "strict": 30,
+   "solved": 30,
+   "total_evals": 395
+  }
+ },
+ "rows": {
+  "default": [
+   {
+    "spec": 0,
+    "target": 8.036184047290366,
+    "channel": 12.520733054275906,
+    "status": "solved",
+    "abs_err": 0.11008178642697786,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 1,
+    "target": 8.071495758152311,
+    "channel": 15.777490977089704,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 2,
+    "target": 8.689418851814743,
+    "channel": 12.546267983156607,
+    "status": "solved",
+    "abs_err": 0.1029999345987278,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 3,
+    "target": 6.720720337214792,
+    "channel": 12.436091625991173,
+    "status": "solved",
+    "abs_err": 0.10997540552603002,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 4,
+    "target": 7.805141153305415,
+    "channel": 12.880464064155497,
+    "status": "solved",
+    "abs_err": 0.18868073871389868,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 5,
+    "target": 10.582654986077998,
+    "channel": 9.967083069123465,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 10,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 6,
+    "target": 6.85663003186115,
+    "channel": 11.128637208311178,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 7,
+    "target": 6.62163039439586,
+    "channel": 10.80011959542891,
+    "status": "solved",
+    "abs_err": 0.11984245476793731,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 8,
+    "target": 10.617378146538114,
+    "channel": 11.023073726693873,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 9,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 9,
+    "target": 9.647895252799461,
+    "channel": 8.324537923117234,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 10,
+    "target": 6.791933575307365,
+    "channel": 13.620729173263857,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 11,
+    "target": 7.713515725113336,
+    "channel": 15.118863124020159,
+    "status": "solved",
+    "abs_err": 0.028168210511129388,
+    "evals": 10,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 12,
+    "target": 7.6106001893963695,
+    "channel": 12.98847836497631,
+    "status": "solved",
+    "abs_err": 0.0143974807116658,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 13,
+    "target": 8.512278293023424,
+    "channel": 12.793053954070878,
+    "status": "solved",
+    "abs_err": 0.19595381394769973,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 14,
+    "target": 8.93411393085704,
+    "channel": 12.090255851238943,
+    "status": "solved",
+    "abs_err": 0.1756474859685948,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 15,
+    "target": 6.162078522019309,
+    "channel": 8.551739057689105,
+    "status": "solved",
+    "abs_err": 1.3532117151392171,
+    "evals": 13,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 16,
+    "target": 6.5122741517093345,
+    "channel": 8.761542698887032,
+    "status": "solved",
+    "abs_err": 0.2179335304849257,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 17,
+    "target": 5.678776199697012,
+    "channel": 10.24468666367772,
+    "status": "solved",
+    "abs_err": 0.11851451573100569,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 18,
+    "target": 8.555098112527983,
+    "channel": 10.745780215472346,
+    "status": "closed_but_failed_verification",
+    "abs_err": 1.992818253787597,
+    "evals": 6,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 19,
+    "target": 9.667095392010705,
+    "channel": 15.723083699988273,
+    "status": "solved",
+    "abs_err": 0.02518401690239891,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 20,
+    "target": 6.9910400674236985,
+    "channel": 9.89027304753667,
+    "status": "solved",
+    "abs_err": 0.06479854478038582,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 21,
+    "target": 9.126987839151564,
+    "channel": 12.581326602598491,
+    "status": "closed_but_failed_verification",
+    "abs_err": 1.8272223226944178,
+    "evals": 15,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 22,
+    "target": 9.61734293589345,
+    "channel": 12.935325908104591,
+    "status": "solved",
+    "abs_err": 0.23657680173102236,
+    "evals": 15,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 23,
+    "target": 6.677110866424518,
+    "channel": 15.288850536372582,
+    "status": "solved",
+    "abs_err": 0.028552355645104832,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 24,
+    "target": 8.437618767153092,
+    "channel": 13.746484207504981,
+    "status": "solved",
+    "abs_err": 0.02699029891424054,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 25,
+    "target": 9.034248094774892,
+    "channel": 14.1583531823834,
+    "status": "solved",
+    "abs_err": 0.134957317425501,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 26,
+    "target": 9.514435369994006,
+    "channel": 11.282431127828204,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 27,
+    "target": 5.227555930109879,
+    "channel": 11.87980009009301,
+    "status": "solved",
+    "abs_err": 0.021074836368899064,
+    "evals": 11,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 28,
+    "target": 10.372090309169964,
+    "channel": 9.156407621345295,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 29,
+    "target": 9.692074408481307,
+    "channel": 13.242927060204373,
+    "status": "solved",
+    "abs_err": 0.24630621651184015,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 30,
+    "target": 9.234099427317837,
+    "channel": 9.744837848236266,
+    "status": "solved",
+    "abs_err": 0.809176022087879,
+    "evals": 15,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 31,
+    "target": 5.45198208637408,
+    "channel": 10.14225712113037,
+    "status": "solved",
+    "abs_err": 0.19509469686512837,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   }
+  ],
+  "accurate": [
+   {
+    "spec": 0,
+    "target": 8.036184047290366,
+    "channel": 12.520733054275906,
+    "status": "solved",
+    "abs_err": 0.006121073211360795,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 1,
+    "target": 8.071495758152311,
+    "channel": 15.777490977089704,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 2,
+    "target": 8.689418851814743,
+    "channel": 12.546267983156607,
+    "status": "solved",
+    "abs_err": 0.0034141791398312193,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 3,
+    "target": 6.720720337214792,
+    "channel": 12.436091625991173,
+    "status": "solved",
+    "abs_err": 0.002756841643408947,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 4,
+    "target": 7.805141153305415,
+    "channel": 12.880464064155497,
+    "status": "solved",
+    "abs_err": 0.008074636506870903,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 5,
+    "target": 10.582654986077998,
+    "channel": 9.967083069123465,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 10,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 6,
+    "target": 6.85663003186115,
+    "channel": 11.128637208311178,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 7,
+    "target": 6.62163039439586,
+    "channel": 10.80011959542891,
+    "status": "solved",
+    "abs_err": 0.002646912322923356,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 8,
+    "target": 10.617378146538114,
+    "channel": 11.023073726693873,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 9,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 9,
+    "target": 9.647895252799461,
+    "channel": 8.324537923117234,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 10,
+    "target": 6.791933575307365,
+    "channel": 13.620729173263857,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 11,
+    "target": 7.713515725113336,
+    "channel": 15.118863124020159,
+    "status": "solved",
+    "abs_err": 0.028168210511129388,
+    "evals": 10,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 12,
+    "target": 7.6106001893963695,
+    "channel": 12.98847836497631,
+    "status": "solved",
+    "abs_err": 0.0143974807116658,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 13,
+    "target": 8.512278293023424,
+    "channel": 12.793053954070878,
+    "status": "solved",
+    "abs_err": 0.008884616023337344,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 14,
+    "target": 8.93411393085704,
+    "channel": 12.090255851238943,
+    "status": "solved",
+    "abs_err": 0.006353673326932707,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 15,
+    "target": 6.162078522019309,
+    "channel": 8.551739057689105,
+    "status": "solved",
+    "abs_err": 1.3532117151392171,
+    "evals": 13,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 16,
+    "target": 6.5122741517093345,
+    "channel": 8.761542698887032,
+    "status": "solved",
+    "abs_err": 0.02331193558781841,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 17,
+    "target": 5.678776199697012,
+    "channel": 10.24468666367772,
+    "status": "solved",
+    "abs_err": 0.0023509534158066003,
+    "evals": 12,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 18,
+    "target": 8.555098112527983,
+    "channel": 10.745780215472346,
+    "status": "closed_but_failed_verification",
+    "abs_err": 1.992818253787597,
+    "evals": 6,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 19,
+    "target": 9.667095392010705,
+    "channel": 15.723083699988273,
+    "status": "solved",
+    "abs_err": 0.02518401690239891,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 20,
+    "target": 6.9910400674236985,
+    "channel": 9.89027304753667,
+    "status": "solved",
+    "abs_err": 0.0022439153730751116,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 21,
+    "target": 9.126987839151564,
+    "channel": 12.581326602598491,
+    "status": "closed_but_failed_verification",
+    "abs_err": 1.8272223226944178,
+    "evals": 35,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 22,
+    "target": 9.61734293589345,
+    "channel": 12.935325908104591,
+    "status": "solved",
+    "abs_err": 0.23657680173102236,
+    "evals": 17,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 23,
+    "target": 6.677110866424518,
+    "channel": 15.288850536372582,
+    "status": "solved",
+    "abs_err": 0.028552355645104832,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 24,
+    "target": 8.437618767153092,
+    "channel": 13.746484207504981,
+    "status": "solved",
+    "abs_err": 0.02699029891424054,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 25,
+    "target": 9.034248094774892,
+    "channel": 14.1583531823834,
+    "status": "solved",
+    "abs_err": 0.007321737638193326,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 26,
+    "target": 9.514435369994006,
+    "channel": 11.282431127828204,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 27,
+    "target": 5.227555930109879,
+    "channel": 11.87980009009301,
+    "status": "solved",
+    "abs_err": 0.021074836368899064,
+    "evals": 11,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 28,
+    "target": 10.372090309169964,
+    "channel": 9.156407621345295,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 29,
+    "target": 9.692074408481307,
+    "channel": 13.242927060204373,
+    "status": "solved",
+    "abs_err": 0.004834737536004496,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 30,
+    "target": 9.234099427317837,
+    "channel": 9.744837848236266,
+    "status": "solved",
+    "abs_err": 0.809176022087879,
+    "evals": 15,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 31,
+    "target": 5.45198208637408,
+    "channel": 10.14225712113037,
+    "status": "solved",
+    "abs_err": 0.0031689527032838782,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   }
+  ],
+  "fastest": [
+   {
+    "spec": 0,
+    "target": 8.036184047290366,
+    "channel": 12.520733054275906,
+    "status": "solved",
+    "abs_err": 0.01671189638193482,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 1,
+    "target": 8.071495758152311,
+    "channel": 15.777490977089704,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 2,
+    "target": 8.689418851814743,
+    "channel": 12.546267983156607,
+    "status": "solved",
+    "abs_err": 0.21056750382024347,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 3,
+    "target": 6.720720337214792,
+    "channel": 12.436091625991173,
+    "status": "solved",
+    "abs_err": 0.5301590648059706,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 4,
+    "target": 7.805141153305415,
+    "channel": 12.880464064155497,
+    "status": "solved",
+    "abs_err": 0.08245308795770168,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 5,
+    "target": 10.582654986077998,
+    "channel": 9.967083069123465,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 10,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 6,
+    "target": 6.85663003186115,
+    "channel": 11.128637208311178,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 7,
+    "target": 6.62163039439586,
+    "channel": 10.80011959542891,
+    "status": "solved",
+    "abs_err": 0.07621861891964876,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 8,
+    "target": 10.617378146538114,
+    "channel": 11.023073726693873,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 9,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 9,
+    "target": 9.647895252799461,
+    "channel": 8.324537923117234,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 10,
+    "target": 6.791933575307365,
+    "channel": 13.620729173263857,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 11,
+    "target": 7.713515725113336,
+    "channel": 15.118863124020159,
+    "status": "solved",
+    "abs_err": 0.028168210511129388,
+    "evals": 10,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 12,
+    "target": 7.6106001893963695,
+    "channel": 12.98847836497631,
+    "status": "solved",
+    "abs_err": 0.0143974807116658,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 13,
+    "target": 8.512278293023424,
+    "channel": 12.793053954070878,
+    "status": "solved",
+    "abs_err": 1.0352025623839456,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 14,
+    "target": 8.93411393085704,
+    "channel": 12.090255851238943,
+    "status": "solved",
+    "abs_err": 0.1756474859685948,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 15,
+    "target": 6.162078522019309,
+    "channel": 8.551739057689105,
+    "status": "solved",
+    "abs_err": 1.3532117151392171,
+    "evals": 13,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 16,
+    "target": 6.5122741517093345,
+    "channel": 8.761542698887032,
+    "status": "solved",
+    "abs_err": 0.013648453027298224,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 17,
+    "target": 5.678776199697012,
+    "channel": 10.24468666367772,
+    "status": "solved",
+    "abs_err": 0.11851451573100569,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 18,
+    "target": 8.555098112527983,
+    "channel": 10.745780215472346,
+    "status": "closed_but_failed_verification",
+    "abs_err": 1.992818253787597,
+    "evals": 6,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 19,
+    "target": 9.667095392010705,
+    "channel": 15.723083699988273,
+    "status": "solved",
+    "abs_err": 0.050081695573299,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 20,
+    "target": 6.9910400674236985,
+    "channel": 9.89027304753667,
+    "status": "solved",
+    "abs_err": 0.06479854478038582,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 21,
+    "target": 9.126987839151564,
+    "channel": 12.581326602598491,
+    "status": "closed_but_failed_verification",
+    "abs_err": 1.8272223226944178,
+    "evals": 15,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 22,
+    "target": 9.61734293589345,
+    "channel": 12.935325908104591,
+    "status": "solved",
+    "abs_err": 1.474114042305887,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 23,
+    "target": 6.677110866424518,
+    "channel": 15.288850536372582,
+    "status": "solved",
+    "abs_err": 0.028552355645104832,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 24,
+    "target": 8.437618767153092,
+    "channel": 13.746484207504981,
+    "status": "solved",
+    "abs_err": 0.02699029891424054,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 25,
+    "target": 9.034248094774892,
+    "channel": 14.1583531823834,
+    "status": "solved",
+    "abs_err": 0.05991195482060263,
+    "evals": 6,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 26,
+    "target": 9.514435369994006,
+    "channel": 11.282431127828204,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 27,
+    "target": 5.227555930109879,
+    "channel": 11.87980009009301,
+    "status": "solved",
+    "abs_err": 0.021074836368899064,
+    "evals": 11,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 28,
+    "target": 10.372090309169964,
+    "channel": 9.156407621345295,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 8,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 29,
+    "target": 9.692074408481307,
+    "channel": 13.242927060204373,
+    "status": "solved",
+    "abs_err": 0.24630621651184015,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 30,
+    "target": 9.234099427317837,
+    "channel": 9.744837848236266,
+    "status": "solved",
+    "abs_err": 0.864836598505967,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 31,
+    "target": 5.45198208637408,
+    "channel": 10.14225712113037,
+    "status": "solved",
+    "abs_err": 0.7403056040557603,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   }
+  ],
+  "thinking": [
+   {
+    "spec": 0,
+    "target": 8.036184047290366,
+    "channel": 12.520733054275906,
+    "status": "solved",
+    "abs_err": 0.006121073211360795,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 1,
+    "target": 8.071495758152311,
+    "channel": 15.777490977089704,
+    "status": "solved",
+    "abs_err": 0.009480532149639842,
+    "evals": 14,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 2,
+    "target": 8.689418851814743,
+    "channel": 12.546267983156607,
+    "status": "solved",
+    "abs_err": 0.0034141791398312193,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 3,
+    "target": 6.720720337214792,
+    "channel": 12.436091625991173,
+    "status": "solved",
+    "abs_err": 0.002756841643408947,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 4,
+    "target": 7.805141153305415,
+    "channel": 12.880464064155497,
+    "status": "solved",
+    "abs_err": 0.008074636506870903,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 5,
+    "target": 10.582654986077998,
+    "channel": 9.967083069123465,
+    "status": "closed_but_failed_verification",
+    "abs_err": 2.031101866650868,
+    "evals": 30,
+    "loose": true,
+    "strict": false
+   },
+   {
+    "spec": 6,
+    "target": 6.85663003186115,
+    "channel": 11.128637208311178,
+    "status": "solved",
+    "abs_err": 0.007102084969491607,
+    "evals": 12,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 7,
+    "target": 6.62163039439586,
+    "channel": 10.80011959542891,
+    "status": "solved",
+    "abs_err": 0.002646912322923356,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 8,
+    "target": 10.617378146538114,
+    "channel": 11.023073726693873,
+    "status": "solved",
+    "abs_err": 0.027445280050546472,
+    "evals": 16,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 9,
+    "target": 9.647895252799461,
+    "channel": 8.324537923117234,
+    "status": "unsolved",
+    "abs_err": null,
+    "evals": 18,
+    "loose": false,
+    "strict": false
+   },
+   {
+    "spec": 10,
+    "target": 6.791933575307365,
+    "channel": 13.620729173263857,
+    "status": "solved",
+    "abs_err": 0.016138777085644485,
+    "evals": 16,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 11,
+    "target": 7.713515725113336,
+    "channel": 15.118863124020159,
+    "status": "solved",
+    "abs_err": 0.028168210511129388,
+    "evals": 10,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 12,
+    "target": 7.6106001893963695,
+    "channel": 12.98847836497631,
+    "status": "solved",
+    "abs_err": 0.0143974807116658,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 13,
+    "target": 8.512278293023424,
+    "channel": 12.793053954070878,
+    "status": "solved",
+    "abs_err": 0.008884616023337344,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 14,
+    "target": 8.93411393085704,
+    "channel": 12.090255851238943,
+    "status": "solved",
+    "abs_err": 0.006353673326932707,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 15,
+    "target": 6.162078522019309,
+    "channel": 8.551739057689105,
+    "status": "solved",
+    "abs_err": 0.03774247997765556,
+    "evals": 19,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 16,
+    "target": 6.5122741517093345,
+    "channel": 8.761542698887032,
+    "status": "solved",
+    "abs_err": 0.02331193558781841,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 17,
+    "target": 5.678776199697012,
+    "channel": 10.24468666367772,
+    "status": "solved",
+    "abs_err": 0.0023509534158066003,
+    "evals": 12,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 18,
+    "target": 8.555098112527983,
+    "channel": 10.745780215472346,
+    "status": "solved",
+    "abs_err": 1.2172621423748806,
+    "evals": 23,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 19,
+    "target": 9.667095392010705,
+    "channel": 15.723083699988273,
+    "status": "solved",
+    "abs_err": 0.02518401690239891,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 20,
+    "target": 6.9910400674236985,
+    "channel": 9.89027304753667,
+    "status": "solved",
+    "abs_err": 0.0022439153730751116,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 21,
+    "target": 9.126987839151564,
+    "channel": 12.581326602598491,
+    "status": "solved",
+    "abs_err": 0.010350787522543925,
+    "evals": 17,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 22,
+    "target": 9.61734293589345,
+    "channel": 12.935325908104591,
+    "status": "solved",
+    "abs_err": 0.0032433957338060537,
+    "evals": 12,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 23,
+    "target": 6.677110866424518,
+    "channel": 15.288850536372582,
+    "status": "solved",
+    "abs_err": 0.028552355645104832,
+    "evals": 9,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 24,
+    "target": 8.437618767153092,
+    "channel": 13.746484207504981,
+    "status": "solved",
+    "abs_err": 0.02699029891424054,
+    "evals": 5,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 25,
+    "target": 9.034248094774892,
+    "channel": 14.1583531823834,
+    "status": "solved",
+    "abs_err": 0.007321737638193326,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 26,
+    "target": 9.514435369994006,
+    "channel": 11.282431127828204,
+    "status": "solved",
+    "abs_err": 0.03500848391291633,
+    "evals": 19,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 27,
+    "target": 5.227555930109879,
+    "channel": 11.87980009009301,
+    "status": "solved",
+    "abs_err": 0.021074836368899064,
+    "evals": 11,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 28,
+    "target": 10.372090309169964,
+    "channel": 9.156407621345295,
+    "status": "solved",
+    "abs_err": 0.0039019161652280587,
+    "evals": 18,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 29,
+    "target": 9.692074408481307,
+    "channel": 13.242927060204373,
+    "status": "solved",
+    "abs_err": 0.004834737536004496,
+    "evals": 7,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 30,
+    "target": 9.234099427317837,
+    "channel": 9.744837848236266,
+    "status": "solved",
+    "abs_err": 0.4204024805755555,
+    "evals": 22,
+    "loose": true,
+    "strict": true
+   },
+   {
+    "spec": 31,
+    "target": 5.45198208637408,
+    "channel": 10.14225712113037,
+    "status": "solved",
+    "abs_err": 0.0031689527032838782,
+    "evals": 8,
+    "loose": true,
+    "strict": true
+   }
+  ]
+ }
+}

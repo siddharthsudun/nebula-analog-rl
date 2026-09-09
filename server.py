@@ -12,6 +12,7 @@ nothing in src/ or scripts/smoke_test.py imports this file.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import threading
@@ -108,6 +109,20 @@ FEATURED_ORDER = list(CURATED.keys())
 #: an object with methods -- nothing here needs more than get/set from two threads.
 _startup: dict[str, Any] = {"ready": False, "warming": False, "error": None}
 _startup_lock = threading.Lock()
+#: Serialises every simulator-backed operation in this process: the warm-up, the guard
+#: sandbox, the pipeline run and the candidate gallery all take THIS object. It exists
+#: because `eqrl.sim.server.get_server()` hands back one resident libngspice process that
+#: is not reentrant (see `_warm_up` below for the measured argument).
+#:
+#: There must be exactly ONE module-level binding of this name. A second `_run_lock = ...`
+#: anywhere at module scope is not a harmless duplicate: every function body resolves the
+#: global at call time, so the later binding silently wins and any route that was written
+#: against the earlier one is left guarding nothing. That is a soundness failure that no
+#: request will ever report -- the concurrent run does not error, it quietly corrupts the
+#: shared ngspice state and returns plausible-looking numbers. `tests/test_server_locking.py`
+#: parses this file with `ast` and fails if a second module-level binding reappears; do not
+#: re-add one when merging.
+_run_lock = threading.Lock()
 
 
 def _warm_up() -> None:
@@ -236,6 +251,26 @@ def _ngspice_error(e: NgspiceError) -> JSONResponse:
         "The design likely doesn't converge in SKY130 as given; try different values.")
 
 
+def _run_busy_error() -> JSONResponse:
+    """Return the shared nonblocking response for a simulator operation in flight."""
+    with _startup_lock:
+        warming = _startup["warming"]
+    if warming:
+        return _api_error(
+            409, "pipeline_busy", "Still starting up",
+            "The server is loading SKY130 device models and the trained policy. "
+            "Both that warm-up and a live request drive the one resident ngspice "
+            "process (eqrl.sim.server.get_server), which is not reentrant, so the "
+            "request cannot start until warm-up releases it.",
+            "Wait for the health indicator to show ready -- about 20 seconds after "
+            "boot -- then try again.")
+    return _api_error(
+        409, "pipeline_busy", "A simulator-backed operation is already in progress",
+        "This server runs one simulator-backed operation at a time because the resident "
+        "ngspice process is not reentrant.",
+        "Wait for the operation already in progress to finish, then try again.")
+
+
 def _unexpected_error(e: Exception) -> JSONResponse:
     return _api_error(
         500, "internal_error", "Unexpected server error",
@@ -308,6 +343,13 @@ class CornerCheckRequest(BaseModel):
     corner: str = "tt"
 
 
+class GalleryEvaluateRequest(BaseModel):
+    """An allowlisted, bounded request for the dashboard's historical comparison set."""
+
+    candidate_ids: list[str] = []
+    live_candidates: list[dict[str, Any]] = []
+
+
 @app.get("/api/guard/presets")
 def guard_presets():
     presets = [{
@@ -358,46 +400,390 @@ def guard_presets():
 
 @app.post("/api/guard/evaluate")
 def guard_evaluate(req: EvaluateRequest):
+    if not _run_lock.acquire(blocking=False):
+        return _run_busy_error()
     try:
-        dv = DesignVars(**_to_si(req.fields))
-        evaluator = get_evaluator(corner=req.corner)
-        verdict = evaluator.evaluate(dv, vdd=req.vdd)
-    except SearchHalted as e:       # BaseException -- must be caught explicitly, first
-        return _search_halted_error(e)
-    except NgspiceError as e:
-        return _ngspice_error(e)
-    except Exception as e:
-        return _unexpected_error(e)
+        try:
+            dv = DesignVars(**_to_si(req.fields))
+            evaluator = get_evaluator(corner=req.corner, fast=False)
+            verdict = evaluator.evaluate(dv, vdd=req.vdd)
+        except SearchHalted as e:       # BaseException -- must be caught explicitly, first
+            return _search_halted_error(e)
+        except NgspiceError as e:
+            return _ngspice_error(e)
+        except Exception as e:
+            return _unexpected_error(e)
 
-    if verdict.is_valid:
-        m = verdict.unwrap()
-        ok, checks = hard_pass(m, DEFAULT_SPEC)
+        if verdict.is_valid:
+            m = verdict.unwrap()
+            ok, checks = hard_pass(m, DEFAULT_SPEC)
+            return {
+                "valid": True,
+                "metrics": m.as_dict(),
+                "hard_pass": {"ok": ok, "checks": checks},
+                "run_id": verdict.run_id,
+                "artifact_dir": str(verdict.artifact_dir),
+            }
         return {
-            "valid": True,
-            "metrics": m.as_dict(),
-            "hard_pass": {"ok": ok, "checks": checks},
+            "valid": False,
+            "tier": verdict.tier,
+            "check": verdict.check.value,
+            "reason": verdict.reason,
+            "violation": verdict.violation,
+            "reached_tiers": [1, 2, 4],
             "run_id": verdict.run_id,
             "artifact_dir": str(verdict.artifact_dir),
         }
-    return {
-        "valid": False,
-        "tier": verdict.tier,
-        "check": verdict.check.value,
-        "reason": verdict.reason,
-        "violation": verdict.violation,
-        "reached_tiers": [1, 2, 4],
-        "run_id": verdict.run_id,
-        "artifact_dir": str(verdict.artifact_dir),
-    }
+    finally:
+        _run_lock.release()
 
 
 @app.post("/api/guard/verify-corners")
 def guard_verify_corners(req: CornerCheckRequest):
-    evaluator = get_evaluator(corner=req.corner)
-    failure = evaluator.verify_corners(("tt", "ss"), force=True)
-    if failure is None:
-        return {"ok": True}
-    return {"ok": False, "reason": failure.reason, "check": failure.check.value}
+    if not _run_lock.acquire(blocking=False):
+        return _run_busy_error()
+    try:
+        try:
+            evaluator = get_evaluator(corner=req.corner, fast=False)
+            failure = evaluator.verify_corners(("tt", "ss"), force=True)
+        except SearchHalted as e:       # BaseException -- must be caught explicitly, first
+            return _search_halted_error(e)
+        except NgspiceError as e:
+            return _ngspice_error(e)
+        except Exception as e:
+            return _unexpected_error(e)
+        if failure is None:
+            return {"ok": True}
+        return {"ok": False, "reason": failure.reason, "check": failure.check.value}
+    finally:
+        _run_lock.release()
+
+
+# -- Candidate gallery --------------------------------------------------------
+
+_GALLERY_MAX_CANDIDATES = 6
+
+
+def _gallery_catalog() -> dict[str, dict[str, Any]]:
+    """Return a small, artifact-backed comparison set without measuring it.
+
+    The historical records select the designs; they do not supply current measurements.
+    In particular, a rejected ``Invalid`` deliberately has no ``.metrics`` member.  The
+    evaluation endpoint below therefore re-runs every chosen candidate through the full
+    guard before it gives a boost or target error to the UI.
+    """
+    delivered = _load_results_json("delivered_circuit.json")
+    pvv = _load_results_json("pass_vs_valid.json")
+    if not delivered or not pvv:
+        raise HTTPException(status_code=404, detail="candidate-gallery artifacts are missing")
+
+    delivered_pvt = delivered.get("pvt") or {}
+    dc_min = ((delivered_pvt.get("worst_case_by_metric") or {})
+              .get("dc_gain_db") or {}).get("min")
+    catalog: dict[str, dict[str, Any]] = {
+        "delivered": {
+            "id": "delivered",
+            "label": "Delivered CTLE",
+            "kind": "delivered",
+            "design": delivered["design"],
+            "target_boost_db": delivered["spec"]["target_boost_db"],
+            "channel_loss_db": delivered["spec"]["channel_loss_db"],
+            "historical_context": (
+                "Frozen delivered-design artifact. The displayed gallery measurement is a "
+                "new typical-corner evaluation, not a PVT requalification."
+            ),
+            "binding_constraint": {
+                "label": "DC-gain floor",
+                "detail": (f"Recorded 45-corner minimum: {dc_min:.2f} dB. "
+                           "This is an additional stated design requirement, separate from "
+                           "the saturation and operating-region guards.") if isinstance(dc_min, (int, float)) else
+                          "An additional stated design requirement, separate from the "
+                          "saturation and operating-region guards.",
+                "scope": "additional_design_requirement",
+            },
+        },
+    }
+
+    # Keep both actual guard failure classes visible.  This is a curated comparison, not
+    # a re-estimate of the pass-vs-valid rate and not a statement that every rejection has
+    # a closed eye.
+    selected: list[dict[str, Any]] = []
+    for reason, count in (("T4.10_dc_gain_implausible", 2),
+                          ("T2.5_mosfet_not_in_saturation", 2)):
+        selected.extend([row for row in pvv.get("designs", [])
+                         if row.get("guard_reason") == reason][:count])
+    for index, row in enumerate(selected):
+        reason = row["guard_reason"]
+        dc_reason = reason == "T4.10_dc_gain_implausible"
+        catalog[f"pvv-{index}"] = {
+            "id": f"pvv-{index}",
+            "label": "Historical DC-gain rejection" if dc_reason else "Historical saturation rejection",
+            "kind": "historical_rejection",
+            "design": row["design"],
+            "target_boost_db": row["target_boost_db"],
+            "channel_loss_db": row["channel_loss_db"],
+            "historical_context": (
+                f"Selected from results/pass_vs_valid.json, whose recorded guard reason was {reason}. "
+                "The current guard result below is measured afresh."
+            ),
+            "binding_constraint": {
+                "label": "DC-gain plausibility guard" if dc_reason else "MOSFET saturation guard",
+                "detail": (
+                    "DC gain is a failed requirement for this candidate. It is not a universal "
+                    "definition of circuit validity."
+                    if dc_reason else
+                    "Operating-region failure: the input pair did not remain in saturation."
+                ),
+                "scope": "additional_design_requirement" if dc_reason else "circuit_sanity",
+            },
+        }
+    return catalog
+
+
+def _gallery_public_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Serialize artifact selection metadata without claiming it is a fresh metric."""
+    return {
+        "id": candidate["id"],
+        "label": candidate["label"],
+        "kind": candidate["kind"],
+        "target_boost_db": candidate["target_boost_db"],
+        "channel_loss_db": candidate["channel_loss_db"],
+        "fields": _human_fields(candidate["design"]),
+        "historical_context": candidate["historical_context"],
+        "binding_constraint": candidate["binding_constraint"],
+    }
+
+
+def _gallery_live_candidates(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]] | None, str | None]:
+    """Validate the small browser-supplied live set before it can reach a simulator."""
+    expected = {key for key, _, _, _, _ in DESIGN_FIELDS}
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        ident = row.get("id")
+        label = row.get("label")
+        design = row.get("design")
+        target = row.get("target_boost_db")
+        channel = row.get("channel_loss_db")
+        if not isinstance(ident, str) or not ident or len(ident) > 80:
+            return None, "Each live candidate needs a short non-empty id."
+        if not isinstance(label, str) or not label or len(label) > 120:
+            return None, "Each live candidate needs a short non-empty label."
+        if not isinstance(design, dict) or set(design) != expected:
+            return None, "A live candidate must contain exactly the seven DesignVars fields."
+        values = [*design.values(), target, channel]
+        if (not all(isinstance(value, (int, float)) and math.isfinite(float(value))
+                    for value in values) or not 0.0 <= float(channel) <= 60.0):
+            return None, "Live candidate values must be finite and channel loss must be 0 to 60 dB."
+        out.append({
+            "id": ident,
+            "label": label,
+            "kind": "live_pipeline_candidate",
+            "design": {key: float(value) for key, value in design.items()},
+            "target_boost_db": float(target),
+            "channel_loss_db": float(channel),
+            "historical_context": "Candidate reported by the current pipeline trace; measured afresh here.",
+            "binding_constraint": {
+                "label": "Pending full guard",
+                "detail": "The binding guard result is measured by this gallery request.",
+                "scope": "pending_guard_evaluation",
+            },
+        })
+    return out, None
+
+
+def _gallery_eye_payload(dv: DesignVars, candidate: dict[str, Any], *, scope: str) -> dict[str, Any]:
+    """Make a display trace only after the verdict establishes its allowed scope.
+
+    `measure_all` remains sealed behind ``GuardedEvaluator``.  This is a separate AC
+    diagnostic used only to reconstruct the matrix that the legacy measurement discards;
+    it never reaches a reward or turns a rejected candidate into a valid one.
+    """
+    from eqrl.sim.server import get_server
+    try:
+        from eqrl.sim.eye import compute_eye_v2 as eye_function
+        metric_version = "audited_eye_v2"
+    except ImportError:
+        # The dashboard can be staged independently of Task 2.  Keeping the fields with
+        # null values makes the old measurement's missing BER data explicit, rather than
+        # inventing an error count from its height or width.
+        from eqrl.sim.eye import compute_eye as eye_function
+        metric_version = "legacy_eye"
+        scope = f"{scope} Legacy eye output: signed opening and BER fields are unavailable."
+
+    try:
+        ac = get_server("tt").ac_complex(dv)
+        res = eye_function(ac["freq"], ac["H"], channel_loss_db=candidate["channel_loss_db"])
+    except NgspiceError as exc:
+        return {
+            "available": False,
+            "scope": scope,
+            "label": "No diagnostic eye trace",
+            "reason": f"AC diagnostic failed: {exc}",
+            "metric_version": metric_version,
+            "eye_matrix": None,
+            "sample_phase": None,
+            "signed_opening_v": None,
+            "errors": None,
+            "count": None,
+            "ber": None,
+        }
+
+    return {
+        "available": True,
+        "scope": scope,
+        "label": "Ideal linear behavioral eye; not a silicon or low-BER certification.",
+        "metric_version": metric_version,
+        "eye_matrix": res.eye_matrix.tolist(),
+        "sample_phase": res.sample_phase,
+        "signed_opening_v": getattr(res, "signed_opening_v", None),
+        "errors": getattr(res, "errors", None),
+        "count": getattr(res, "count", None),
+        "ber": getattr(res, "ber", None),
+    }
+
+
+def _gallery_unavailable_eye(*, tier: int) -> dict[str, Any]:
+    return {
+        "available": False,
+        "scope": "unavailable_before_measurement",
+        "label": "No eye trace",
+        "reason": (f"Rejected at Tier {tier} before a sealed measurement existed. "
+                   "The dashboard does not request an unguarded substitute trace."),
+        "metric_version": None,
+        "eye_matrix": None,
+        "sample_phase": None,
+        "signed_opening_v": None,
+        "errors": None,
+        "count": None,
+        "ber": None,
+    }
+
+
+def _evaluate_gallery_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Full-guard one allowlisted candidate and return no metrics for an Invalid."""
+    dv = DesignVars(**candidate["design"])
+    evaluator = get_evaluator(corner="tt", fast=False,
+                              channel_loss_db=candidate["channel_loss_db"])
+    verdict = evaluator.evaluate(dv)
+    public = _gallery_public_candidate(candidate)
+    if verdict.is_valid:
+        metrics = verdict.unwrap()
+        boost = float(metrics.boost_db)
+        public.update({
+            "guard": {
+                "valid": True,
+                "tier": None,
+                "check": None,
+                "reason": "All enabled single-corner guard checks passed.",
+                "run_id": verdict.run_id,
+                "artifact_dir": str(verdict.artifact_dir),
+            },
+            "boost_db": boost,
+            "target_error_db": abs(boost - candidate["target_boost_db"]),
+            "metric_scope": "full_guard_validated_typical_corner",
+            "eye": _gallery_eye_payload(
+                dv, candidate,
+                scope=("Display diagnostic derived after a full guarded typical-corner "
+                       "evaluation. It is not a reward path."),
+            ),
+        })
+        return public
+
+    # Do not use `verdict.metrics`: Invalid deliberately has no such attribute.  A Tier 4
+    # rejection did reach guarded measurement, so a separately labelled AC display trace
+    # is honest. Tiers 1 and 2 are withheld rather than bypassing the seal.
+    eye = (_gallery_eye_payload(
+        dv, candidate,
+        scope=("Diagnostic only, collected after the full guard rejected this candidate at "
+               "Tier 4. It does not qualify the design or promote any value to a reward."),
+    ) if verdict.tier >= 4 else _gallery_unavailable_eye(tier=verdict.tier))
+    public.update({
+        "guard": {
+            "valid": False,
+            "tier": verdict.tier,
+            "check": verdict.check.value,
+            "reason": verdict.reason,
+            "run_id": verdict.run_id,
+            "artifact_dir": str(verdict.artifact_dir),
+        },
+        "boost_db": None,
+        "target_error_db": None,
+        "metric_scope": "unavailable_after_guard_rejection",
+        "eye": eye,
+    })
+    return public
+
+
+@app.get("/api/candidate-gallery")
+def candidate_gallery():
+    """Artifact-backed selection only. Simulations happen on the explicit POST route."""
+    response = JSONResponse(content={
+        "candidates": [_gallery_public_candidate(c) for c in _gallery_catalog().values()],
+        "measurement_scope": (
+            "A curated artifact selection, not a re-estimate of the 24/28 historical rate. "
+            "Run the full guarded measurement to populate current values and eye traces."
+        ),
+        "max_candidates": _GALLERY_MAX_CANDIDATES,
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.post("/api/candidate-gallery/evaluate")
+def candidate_gallery_evaluate(req: GalleryEvaluateRequest):
+    """Measure at most six catalogued designs under the shared simulator lock."""
+    ids = req.candidate_ids
+    if ids and req.live_candidates:
+        return _api_error(422, "invalid_request", "Ambiguous gallery selection",
+                          "Choose catalogued candidates or live pipeline candidates, not both.",
+                          "Send one gallery selection type per request.")
+    candidates, live_error = _gallery_live_candidates(req.live_candidates)
+    if live_error:
+        return _api_error(422, "invalid_request", "Invalid live gallery candidate", live_error,
+                          "Use the candidate payload emitted by the current pipeline trace.")
+    selected_count = len(ids) if ids else len(candidates or [])
+    if not 1 <= selected_count <= _GALLERY_MAX_CANDIDATES:
+        return _api_error(422, "invalid_request", "Invalid gallery selection",
+                          f"Select between 1 and {_GALLERY_MAX_CANDIDATES} candidates.",
+                          "Reload the gallery and choose its listed candidates.")
+    request_ids = ids if ids else [candidate["id"] for candidate in candidates or []]
+    if len(set(request_ids)) != len(request_ids):
+        return _api_error(422, "invalid_request", "Duplicate gallery candidate",
+                          "Each gallery candidate may be measured once per request.",
+                          "Remove duplicate selections and retry.")
+    if ids:
+        catalog = _gallery_catalog()
+        unknown = [candidate_id for candidate_id in ids if candidate_id not in catalog]
+        if unknown:
+            return _api_error(422, "invalid_request", "Unknown gallery candidate",
+                              f"Unknown candidate id(s): {', '.join(unknown)}.",
+                              "Reload the gallery before retrying.")
+        candidates = [catalog[candidate_id] for candidate_id in ids]
+    if not _run_lock.acquire(blocking=False):
+        return _run_busy_error()
+    try:
+        try:
+            records = [_evaluate_gallery_candidate(candidate) for candidate in candidates or []]
+        except SearchHalted as exc:  # BaseException: the finally below must still release the lock.
+            return _search_halted_error(exc)
+        except NgspiceError as exc:
+            return _ngspice_error(exc)
+        except Exception as exc:
+            return _unexpected_error(exc)
+    finally:
+        _run_lock.release()
+    response = JSONResponse(content={
+        "candidates": records,
+        "measurement_scope": (
+            "Each selected candidate was evaluated with fast=False under the normal guard. "
+            "Eye matrices are display diagnostics, and behavioral BER fields are not silicon "
+            "or low-BER certification."
+        ),
+    })
+    # A response contains fresh simulator state and must never be reused after an artifact,
+    # PDK, or evaluator change.
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # -- Results explorer ----------------------------------------------------------
@@ -570,6 +956,23 @@ class ParseSpecRequest(BaseModel):
 #: "default" survives in the API but not in the UI.
 UI_MODES = ("auto", "fastest", "thinking")
 
+#: NOTE -- no solve-rate ("X of 32") number appears in this copy, deliberately. Our own
+#: preregistered analysis (docs/PREREG_TARGET_CONDITIONED.md:187, chance_baseline.py) found
+#: PPO's strict 16/32 indistinguishable from its chance-matched line (16.91/32, p = 0.76),
+#: and every arm tested sits on its own chance line. A bare "solves N of 32" shown to a
+#: reader is a claim we have already retracted internally. If a solve rate goes back in
+#: here it goes in WITH its budget-matched chance baseline beside it, or not at all.
+#: The prior numbers (22/32, 30/32) also traced to a benchmark that predates the current
+#: MODES tuple, so they were stale as well as unbaselined. Re-run pending from silq-opus.
+#:
+#: NOTE 2 -- per-spec EVALUATION counts have now been pulled from this copy for the same
+#: reason. results/mode_sweep_seed99.json (mtime 2026-09-06 07:04) predates 30a90901f
+#: (2026-09-06 15:40), which did not change fastest's budget -- it REPLACED fastest's
+#: stage 1, swapping a full PPO rollout for a corpus lookup. Its 7.6 evals/spec, and the
+#: "worst case 11 sims" figure derived from the same sweep, describe an algorithm that no
+#: longer exists; the shipped mode is closing at ~1 optimizer evaluation per spec on the
+#: in-progress re-run. Cost copy stays qualitative until that run lands. Do not put a
+#: number back here from any artifact older than 30a90901f.
 MODE_COPY = {
     "auto": {"label": "Auto", "tagline": "Fast first, Thinking only if needed",
              "detail": "Runs the corpus-seeded fast search and verifies it. If the "
@@ -578,11 +981,18 @@ MODE_COPY = {
     "fastest": {"label": "Fastest", "tagline": "One corpus seed, three solver steps",
                 "detail": "Stage 1 is a lookup in the frozen corpus instead of a PPO "
                           "rollout, followed by the unmodified G3.2 solver on a budget of "
-                          "three. Answers in seconds; solves 22 of 32 held-out specs."},
+                          "three. Usually answers in seconds. The seed and the solved "
+                          "design are both re-simulated independently before you see "
+                          "them, so a result shown here passed a fresh check, not the "
+                          "lookup. When the corpus seed is a poor match the solver has "
+                          "only three steps to recover, so a bad seed is more likely "
+                          "to end in no answer than in a wrong one."},
     "thinking": {"label": "Thinking", "tagline": "Up to eight restarts, budget 25",
                  "detail": "Up to eight independent PPO rollouts, each closed by G3.2 "
                            "with a larger budget and a 0.01 dB stop, then corpus-proposed "
-                           "restarts if none reached target. Solves 30 of 32."},
+                           "restarts if none reached target. It spends several times "
+                           "Fastest's simulator budget, and spends it on precision "
+                           "rather than on solving more requests."},
 }
 
 
@@ -752,7 +1162,6 @@ def pipeline_parse_spec(req: ParseSpecRequest):
 # globals, exactly one run at a time is allowed -- a second concurrent request gets a 202
 # error rather than quietly corrupting the first one's narration.
 
-_run_lock = threading.Lock()            # serialises runs (the patching is process-global)
 _state_lock = threading.Lock()          # guards the event list against the polling reader
 _run_state: dict[str, Any] = {"active": False, "stage": None, "events": [], "t0": 0.0}
 

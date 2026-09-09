@@ -336,21 +336,33 @@ correcting an error of mine.** I rechecked `results/solved_design.json` and repo
     final_report.json      w_in 11.83 um  rs 5000 ohm  cs 222 fF  r_load 1171 ohm
     solved_design.json     w_in  5.43 um  rs 4887 ohm  cs 132 fF  r_load 1806 ohm
 
-So `results/legacy_design_recheck.json` (45 corners, **10 failing**, `all_pvt_pass: false`)
-is a real measurement of `solved_design.json` on the corrected circuit, but it does not
-refute the 45/45 claim, which belongs to the other design.
+> ### ⚠️ THE REFUTATION BELOW WAS ITSELF WITHDRAWN — DO NOT QUOTE IT
+>
+> This section once reported that "45/45" was false: 42/45 for the `final_report.json`
+> design and 35/45 for `solved_design.json`. **Both results were measurement artifacts and
+> were retracted the same day**, in `1b00a9659` ("Fix the noise measurement, and restore
+> the 45/45 claim I wrongly removed"). ngspice's differential `.noise v(outp,outn)` returns
+> `-nan(ind)` at three corners (tt/1.89V/27C, sf/1.89V/27C, ss/1.80V/125C) while AC and
+> supply-current analyses solve normally at those same corners — so the circuit is biased
+> correctly and the noise analysis alone diverges. The "failures" were missing
+> measurements, not metrics out of limit. That is why the original text noted "All three
+> return no measurement at all rather than a metric out of limit" without drawing the
+> conclusion. After the single-ended fallback (× 1/√2, validated against the 42 working
+> corners, mean ratio 1.0184), both designs re-characterised at 45/45, `all_pvt_pass: true`.
+>
+> `results/legacy_design_recheck.json` and `results/final_report_design_recheck.json` were
+> **deliberately deleted** in that commit because they recorded the defect, not because
+> they were lost. Nothing is owed here and no re-run is needed.
+>
+> **Scope, because this gets quoted out of context:** the whole episode concerns
+> `final_report.json`'s design and `solved_design.json`. It does **not** touch the
+> delivered circuit. `results/delivered_circuit.json` was frozen later at `15a7d27`, and
+> its 45/45 rests on two artifacts that are both tracked and present:
+> `delivered_circuit.json` and `results/pvt_signoff_seed23.json`.
 
-That claim has now been measured on its own design (`results/final_report_design_recheck.json`):
-
-    final_report.json design   42/45 pass, 3 fail (tt, ss, sf)   all_pvt_pass: false
-    solved_design.json         35/45 pass, 10 fail               all_pvt_pass: false
-
-So "45/45" is false, but by three corners rather than ten, and the design's behaviour is
-otherwise close to what was published (boost 8.60-10.62 dB measured against 8.9-10.9 dB
-claimed). One of the three failures is at tt, the nominal corner. All three return no
-measurement at all rather than a metric out of limit.
-I left the original in place rather than delete it, but it is the most concrete
-falsifiable object in the repo and should not survive to submission.
+The distinction that remains valid is the one above it: `final_report.json` and
+`solved_design.json` are **different designs**, so a recheck of one was never evidence
+about the other. That confusion is the real lesson of this section.
 
 **`web/` and `site/` are a correctness liability, not merely untouched.** They still
 assert 45/45, 7x, 350x and "nothing in the scoring is a placeholder", and the PVT grid is

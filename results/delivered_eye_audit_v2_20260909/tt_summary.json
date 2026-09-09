@@ -1,0 +1,938 @@
+{
+  "complete": true,
+  "rows": [
+    {
+      "corner": "tt|1.710|0",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.5189193716213414,
+        "peak_gain_db": 10.78511109109801,
+        "boost_db": 9.266191719476668,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -61.29668677364484,
+        "noise_vrms": 0.000560970246,
+        "power_w": 0.0017936904438,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.75,
+        "eye_v_mv": 708.6530252650699
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.5189193716213414,
+          "peak_gain_db": 10.78511109109801,
+          "boost_db": 9.266191719476668,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.29668677364484,
+          "noise_vrms": 0.000560970246,
+          "power_w": 0.0017936904438,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 708.6530252650699,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.710_0\\frozen_working_tree\\20260909T151309_000001_6b847c31"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.5189193716213414,
+          "peak_gain_db": 10.78511109109801,
+          "boost_db": 9.266191719476668,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.29668677364484,
+          "noise_vrms": 0.000560970246,
+          "power_w": 0.0017936904438,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 703.635347446148,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.703635347446148,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 6
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.710_0\\audited_v2\\20260909T151309_000001_2153ba53"
+      }
+    },
+    {
+      "corner": "tt|1.710|27",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.4808925299600117,
+        "peak_gain_db": 10.55439476263036,
+        "boost_db": 9.073502232670347,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -61.35921109280342,
+        "noise_vrms": 0.000583419098,
+        "power_w": 0.0017905142042999999,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.75,
+        "eye_v_mv": 659.1047824454274
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.4808925299600117,
+          "peak_gain_db": 10.55439476263036,
+          "boost_db": 9.073502232670347,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.35921109280342,
+          "noise_vrms": 0.000583419098,
+          "power_w": 0.0017905142042999999,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 698.2412094696934,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.710_27\\frozen_working_tree\\20260909T151310_000001_befde83b"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.4808925299600117,
+          "peak_gain_db": 10.55439476263036,
+          "boost_db": 9.073502232670347,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.35921109280342,
+          "noise_vrms": 0.000583419098,
+          "power_w": 0.0017905142042999999,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 659.9550105045425,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.6599550105045425,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 7
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.710_27\\audited_v2\\20260909T151311_000001_32390f14"
+      }
+    },
+    {
+      "corner": "tt|1.710|125",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.3241132177834816,
+        "peak_gain_db": 9.459855566080748,
+        "boost_db": 8.135742348297267,
+        "peak_freq_ghz": 1.42479405,
+        "hd3_db": -56.69503067842969,
+        "noise_vrms": 0.000672855643,
+        "power_w": 0.0017886555710999999,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.8125,
+        "eye_v_mv": 632.405592411376
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.3241132177834816,
+          "peak_gain_db": 9.459855566080748,
+          "boost_db": 8.135742348297267,
+          "peak_freq_ghz": 1.42479405,
+          "hd3_db": -56.69503067842969,
+          "noise_vrms": 0.000672855643,
+          "power_w": 0.0017886555710999999,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.8125,
+          "eye_v_mv": 632.405592411376,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.710_125\\frozen_working_tree\\20260909T151311_000001_eb40a417"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.3241132177834816,
+          "peak_gain_db": 9.459855566080748,
+          "boost_db": 8.135742348297267,
+          "peak_freq_ghz": 1.42479405,
+          "hd3_db": -56.69503067842969,
+          "noise_vrms": 0.000672855643,
+          "power_w": 0.0017886555710999999,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.8125,
+          "eye_v_mv": 630.6737801906445,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.6306737801906445,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 7
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.710_125\\audited_v2\\20260909T151312_000001_c42ee8e4"
+      }
+    },
+    {
+      "corner": "tt|1.800|0",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.4262649513425782,
+        "peak_gain_db": 10.790797043789999,
+        "boost_db": 9.364532092447421,
+        "peak_freq_ghz": 1.69371927,
+        "hd3_db": -61.69102655208307,
+        "noise_vrms": 0.000569541912,
+        "power_w": 0.0018963151200000002,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.75,
+        "eye_v_mv": 705.1040770729402
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.4262649513425782,
+          "peak_gain_db": 10.790797043789999,
+          "boost_db": 9.364532092447421,
+          "peak_freq_ghz": 1.69371927,
+          "hd3_db": -61.69102655208307,
+          "noise_vrms": 0.000569541912,
+          "power_w": 0.0018963151200000002,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 705.1040770729402,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.800_0\\frozen_working_tree\\20260909T151313_000001_1bfaf83f"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.4262649513425782,
+          "peak_gain_db": 10.790797043789999,
+          "boost_db": 9.364532092447421,
+          "peak_freq_ghz": 1.69371927,
+          "hd3_db": -61.69102655208307,
+          "noise_vrms": 0.000569541912,
+          "power_w": 0.0018963151200000002,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 700.5587639135277,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.7005587639135278,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 6
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.800_0\\audited_v2\\20260909T151313_000001_0b356ddc"
+      }
+    },
+    {
+      "corner": "tt|1.800|27",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.361947982710072,
+        "peak_gain_db": 10.527698291780768,
+        "boost_db": 9.165750309070695,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -61.76289664030013,
+        "noise_vrms": 0.000593986436,
+        "power_w": 0.001896928596,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.75,
+        "eye_v_mv": 652.8164862292336
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.361947982710072,
+          "peak_gain_db": 10.527698291780768,
+          "boost_db": 9.165750309070695,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.76289664030013,
+          "noise_vrms": 0.000593986436,
+          "power_w": 0.001896928596,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 692.256081933201,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.800_27\\frozen_working_tree\\20260909T151314_000001_7ce5dee2"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.361947982710072,
+          "peak_gain_db": 10.527698291780768,
+          "boost_db": 9.165750309070695,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.76289664030013,
+          "noise_vrms": 0.000593986436,
+          "power_w": 0.001896928596,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 653.9419789294714,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.6539419789294714,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 7
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.800_27\\audited_v2\\20260909T151315_000001_add326d3"
+      }
+    },
+    {
+      "corner": "tt|1.800|125",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.1346937074303962,
+        "peak_gain_db": 9.480786127576039,
+        "boost_db": 8.346092420145643,
+        "peak_freq_ghz": 1.42479405,
+        "hd3_db": -58.186934369427476,
+        "noise_vrms": 0.000687643239,
+        "power_w": 0.001893415482,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.8125,
+        "eye_v_mv": 623.3322844279977
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.1346937074303962,
+          "peak_gain_db": 9.480786127576039,
+          "boost_db": 8.346092420145643,
+          "peak_freq_ghz": 1.42479405,
+          "hd3_db": -58.186934369427476,
+          "noise_vrms": 0.000687643239,
+          "power_w": 0.001893415482,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.8125,
+          "eye_v_mv": 623.3322844279977,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.800_125\\frozen_working_tree\\20260909T151316_000001_9e398e22"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.1346937074303962,
+          "peak_gain_db": 9.480786127576039,
+          "boost_db": 8.346092420145643,
+          "peak_freq_ghz": 1.42479405,
+          "hd3_db": -58.186934369427476,
+          "noise_vrms": 0.000687643239,
+          "power_w": 0.001893415482,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.8125,
+          "eye_v_mv": 621.4589631703243,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.6214589631703243,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 7
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.800_125\\audited_v2\\20260909T151316_000001_82659ac2"
+      }
+    },
+    {
+      "corner": "tt|1.890|0",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.398492599347865,
+        "peak_gain_db": 10.866109170918183,
+        "boost_db": 9.467616571570318,
+        "peak_freq_ghz": 1.69371927,
+        "hd3_db": -61.81142980920442,
+        "noise_vrms": 0.0006099503342002532,
+        "power_w": 0.0019928501523000003,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.75,
+        "eye_v_mv": 706.7003255421238
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.398492599347865,
+          "peak_gain_db": 10.866109170918183,
+          "boost_db": 9.467616571570318,
+          "peak_freq_ghz": 1.69371927,
+          "hd3_db": -61.81142980920442,
+          "noise_vrms": 0.0006099503342002532,
+          "power_w": 0.0019928501523000003,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 706.7003255421238,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.890_0\\frozen_working_tree\\20260909T151317_000001_b26fedf5"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.398492599347865,
+          "peak_gain_db": 10.866109170918183,
+          "boost_db": 9.467616571570318,
+          "peak_freq_ghz": 1.69371927,
+          "hd3_db": -61.81142980920442,
+          "noise_vrms": 0.0006099503342002532,
+          "power_w": 0.0019928501523000003,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 702.4759726941061,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.7024759726941061,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 6
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.890_0\\audited_v2\\20260909T151318_000001_e9d9b1b8"
+      }
+    },
+    {
+      "corner": "tt|1.890|27",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.317442798828713,
+        "peak_gain_db": 10.56553657391493,
+        "boost_db": 9.248093775086216,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -61.87815132486561,
+        "noise_vrms": 0.000598884252,
+        "power_w": 0.0019994095107000003,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.75,
+        "eye_v_mv": 651.5672695373207
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.317442798828713,
+          "peak_gain_db": 10.56553657391493,
+          "boost_db": 9.248093775086216,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.87815132486561,
+          "noise_vrms": 0.000598884252,
+          "power_w": 0.0019994095107000003,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 691.5761499918959,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.890_27\\frozen_working_tree\\20260909T151319_000001_456057cf"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.317442798828713,
+          "peak_gain_db": 10.56553657391493,
+          "boost_db": 9.248093775086216,
+          "peak_freq_ghz": 1.59886447,
+          "hd3_db": -61.87815132486561,
+          "noise_vrms": 0.000598884252,
+          "power_w": 0.0019994095107000003,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.75,
+          "eye_v_mv": 652.8660057333063,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.6528660057333063,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 7
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.890_27\\audited_v2\\20260909T151320_000001_48f35f97"
+      }
+    },
+    {
+      "corner": "tt|1.890|125",
+      "archived_legacy": {
+        "guard_valid": true,
+        "guard_check": null,
+        "halted": null,
+        "pass10": true,
+        "pass9": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "failing": [],
+        "dc_gain_db": 1.0556078746805566,
+        "peak_gain_db": 9.549556051350553,
+        "boost_db": 8.493948176669996,
+        "peak_freq_ghz": 1.5093219,
+        "hd3_db": -59.29081218569542,
+        "noise_vrms": 0.000694913764,
+        "power_w": 0.0019959151842000003,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.8125,
+        "eye_v_mv": 620.6344699573935
+      },
+      "frozen_working_tree": {
+        "version": "frozen_working_tree",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.0556078746805566,
+          "peak_gain_db": 9.549556051350553,
+          "boost_db": 8.493948176669996,
+          "peak_freq_ghz": 1.5093219,
+          "hd3_db": -59.29081218569542,
+          "noise_vrms": 0.000694913764,
+          "power_w": 0.0019959151842000003,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.8125,
+          "eye_v_mv": 620.6344699573935,
+          "ok": true
+        },
+        "eye_audit": null,
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.890_125\\frozen_working_tree\\20260909T151321_000001_ebc9f98c"
+      },
+      "audited_v2": {
+        "version": "audited_v2",
+        "guard_valid": true,
+        "pass10": true,
+        "checks": {
+          "boost_range": true,
+          "peak_in_band": true,
+          "hd3": true,
+          "noise": true,
+          "power": true,
+          "area": true,
+          "eye_h": true,
+          "eye_v": true,
+          "dc_gain": true,
+          "boost_target": true
+        },
+        "metrics": {
+          "dc_gain_db": 1.0556078746805566,
+          "peak_gain_db": 9.549556051350553,
+          "boost_db": 8.493948176669996,
+          "peak_freq_ghz": 1.5093219,
+          "hd3_db": -59.29081218569542,
+          "noise_vrms": 0.000694913764,
+          "power_w": 0.0019959151842000003,
+          "area_mm2": 0.001002038189095627,
+          "eye_h_ui": 0.8125,
+          "eye_v_mv": 618.7109551643595,
+          "ok": true
+        },
+        "eye_audit": {
+          "signed_opening_v": 0.6187109551643595,
+          "errors": 0,
+          "count": 2016,
+          "ber": 0.0,
+          "sample_phase": 7
+        },
+        "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\tt_1.890_125\\audited_v2\\20260909T151322_000001_57092266"
+      }
+    }
+  ],
+  "cost": {
+    "measure_all": 18,
+    "analysis": 83
+  },
+  "wall_seconds_observed": 22.51600000000326,
+  "error": null
+}

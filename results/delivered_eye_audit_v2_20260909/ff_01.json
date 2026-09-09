@@ -1,0 +1,103 @@
+{
+  "corner": "ff|1.710|0",
+  "archived_legacy": {
+    "guard_valid": true,
+    "guard_check": null,
+    "halted": null,
+    "pass10": true,
+    "pass9": true,
+    "checks": {
+      "boost_range": true,
+      "peak_in_band": true,
+      "hd3": true,
+      "noise": true,
+      "power": true,
+      "area": true,
+      "eye_h": true,
+      "eye_v": true,
+      "dc_gain": true,
+      "boost_target": true
+    },
+    "failing": [],
+    "dc_gain_db": 1.530825367866285,
+    "peak_gain_db": 10.988754699594477,
+    "boost_db": 9.457929331728192,
+    "peak_freq_ghz": 1.69371927,
+    "hd3_db": -61.67235913137915,
+    "noise_vrms": 0.000565182773,
+    "power_w": 0.0017967485907,
+    "area_mm2": 0.001002038189095627,
+    "eye_h_ui": 0.75,
+    "eye_v_mv": 718.4447083862871
+  },
+  "frozen_working_tree": {
+    "version": "frozen_working_tree",
+    "guard_valid": true,
+    "pass10": true,
+    "checks": {
+      "boost_range": true,
+      "peak_in_band": true,
+      "hd3": true,
+      "noise": true,
+      "power": true,
+      "area": true,
+      "eye_h": true,
+      "eye_v": true,
+      "dc_gain": true,
+      "boost_target": true
+    },
+    "metrics": {
+      "dc_gain_db": 1.530825367866285,
+      "peak_gain_db": 10.988754699594477,
+      "boost_db": 9.457929331728192,
+      "peak_freq_ghz": 1.69371927,
+      "hd3_db": -61.67235913137915,
+      "noise_vrms": 0.000565182773,
+      "power_w": 0.0017967485907,
+      "area_mm2": 0.001002038189095627,
+      "eye_h_ui": 0.75,
+      "eye_v_mv": 718.4447083862871,
+      "ok": true
+    },
+    "eye_audit": null,
+    "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\ff_1.710_0\\frozen_working_tree\\20260909T151358_000001_ad255831"
+  },
+  "audited_v2": {
+    "version": "audited_v2",
+    "guard_valid": true,
+    "pass10": true,
+    "checks": {
+      "boost_range": true,
+      "peak_in_band": true,
+      "hd3": true,
+      "noise": true,
+      "power": true,
+      "area": true,
+      "eye_h": true,
+      "eye_v": true,
+      "dc_gain": true,
+      "boost_target": true
+    },
+    "metrics": {
+      "dc_gain_db": 1.530825367866285,
+      "peak_gain_db": 10.988754699594477,
+      "boost_db": 9.457929331728192,
+      "peak_freq_ghz": 1.69371927,
+      "hd3_db": -61.67235913137915,
+      "noise_vrms": 0.000565182773,
+      "power_w": 0.0017967485907,
+      "area_mm2": 0.001002038189095627,
+      "eye_h_ui": 0.75,
+      "eye_v_mv": 715.5112421743675,
+      "ok": true
+    },
+    "eye_audit": {
+      "signed_opening_v": 0.7155112421743675,
+      "errors": 0,
+      "count": 2016,
+      "ber": 0.0,
+      "sample_phase": 6
+    },
+    "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\ff_1.710_0\\audited_v2\\20260909T151359_000001_aca1f245"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "timesteps": 40960,
+  "elapsed_s": 6475.5,
+  "n_sims": 22080,
+  "n_invalid": 5317,
+  "invalid_rate": 0.1994,
+  "by_check": {
+    "__valid__": 16396,
+    "T2.5_mosfet_not_in_saturation": 1561,
+    "T4.10_dc_gain_implausible": 1480,
+    "T2.8_device_parameter_at_pdk_bound": 1031,
+    "T4.15_eye_zero_or_above_theoretical_max": 12
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-09-05 18:51:37",
+  "iterations_seen": 38,
+  "steps": 39936,
+  "std": 0.83,
+  "entropy_loss": -7.4,
+  "explained_variance": 0.117,
+  "approx_kl": 0.016898882,
+  "value_loss": 28.6,
+  "invalid_rate_cumulative": 0.4222,
+  "invalid_rate_marginal": 0.33866891322662174,
+  "invalid_marginal_history": [
+    0.3307017543859649,
+    0.3210202286719437,
+    0.313588850174216,
+    0.329004329004329,
+    0.32437120555073723,
+    0.3448275862068966,
+    0.31905961376994124,
+    0.33866891322662174
+  ],
+  "heartbeat_state": "running",
+  "healthy": true,
+  "breaches": []
+}

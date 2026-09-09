@@ -50,9 +50,30 @@ ev = build_evaluator(DEFAULT_SPEC, corner="tt", fast=False)
 
 
 def spec_pass(dv, target, channel):
-    """Exactly what honest_benchmark scores on: unguarded measure + hard_pass."""
+    """Exactly what honest_benchmark scores on: unguarded measure + hard_pass.
+
+    `dc_gain_db_min=None` IS THE POINT OF THIS EXPERIMENT, and it is pinned rather than
+    inherited. The question here is whether designs meeting the PUBLISHED eight-check spec
+    are real circuits, so the eight-check spec is the correct one to score against --
+    `honest_benchmark._DC_GAIN_DB_MIN` defaults to None for the same reason, and this
+    function's first line claims to match it.
+
+    IT STOPPED MATCHING, SILENTLY, AND THIS PIN IS THE REPAIR. Both this file and
+    `results/pass_vs_valid.json` were committed in 6d465c93a (17 Aug 2026), when
+    `Spec.dc_gain_db_min` was still None. 2f3ec52b3 (18 Aug 2026) flipped that default to
+    0.0 -- correctly, it closes the attenuate-at-DC hole -- and this file was never touched
+    again. So `replace(DEFAULT_SPEC, ...)` began yielding NINE checks while the shipped
+    artifact, and `docs/PASS_VS_VALID.md` which cites it, describe eight.
+
+    The artifact is not wrong; it is self-proving at eight. 14 of its 28 spec-passing
+    designs are rejected as T4.10_dc_gain_implausible, i.e. DC gain below 0 dB, which no
+    design that had also cleared a `dc_gain >= 0 dB` hard check could be. But re-running
+    this script at HEAD would have scored nine and produced a different split, so anyone
+    checking the document against the code would have found them in contradiction and had
+    no way to tell which was right. Pinning makes the script reproduce its own artifact.
+    """
     spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target,
-                               channel_loss_db=channel)
+                               channel_loss_db=channel, dc_gain_db_min=None)
     m = measure_all(dv, corner="tt", vdd=spec.vdd_nominal, fast=False,
                     channel_loss_db=channel)
     if not m.ok:

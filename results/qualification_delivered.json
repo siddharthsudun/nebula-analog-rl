@@ -1,0 +1,318 @@
+{
+ "what": "post-design qualification of the delivered SILQ circuit -- measures the frozen circuit, optimizes nothing, changes no recorded number",
+ "generated_by": "eqrl.experiments.qualify_delivered",
+ "commit": "a87bea13952c19dbaf27c9a1fc07872ab15ca002",
+ "circuit_source": "results/delivered_circuit.json",
+ "circuit_commit": "15a7d27de6ba1ba6560fc9eddbc4b6d8a234e9d9",
+ "guard": "eqrl.evaluator.build_evaluator -- the same guard the CLI and dashboard use",
+ "nominal": {
+  "evaluator": "fast=False (full guard: real HD3 and input-referred noise)",
+  "target_boost_db": 8.920073128007523,
+  "boost_tol_db": 1.5,
+  "channel_loss_db": 14.827656847721286,
+  "margins": {
+   "boost_db": {
+    "value": 9.165750309070695,
+    "kind": "target",
+    "target": 8.920073128007523,
+    "tol": 1.5,
+    "margin": 0.8362152126245519
+   },
+   "peak_freq_ghz": {
+    "value": 1.59886447,
+    "kind": "band",
+    "limit_lo": 1.25,
+    "limit_hi": 2.5,
+    "margin": 0.27909157600000006
+   },
+   "dc_gain_db": {
+    "value": 1.361947982710072,
+    "kind": "min",
+    "limit": 0.0,
+    "margin": 1.361947982710072
+   },
+   "hd3_db": {
+    "value": -61.76289664030013,
+    "kind": "max",
+    "limit": -30.0,
+    "margin": 1.0587632213433376
+   },
+   "noise_vrms": {
+    "value": 0.000593986436,
+    "kind": "max",
+    "limit": 0.0015,
+    "margin": 0.6040090426666667
+   },
+   "power_w": {
+    "value": 0.001896928596,
+    "kind": "max",
+    "limit": 0.015,
+    "margin": 0.8735380936
+   },
+   "area_mm2": {
+    "value": 0.001002038189095627,
+    "kind": "max",
+    "limit": 0.05,
+    "margin": 0.9799592362180876
+   },
+   "eye_h_ui": {
+    "value": 0.75,
+    "kind": "min",
+    "limit": 0.4,
+    "margin": 0.8749999999999999
+   },
+   "eye_v_mv": {
+    "value": 652.8164862292336,
+    "kind": "min",
+    "limit": 100.0,
+    "margin": 5.5281648622923365
+   }
+  },
+  "margins_note": "Per-metric fingerprint only. NOT ranked across metrics to crown a binding spec -- the normalizations are incommensurable (dc_gain_db floor is 0 dB -> absolute dB; peak_freq_ghz -> fraction of the band). The authoritative binding constraint is pvt_binding; the unit-comparable 'what breaks first' is Part A.",
+  "pvt_binding": {
+   "spec": "dc_gain_db",
+   "source": "results/delivered_circuit.json -> pvt.worst_case_by_metric (frozen; not re-simulated here)",
+   "worst_corner_value_db": 1.0404810884607727,
+   "worst_corner_at": "ss|1.890|125",
+   "floor_db": 0.0,
+   "worst_corner_slack_db": 1.0404810884607727,
+   "note": "DC gain is the constraint the PVT sign-off found binding. It has ample slack at TT nominal; it only binds at the worst process/VDD/temp corner."
+  }
+ },
+ "failure_radius": {
+  "protocol": "Part A: one parameter at a time, -20%..20% by 1%, others nominal, full guard.",
+  "scope": "LOCAL and single-parameter -- cannot see parameter interactions.",
+  "per_param": {
+   "w_in": {
+    "first_fail_pos_pct": null,
+    "reason_pos": null,
+    "first_fail_neg_pct": null,
+    "reason_neg": null,
+    "radius_pct": null
+   },
+   "l_in": {
+    "first_fail_pos_pct": null,
+    "reason_pos": null,
+    "first_fail_neg_pct": null,
+    "reason_neg": null,
+    "radius_pct": null
+   },
+   "i_tail": {
+    "first_fail_pos_pct": null,
+    "reason_pos": null,
+    "first_fail_neg_pct": null,
+    "reason_neg": null,
+    "radius_pct": null
+   },
+   "rs": {
+    "first_fail_pos_pct": 19.0,
+    "reason_pos": "boost_db",
+    "first_fail_neg_pct": null,
+    "reason_neg": null,
+    "radius_pct": 19.0
+   },
+   "cs": {
+    "first_fail_pos_pct": null,
+    "reason_pos": null,
+    "first_fail_neg_pct": null,
+    "reason_neg": null,
+    "radius_pct": null
+   },
+   "r_load": {
+    "first_fail_pos_pct": null,
+    "reason_pos": null,
+    "first_fail_neg_pct": -20.0,
+    "reason_neg": "T4.10_dc_gain_implausible",
+    "radius_pct": 20.0
+   }
+  },
+  "binding_param": "rs",
+  "empirical_local_failure_radius_pct": 19.0
+ },
+ "pairwise": {
+  "param1": "rs",
+  "param2": "r_load",
+  "grid_pct": [
+   -10.0,
+   -5.0,
+   0.0,
+   5.0,
+   10.0
+  ],
+  "cells": [
+   [
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    }
+   ],
+   [
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    }
+   ],
+   [
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    }
+   ],
+   [
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    }
+   ],
+   [
+    {
+     "pass": false,
+     "reason": "T4.10_dc_gain_implausible"
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    },
+    {
+     "pass": true,
+     "reason": null
+    }
+   ]
+  ],
+  "scope": "The two most single-parameter-sensitive params (rs, r_load); others held nominal. Full guard. Exposes interaction the 1-D sweep in Part A cannot see."
+ },
+ "adversarial": {
+  "protocol": "bounded local search (differential evolution, fast/AC path) for the +/-10%-per-parameter perturbation that minimizes the worst spec margin; the worst point and the nearest-failure point are re-checked with the full guard.",
+  "scope": "LOCAL heuristic. Reports the worst case FOUND within the budget, not a proof of the global worst case or the globally nearest failure. Search objective uses the fast (AC) path, so HD3/noise do not steer it.",
+  "budget_pct": 10.0,
+  "de": {
+   "maxiter": 40,
+   "popsize": 12,
+   "seed": 20260903,
+   "func_evals": 1440
+  },
+  "worst_case_within_budget": {
+   "delta_pct": {
+    "w_in": 5.72,
+    "l_in": -1.36,
+    "i_tail": -7.5,
+    "rs": 9.0,
+    "cs": 8.62,
+    "r_load": -8.84
+   },
+   "max_component_pct": 9.0,
+   "guard_valid": false,
+   "first_failing_spec": "T4.10_dc_gain_implausible",
+   "min_margin": null
+  },
+  "nearest_failure": {
+   "delta_pct": {
+    "w_in": 4.44,
+    "l_in": -1.06,
+    "i_tail": -5.83,
+    "rs": 6.99,
+    "cs": 6.69,
+    "r_load": -6.86
+   },
+   "max_component_pct": 6.99,
+   "guard_valid": true,
+   "first_failing_spec": "boost_db",
+   "closest_spec": "boost_db",
+   "min_margin": -9.906279219743889e-06
+  }
+ },
+ "monte_carlo": {
+  "label": "COMPONENT-TOLERANCE STRESS TEST -- assumed independent Gaussian, 3 sigma = +/-10%%. NOT a foundry mismatch/yield model. Distinct from the 45-corner PVT result, which uses real SKY130 corner models.",
+  "evaluator": "fast=True (AC path): HD3 and noise NOT re-simulated per sample.",
+  "n": 10000,
+  "sigma_pct": 3.333,
+  "trunc_sigma": 3.0,
+  "rng_seed": 20260903,
+  "params": [
+   "w_in",
+   "l_in",
+   "i_tail",
+   "rs",
+   "cs",
+   "r_load"
+  ],
+  "pass_fraction": 0.9992,
+  "ci95_low": 0.9984242928946343,
+  "ci95_high": 0.9996545555230036,
+  "fail_by_tier": {
+   "boost_db": 8
+  }
+ }
+}

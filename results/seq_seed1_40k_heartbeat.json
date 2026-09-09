@@ -1,0 +1,20 @@
+{
+  "state": "done",
+  "prefix": "seq_seed1_40k",
+  "target": 40000,
+  "steps_reached": 40960,
+  "pct": 102.4,
+  "attempts": 1,
+  "stalls": 0,
+  "elapsed_min": 458.2,
+  "history": [
+    {
+      "attempt": 1,
+      "started": "2026-09-05 02:03:27",
+      "resumed_from_steps": 0,
+      "exit_code": 0,
+      "steps_after": 40960
+    }
+  ],
+  "log": "results\\seq_seed1_40k.log"
+}

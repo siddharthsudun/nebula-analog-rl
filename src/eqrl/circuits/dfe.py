@@ -22,9 +22,24 @@ where (c0, c1) are the *real* cursors of this design's channel+CTLE pulse respon
 (eye.pulse_cursors), so the ISI the DFE cancels is the ISI this circuit actually produces.
 The feedback uses the known transmitted bit for the previous decision — the standard
 design-time simplification (correct-decision assumption; error propagation is a separate
-analysis). The tap is `dv.w_dfe` when set, else the adaptive optimum (= c1, what an LMS
-loop converges to). Built from linear `E poly` sources so ngspice converges every time and
-no PDK is needed.
+analysis). Built from linear `E poly` sources so ngspice converges every time and no PDK
+is needed.
+
+THIS MODULE IS NOT ON THE SCORING PATH — READ THIS BEFORE QUOTING IT
+--------------------------------------------------------------------
+Nothing in the measurement, training, PVT or reporting path imports this module. It is a
+hand-run characterisation and schematic-export utility, reached only through its own CLI
+(`main` below). Every published number was measured with a DIFFERENT 1-tap DFE: the one
+inside the eye engine, where `compute_eye` (`sim/eye.py`) adapts a tap to the measured
+first post-cursor and clips it, on by default. `measure_all` takes that default, so every
+reward, every one of the PVT corners and every eye number is a post-DFE eye.
+
+The consequence for `dv.w_dfe`: it is read on no scoring path, so its value influences no
+published number. Inside `measure_dfe` below it picks a tap fraction for that
+characterisation, and that is its only effect anywhere in the repo. That deadness is
+deliberate, not an oversight — the reason `w_dfe` is excluded from the action vector is
+given at its exclusion comment (`ctle.py:97-99`), and `tests/test_dfe_is_off_the_scoring_path.py`
+pins both facts so they cannot change silently.
 """
 from __future__ import annotations
 
@@ -116,12 +131,22 @@ def dfe_stage_eye(tap: float, *, c0: float = 0.5, c1: float = 0.28,
 def measure_dfe(dv: DesignVars, freq_ac: np.ndarray, H_ctle: np.ndarray, *,
                 channel_loss_db: float = 12.0, seed: int = 0) -> dict:
     """Characterise the 1-tap DFE for a real design: extract the channel+CTLE cursors,
-    and measure the eye at the slicer with the DFE off, at the adaptive optimum, and at the
+    and measure the eye at the slicer with no tap, at the adaptive optimum, and at the
     user's pinned tap fraction `dv.w_dfe`.
 
-    `dv.w_dfe` is a FRACTION of the optimal tap (0 = DFE off, 1 = full post-cursor
-    cancellation, >1 = over-correct); the sign is carried by c1, so the knob is sign-safe.
-    `dv.w_dfe` genuinely controls `eye_h_at_wdfe_v` -- it is no longer a dead parameter.
+    NO CALLER ON THE SCORING PATH. This function is a hand-run characterisation utility;
+    its only caller in the repo is `export_dfe_schematic` below, which is itself reached
+    only from this module's CLI. Nothing in measurement, training, PVT or reporting calls
+    either. So `dv.w_dfe` steers `eye_h_at_wdfe_v` in the dict returned here and nothing
+    else: no reward, no corner, no published number depends on its value. The DFE that
+    the scored eye actually runs is the adaptive one in `compute_eye` (`sim/eye.py`),
+    which is always on and adapts its tap to the measured post-cursor — this testbench
+    does not feed it. `w_dfe` is deliberately not an action variable; the reason is at
+    its exclusion comment (`ctle.py:97-99`).
+
+    `dv.w_dfe` is a FRACTION of the optimal tap (0 = no tap applied in THIS testbench,
+    which is not the same thing as the scored eye's DFE being off; 1 = full post-cursor
+    cancellation; >1 = over-correct). The sign is carried by c1, so the knob is sign-safe.
     """
     from eqrl.sim.eye import pulse_cursors
 

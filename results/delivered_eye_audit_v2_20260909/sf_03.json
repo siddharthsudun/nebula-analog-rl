@@ -1,0 +1,103 @@
+{
+  "corner": "sf|1.710|125",
+  "archived_legacy": {
+    "guard_valid": true,
+    "guard_check": null,
+    "halted": null,
+    "pass10": true,
+    "pass9": true,
+    "checks": {
+      "boost_range": true,
+      "peak_in_band": true,
+      "hd3": true,
+      "noise": true,
+      "power": true,
+      "area": true,
+      "eye_h": true,
+      "eye_v": true,
+      "dc_gain": true,
+      "boost_target": true
+    },
+    "failing": [],
+    "dc_gain_db": 1.2071167294950966,
+    "peak_gain_db": 9.547600559033544,
+    "boost_db": 8.340483829538448,
+    "peak_freq_ghz": 1.5093219,
+    "hd3_db": -53.0814772028641,
+    "noise_vrms": 0.0006731225179333002,
+    "power_w": 0.0017977703841,
+    "area_mm2": 0.001002038189095627,
+    "eye_h_ui": 0.8125,
+    "eye_v_mv": 629.7905960875545
+  },
+  "frozen_working_tree": {
+    "version": "frozen_working_tree",
+    "guard_valid": true,
+    "pass10": true,
+    "checks": {
+      "boost_range": true,
+      "peak_in_band": true,
+      "hd3": true,
+      "noise": true,
+      "power": true,
+      "area": true,
+      "eye_h": true,
+      "eye_v": true,
+      "dc_gain": true,
+      "boost_target": true
+    },
+    "metrics": {
+      "dc_gain_db": 1.2071167294950966,
+      "peak_gain_db": 9.547600559033544,
+      "boost_db": 8.340483829538448,
+      "peak_freq_ghz": 1.5093219,
+      "hd3_db": -53.0814772028641,
+      "noise_vrms": 0.0006731225179333002,
+      "power_w": 0.0017977703841,
+      "area_mm2": 0.001002038189095627,
+      "eye_h_ui": 0.8125,
+      "eye_v_mv": 629.7905960875545,
+      "ok": true
+    },
+    "eye_audit": null,
+    "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\sf_1.710_125\\frozen_working_tree\\20260909T151427_000001_ba2e3df1"
+  },
+  "audited_v2": {
+    "version": "audited_v2",
+    "guard_valid": true,
+    "pass10": true,
+    "checks": {
+      "boost_range": true,
+      "peak_in_band": true,
+      "hd3": true,
+      "noise": true,
+      "power": true,
+      "area": true,
+      "eye_h": true,
+      "eye_v": true,
+      "dc_gain": true,
+      "boost_target": true
+    },
+    "metrics": {
+      "dc_gain_db": 1.2071167294950966,
+      "peak_gain_db": 9.547600559033544,
+      "boost_db": 8.340483829538448,
+      "peak_freq_ghz": 1.5093219,
+      "hd3_db": -53.0814772028641,
+      "noise_vrms": 0.0006731225179333002,
+      "power_w": 0.0017977703841,
+      "area_mm2": 0.001002038189095627,
+      "eye_h_ui": 0.8125,
+      "eye_v_mv": 630.331668293805,
+      "ok": true
+    },
+    "eye_audit": {
+      "signed_opening_v": 0.630331668293805,
+      "errors": 0,
+      "count": 2016,
+      "ber": 0.0,
+      "sample_phase": 7
+    },
+    "artifact_dir": "results\\delivered_eye_audit_v2_20260909\\raw\\sf_1.710_125\\audited_v2\\20260909T151428_000001_05f5ec34"
+  }
+}

@@ -24,57 +24,46 @@ and truer.** The good news: there is a real, defensible gap, and we're already s
 
 ---
 
-## 1. The one genuinely novel thing: a reward-integrity guard against non-physical designs
+## 1. Candidate contribution: a topology-specific reward-integrity guard
 
 ### The problem, stated precisely
-In RL circuit sizing, the agent maximizes a reward computed from a SPICE result. But **a
-broken circuit can return a perfectly plausible-looking SPICE result.** Concrete failure
-(we can reproduce it): push the load resistor high enough that the drain node collapses
-below the transistor's saturation voltage. The amplifier is **dead** — output pinned, devices
-in triode — yet `.ac` still returns a finite gain (say −39 dB) and `.noise` returns a finite
-number. Nothing errors. The reward function sees "ordinary low-gain amplifier," not "corpse."
+In RL circuit sizing, the agent maximizes a reward computed from a SPICE result. A simulator
+can return finite small-signal metrics for a bias point that is inconsistent with the intended
+topology and operating regime. For example, an intended common-source gain device can leave
+saturation while `.ac` and `.noise` still return finite values. The reward must therefore carry
+explicit assumptions about device roles, node headroom, and the intended link gain budget.
 
-An RL agent will **find and exploit these regions** — it's the textbook definition of
-**reward hacking**: optimizing a proxy while the true objective (a *functional* circuit) is
-violated. This is a documented, named failure mode in physical RL — e.g. a fluid-control
-policy that "reported drag reduction while collapsing to non-physical configurations"
-(arXiv 2606.06227). Our audit found our *own* agent doing exactly this: railed parameters,
-an attenuating "equalizer," a design sitting on a boundary that only looks valid.
+An agent can optimize such a mismatch between a proxy and the intended circuit behavior. That
+is a reward-integrity risk, not yet evidence that every low-gain or non-saturating candidate is
+non-functional. The historical pass-versus-valid labels require fresh revalidation after the
+`eye.py` self-label correction; see `docs/CRITICAL_AUDIT_2026-09-08.md`.
 
-### Why this is a real gap (this is the defensible part)
-The crowded RL-sizing literature does **not** guard against *functional invalidity*:
-- **They assume the simulator result is meaningful.** AutoCkt, DNN-Opt, PPAAS optimize on
-  the returned metrics directly.
-- **GLOVA (2025) does early failure detection — but a *different* failure class.** GLOVA's
-  μ-σ / simulation-reordering trick halts *spec* verification early when a design is going to
-  *miss specs across corners*. That's "this design is bad." It is **not** "this design is
-  **non-functional but scores fine**." Those are different problems: GLOVA saves time on
-  designs that visibly fail; we catch designs that *invisibly* pass.
-- Classical flows have "DC bias verification" as a manual sign-off step — but nobody has put
-  it **inside the RL reward loop as a hard gate that converts reward-hacking exploits into
-  rejections.**
-
-**That combination — an operating-point *validity* guard, integrated into the RL reward as a
-reward-hacking defense, for high-speed equalizer sizing — is, as far as the 2024–25 literature
-shows, unclaimed.** It also happens to be the kind of "boring but real" contribution that a
-*professional* judge (who has debugged dead SPICE decks at 2am) will immediately respect,
-precisely because the flashy stuff (RL, LLM, PVT) is already taken.
+### What can be claimed after comparison
+This is a candidate contribution, not a field-wide priority claim. The related work named in
+§7 includes methods that reason from equations, inspect operating regions, or address robust
+analog optimization. The required comparison is whether SILQ's *specific* combination of
+topology-specific operating-region checks, reward gating, and early characterization skipping
+differs materially from those methods. Until that comparison and fresh revalidation are
+complete, do not claim "first," "nobody," or an unqualified functionality guarantee.
 
 ### What the guard actually checks (make it concrete)
-For every candidate, **before** trusting the reward, run a cheap `.op` and assert:
-1. **Every transistor is in saturation** — `Vds > Vds,sat` and `Vgs > Vth` for each device
-   (read `region`/`vdsat` from the SPICE operating point).
+For every candidate, **before** trusting the reward, run a cheap `.op` and assert the
+topology-specific conditions documented for that circuit:
+1. **Operating-region checks by device role.** Require saturation only for devices intended to
+   provide saturated gain; a device deliberately used as a switch, resistor, or other
+   non-saturating element needs its own criterion.
 2. **No collapsed/railed nodes** — output common-mode inside `[Vov, VDD−Vov]`, not pinned.
 3. **Bias sanity** — the mirror actually delivers ~the intended current (mirror error bounded).
 4. **Convergence & finiteness** — the op point converged and metrics are finite/non-degenerate.
 
-If any check fails → the design is **rejected** (large negative reward, flagged invalid),
-and — the efficiency win — we **skip the expensive characterization** (transient HD3, eye,
-noise) entirely. A dead design never consumes the costly sims.
+If a documented condition fails, the design can be rejected (large negative reward, flagged
+for review) and the expensive characterization can be skipped. The time-saving benefit remains
+a hypothesis until measured with the corrected scoring path.
 
 ### Why it makes the project *better* (three measurable payoffs)
-1. **Reward integrity / trust.** The agent can no longer converge to a phantom. Every design
-   it proposes is a *functioning* circuit. This is the correctness argument.
+1. **Reward integrity / trust.** The agent is constrained by explicit, reviewable operating
+   assumptions. This is evidence of conformance to those assumptions, not proof of universal
+   circuit functionality.
 2. **Sample efficiency = the #1 industry pain.** Industry's dominant complaint is
    **simulation cost**: "many learning-based algorithms require thousands of simulated data
    points, impractical for expensive-to-simulate circuits," and "simulation of post-layout
@@ -86,13 +75,12 @@ noise) entirely. A dead design never consumes the costly sims.
 3. **PVT realism.** Combined with our **real current-mirror bias** (not an ideal source), the
    guard ensures the agent respects the actual bias/headroom constraints that break real chips.
 
-### The experiment that proves it (build this — it's the money slide)
+### The experiment that tests it
 - **A/B run:** identical RL setup, guard **OFF** vs **ON**, same seeds/budget.
-- **Show the exploit:** with guard OFF, exhibit a design the agent converged to that *passes
-  the numeric reward but is non-functional* (transistor in triode, dead amp). This is your
-  jaw-drop moment — "here is the agent cheating."
-- **Show the fix:** with guard ON, that region is rejected; the agent is forced to
-  functionally-valid designs.
+- **Show the operating-regime mismatch:** with the guard OFF, exhibit a candidate that passes
+  the numeric reward while violating a documented device-role or headroom criterion.
+- **Show the effect of the guard:** with the guard ON, show whether that region is rejected and
+  whether the resulting candidates meet the same documented criteria.
 - **Two numbers:** (a) *invalid-design rate* the guard caught; (b) *simulation time saved* by
   early rejection. Plot both. This converts "we have a guard" into evidence.
 
@@ -112,26 +100,17 @@ These aren't unique on their own, but stacked with the guard they make a coheren
   spec. (Addresses the "only one scalar varies" critique.)
 - **Real current-mirror bias.** We model the bias network that actually drifts across PVT, so
   our robustness numbers mean something. Many demos quietly use ideal sources.
-- **Resident-simulator engineering (~90× faster evals).** This is *engineering, not AI* — so
-  **frame it honestly** as "the enabler that made RL-on-real-SPICE feasible in an afternoon,"
-  never as the headline result. (The old "350×" claim was measuring simulator startup — do not
-  repeat it.)
+- **Resident-simulator engineering.** This is engineering, not AI. Its performance benefit is
+  pending provenance; do not use speedup figures as a headline.
 
 ---
 
-## 3. The honest headline numbers (use these exact framings)
+## 3. Headline metrics are pending provenance
 
-- **Sample efficiency, per spec:** trained policy reaches a full-8-spec design in a **median
-  of ~6 SPICE evaluations**, vs **~24–25 for CMA-ES / Bayesian / random from scratch**
-  (measured, identical success test). → *"~4× fewer simulations per spec than the strongest
-  conventional optimizer."*
-- **vs brute force (what Astera actually asked to beat):** an exhaustive parameter sweep is
-  ~10⁶+ simulations in 6 dimensions; the policy uses single digits. → the honest "orders of
-  magnitude vs sweeping" claim.
-- **Amortization (be upfront):** RL carries a one-time training cost (~11k sims), so it only
-  *net* pays back after many specs. **Show the break-even curve** — that honesty is itself
-  impressive and pre-empts the judge's obvious question. Do **not** hide the training cost.
-- **PVT:** full 45-corner sign-off **with a real bias mirror** and the real eye at every corner.
+Do not quote evaluation counts, speedups, training cost, break-even, or PVT-coverage figures
+from this document. Each needs a cited artifact, an explicit scoring definition, and fresh
+revalidation after the `eye.py` correction. The audit record is
+`docs/CRITICAL_AUDIT_2026-09-08.md`.
 
 ---
 
@@ -149,17 +128,12 @@ These aren't unique on their own, but stacked with the guard they make a coheren
 
 ## 5. The pitch — sentences to actually say to Astera
 
-> "RL for analog sizing isn't new — AutoCkt did it, and 2025 already has PVT-aware RL and LLM
-> agents. So we didn't try to out-RL them. We went after a failure mode *none* of them
-> address: **an RL agent will reward-hack a SPICE reward, because a broken, non-functional
-> circuit still returns a plausible number.** We built an **operating-point validity guard**
-> that sits inside the reward loop, proves every device is in saturation before the metric is
-> trusted, and rejects the phantom designs the agent would otherwise exploit. It does two things
-> a judge cares about: it makes every proposed design a *real* circuit, and — because it kills
-> invalid candidates with one cheap operating-point check instead of a full characterization —
-> it **cuts the wasted-simulation budget**, which is the #1 cost in this whole field. Here's the
-> agent cheating with the guard off; here's it forced honest with the guard on; here's the
-> simulation time we saved."
+> "RL for analog sizing is established work. Our contribution under evaluation is a
+> topology-specific operating-point guard inside the reward loop. It makes the operating
+> assumptions explicit before the reward is trusted, and it can reject candidates that violate
+> those assumptions before expensive characterization. We will compare this behavior directly
+> with related methods and show a guard-off/guard-on revalidation, rather than claiming that it
+> proves functionality or has no precedent."
 
 Then show: the exploit design, the A/B curves, the 45-corner sign-off on the real-bias circuit,
 the eye opening, and the honest sample-efficiency + break-even numbers.
@@ -196,7 +170,10 @@ the eye opening, and the honest sample-efficiency + break-even numbers.
   detection is *spec* failure, not functional validity).
 - PPAAS — PVT & Pareto-aware goal-conditioned RL — arXiv 2507.17003.
 - LLM agents: AnaFlow (arXiv 2511.03697), AutoSizer, LEDRO, White-Box Reasoning (arXiv 2508.13172).
-- Reward hacking as a named failure mode in physical RL — arXiv 2606.06227; overview: Wikipedia "Reward hacking".
-- Industry pain / simulation bottleneck framing — Synopsys "AI-powered analog design";
-  Berkeley BAIR "Sample-Efficient EA for Analog" (simulation cost).
-- gm/ID methodology — inversion-coefficient sizing literature.
+- SelfCal — arXiv:2604.07387 (equation-based LLM reasoning, local-slope comparison, and triode
+  flags); Lighthouse — arXiv:2607.14008; FD-MAGRPO — AAAI article 39388 (operating-region
+  observations).
+- HR2 — DOI:10.1109/MLCAD65511.2025.11189231; PVT Sizing —
+  DOI:10.1145/3649329.3661850; RoSE — arXiv:2407.19150; SABLE — arXiv:2607.03701.
+- These references define the comparison set; they do not establish a priority claim or a SILQ
+  performance result.

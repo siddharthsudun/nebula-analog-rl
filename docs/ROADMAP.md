@@ -58,9 +58,12 @@ from Python.
 - [x] Corner runner: TT/SS/FF/SF/FS × VDD ±5% × {0, 27, 125} °C — all 45, with HD3 and
       noise simulated at each. ✅
 - [x] Reward = worst-corner aggregate; pass-bonus when all specs pass all corners. ✅
-- [ ] A design that holds across the grid. The one committed in `results/` fails 10 of 45
-      (`results/legacy_design_recheck.json`, `all_pvt_pass: false`); the 10 failures do
-      not solve at all rather than missing a limit.
+- [x] A design that holds across the grid. An earlier entry here recorded a legacy design
+      failing 10 of 45 corners; that measurement was **withdrawn** in `1b00a9659` — the
+      failures were `-nan(ind)` returns from a diverging differential noise analysis, not
+      corners out of limit, and its artifact was deliberately deleted. The delivered
+      circuit passes 45/45 (`results/delivered_circuit.json`,
+      `results/pvt_signoff_seed23.json`, both tracked). ✅
 - [ ] Delete or supersede `results/final_report.json`, which still asserts
       `all_pvt_pass: true` for a different design of the same generation — never rechecked
       on the corrected circuit, and produced by a checkpoint the current env cannot load.

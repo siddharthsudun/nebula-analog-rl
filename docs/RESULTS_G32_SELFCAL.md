@@ -1,9 +1,14 @@
-# RESULT — H-SC: G3.2's slope constants are runtime-derivable
+# Historical result — H-SC: G3.2 self-calibration development slice
 
-**Verdict: EQUIVALENT.** Criterion, slice and verdict rule were committed in
+**Historical verdict: equivalent on the development slice. Current verdict: fresh
+revalidation pending.** Criterion, slice and verdict rule were committed in
 `docs/PREREG_G32_SELFCAL.md` (`4b4c6a3c2`) before the harness existed
 (`a3e081eb5`), which ran before this document. Artifact:
 `results/g32_selfcal_bench.json`, 155 simulations.
+
+The figures below are retained for traceability, not as fresh delivery validation. A concurrent
+`eye.py` self-labelling correction changes future scores. The historical artifact, the frozen
+configuration, and the delivered result remain unchanged; a fresh revalidation is pending.
 
 Reproduce:
 
@@ -20,11 +25,12 @@ single-axis perturbations and **paid for them out of the same 10-evaluation stag
 so it ran on `r − spent`. Everything else — evaluator, rescue ladder, budget, tolerance —
 was identical. The only difference between the arms is the plane dict.
 
-**Internal validity gate: PASSED.** The frozen arm inside this harness reproduced
+**Historical internal-harness gate: passed.** The frozen arm inside this harness reproduced
 `results/g32_repair_smoke.json` exactly on all ten specs and all five outcome fields, so
-the differences below are attributable to the plane and not to the harness.
+the differences below are attributable to the plane and not to the harness under the historical
+scoring path. This does not validate scores after the `eye.py` correction.
 
-## 2. The numbers
+## 2. Archived figures — not current performance claims
 
 | criterion | frozen | calibrated | passes |
 |---|---|---|---|
@@ -89,22 +95,16 @@ evidence**, and spec 15's +0.007 dB is purely the cost of the wasted budget. Thr
 is not a small failure rate, and it is the main practical argument against switching the
 default on.
 
-## 5. What this establishes, and what it does not
+## 5. What the historical artifact suggests, and what it does not
 
-It establishes that G3.2's slope table is derivable at runtime from 2–4 perturbations at
-the design in hand, and that substituting the measured slopes for the frozen ones changes
-no solve outcome on the development slice **at equal total cost**. The criticism "you
-hand-tuned these constants until it worked" does not survive: the boost constant sits inside
-a 2.7× band the controller cannot distinguish, and the peak constant is set by the
-simulator's frequency resolution rather than by any fit. It does **not** establish anything
-about the held-out seed 23, about the delivered circuit, or about the *axis* choice (`rs`
-for boost, `l_in` for peak), which remains a seed-2 development artifact and was carried
-over unchanged. It is n = 10 on a burned development slice with no inferential test and no
-p-value, and it must never be quoted alongside the seed-23 numbers as though it were one of
-them.
+Before the eye-score correction, this development artifact suggested that local boost slopes
+varied while the controller's archived outcomes did not change on the burned slice. The peak
+axis remains limited by AC-grid quantization, and three development cases fell back to the
+frozen plane. It does not establish behavior on held-out data, the delivered circuit, or the
+axis choice (`rs` for boost, `l_in` for peak). No archived figure here should be quoted as a
+current performance result.
 
-**Nothing shipped changed.** The delivered circuit is the frozen-slope one, no constant in
-`g32_repair.py` moved, `results/final_comparison_seed23.json` was not re-run, and the
-self-calibrating path stays opt-in. On this evidence it should stay opt-in: it costs 2–4 of
-10 refinement evaluations, buys no measurable accuracy, and comes back empty-handed on
-three specs in ten.
+**The frozen configuration remains the delivered configuration.** No constant in
+`g32_repair.py` changed and the historical artifact is preserved. A fresh delivered-design
+revalidation with the corrected eye scorer is pending. Until it is complete, the
+self-calibrating path remains an archived development option rather than a validated default.

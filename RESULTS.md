@@ -161,10 +161,14 @@ through the full guard layer and scored against the requested target. The delive
 (`results/delivered_circuit.json`, `docs/REPRODUCE.md` §21):
 
 ```
-all_pvt_pass          : true
-passed                : 45 / 45
-worst-corner tgt err  : 1.081 dB   (fs / 1.71 V / 125 °C)
-binding constraint    : DC gain, 1.04 dB of margin
+all-guard-valid       : true    (`results/delivered_circuit.json → pvt.all_guard_valid`)
+passed                : 45 / 45 (`results/delivered_circuit.json → pvt.corners_passed`,
+                                  `results/delivered_circuit.json → pvt.corners_total`)
+worst-corner tgt err  : 1.081 dB (`results/delivered_circuit.json → pvt.worst_corner_target_err_db`;
+                                  fs / 1.71 V / 125 °C from `results/delivered_circuit.json → pvt.worst_corner`)
+binding constraint    : DC gain, 1.04 dB over its 0 dB floor
+                                  (`results/delivered_circuit.json → pvt.worst_case_by_metric.dc_gain_db.min`,
+                                   `results/delivered_circuit.json → pvt.worst_case_by_metric.dc_gain_db.limit_lo`)
 ```
 
 It was **not** hand-picked: all 22 held-out candidates that met the strict criterion at TT
@@ -174,19 +178,55 @@ gain and saturation headroom at low supply / high temperature. Optimisation ran 
 so this is an out-of-distribution measurement of one generated candidate, not a claim that
 the framework yields PVT-robust designs in general.
 
-*(For provenance, an earlier legacy design — produced before the tail-mirror fix — fails
-10 of 45 corners; `results/legacy_design_recheck.json`. It is kept in the tree as a record,
-not as the delivered result.)*
+*(An earlier recheck reported that a legacy design failed 10 of 45 corners. That
+measurement was withdrawn in `1b00a9659`: the failures were `-nan(ind)` returns from a
+diverging differential noise analysis, not corners out of limit, and its artifact was
+deliberately deleted. See the withdrawn-refutation notice in HANDOVER.md. It says nothing
+about the delivered design either way.)*
 
 The eye is computed, not assumed: the SPICE-extracted **complex** CTLE response is put in
 series with a minimum-phase PCIe-Gen2 channel (skin + dielectric loss, 12 dB at Nyquist)
 and a 1-tap DFE adapted to the first post-cursor, then a random NRZ pattern is run through
 and folded. `src/eqrl/sim/eye.py`.
 
+### The same 45 corners, measured twice by two different eye scorers
+
+An eye number is only as good as the scorer that produced it, and this one is a
+behavioural DSP model rather than a SPICE transient — so it was re-measured by a second,
+independently written instrument. `compute_eye_v2` labels each column by the *transmitted*
+bit rather than by the receiver's own decision sign, convolves with a finite causal FIR
+instead of a circular FFT, and adapts its DFE tap by decision-directed LMS rather than
+clipping to the first post-cursor. It is a different algorithm, not a re-tuning, and it
+enters the frozen guard before any of its numbers can be exposed
+(`src/eqrl/experiments/delivered_eye_audit.py`). Both versions were run over the whole
+45-corner grid, with HD3 and input-referred noise simulated at every corner:
+
+```
+corners recorded      : 45 / 45 (`results/delivered_eye_audit_v2_20260909/comparison.json → corners_recorded`,
+                                  `results/delivered_eye_audit_v2_20260909/comparison.json → corners_required`)
+frozen scorer, 10/10  : 45      (`results/delivered_eye_audit_v2_20260909/comparison.json → corners_pass10.frozen_working_tree`)
+audited v2,   10/10   : 45      (`results/delivered_eye_audit_v2_20260909/comparison.json → corners_pass10.audited_v2`)
+run complete          : true    (`results/delivered_eye_audit_v2_20260909/comparison.json → complete`)
+```
+
+The two instruments agree: a median difference of 3.3 mV of eye height and a worst case of
+40.8 mV, on openings of 599–721 mV against a 100 mV floor. The direction matters more than
+the size — v2 reads **lower** than the frozen scorer at 44 of the 45 corners, exceeding it
+by at most 0.54 mV, so the shipped number is not the optimistic one. v2 also records zero
+decision errors on all 2,016 scored bits at every corner.
+
+This is a cross-check of the measurement, not of the silicon. Both scorers share the same
+SPICE-extracted complex response and the same behavioural channel, so a defect in either
+of those would move both. It rules out one specific failure — that the delivered eye is an
+artifact of how the frozen scorer folds and labels its samples — and nothing beyond that.
+
 *(Note: `results/final_report.json` is a stale legacy artifact from the honest-benchmark
-line and asserts `all_pvt_pass: true` for a different pre-mirror-fix design. It is not the
-delivered result — that is `results/delivered_circuit.json` — and is kept only for the
-record.)*
+line, but it has no `all_pvt_pass` field. The committed artifact that carries that field is
+`results/solved_design_pvt.json → all_pvt_pass`, for a different design. The schema is
+constructed by `src/eqrl/experiments/characterize.py::characterize`; its CLI writes that
+schema as `<outdir>/final_report.json`, while `solved_design_pvt.json` records no generator
+provenance. The delivered result is `results/delivered_circuit.json`, whose PVT fields are
+cited above.)*
 
 ## Speed: 82.2× per evaluation
 

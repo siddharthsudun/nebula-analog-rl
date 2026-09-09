@@ -1,0 +1,30 @@
+{
+  "model": "results\\seq_seed2_40k.zip",
+  "timesteps": 40000,
+  "n_sims": 44722,
+  "n_invalid": 20012,
+  "wall_minutes": 404.9,
+  "seed": 2,
+  "fast": true,
+  "guarded": true,
+  "shaped_invalid": false,
+  "pvt": false,
+  "horizon": 20,
+  "n_envs": 8,
+  "step_size": 0.18,
+  "target_range": [
+    5.0,
+    11.0
+  ],
+  "channel_range": [
+    8.0,
+    16.0
+  ],
+  "resumed_from": null,
+  "feasible_decode": false,
+  "anchor_baseline": false,
+  "anchor_noise": 0.0,
+  "boost_tol": null,
+  "target_weight": null,
+  "target_price_ref_db": null
+}

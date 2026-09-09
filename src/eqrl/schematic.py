@@ -19,8 +19,16 @@ topology, the fixed load caps, the mirror length -- is fixed by the design and d
 That split is the point of the figure: it shows exactly what was searched and what was not.
 
 The 1-tap DFE is drawn as a DOWNSTREAM, DASHED block deliberately. It is a receiver-DSP
-tap applied at the slicer in the eye engine, not an analog node in this netlist, and
-w_dfe = 0 in the delivered design. Drawing it as an analog component would be a lie.
+tap applied at the slicer in the eye engine, not an analog node in this netlist, so
+drawing it as an analog component would be a lie.
+
+The block IS active, and the drawing must not be read as saying otherwise. `w_dfe = 0`
+means only that no design-time tap was searched: the DFE the eye numbers were measured
+with adapts its own tap to the measured post-cursor at runtime, inside `compute_eye`
+(`sim/eye.py`), and it is on for every reward and every PVT corner. So the block is
+labelled with the runtime tap, and `w_dfe` is demoted to a hint about the unsearched
+design-time knob. "1-tap DFE / w_dfe = 0" on its own would read as "DFE off", which is
+false.
 """
 from __future__ import annotations
 
@@ -275,10 +283,15 @@ def render(dv: DesignVars, *, title: str = "Delivered CTLE",
              f'1-tap DFE</text>')
     g.append(f'<text x="{dfe_x}" y="{dfe_y + 6}" class="hint" text-anchor="middle">'
              f'RX DSP at the slicer</text>')
+    # The tap the eye numbers were actually measured with is the ADAPTIVE one; w_dfe is
+    # the design-time knob, which was never searched. Printing "w_dfe = 0" as the block's
+    # value read as "DFE off", which is false, so it is demoted to the hint below.
     g.append(f'<text x="{dfe_x}" y="{dfe_y + 24}" class="val" text-anchor="middle">'
-             f'w_dfe = {dv.w_dfe:g}</text>')
+             f'adaptive tap (runtime)</text>')
     g.append(f'<text x="{dfe_x}" y="{dfe_y + 50}" class="hint" text-anchor="middle">'
              f'not an analog node</text>')
+    g.append(f'<text x="{dfe_x}" y="{dfe_y + 66}" class="hint" text-anchor="middle">'
+             f'w_dfe = {dv.w_dfe:g}: unsearched knob</text>')
 
     header = (f'<text x="40" y="34" class="title">{title}</text>'
               + (f'<text x="40" y="54" class="sub">{subtitle}</text>' if subtitle else ""))

@@ -17,7 +17,7 @@ colleague, and watch a verified SKY130 CTLE appear, redrawn for every simulated 
 
 ```bash
 python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dashboard.txt
 PYTHONPATH=src python -m uvicorn server:app --port 8000
 # open http://127.0.0.1:8000
 ```
@@ -93,20 +93,26 @@ it we have executed is verification.
   natural-language spec ──(LLM wrapper)──▶ Spec object
                                              │
                                              ▼
-     ┌──────────────────────────────────────────────────────┐
+     ┌───────────────────────────────────────────────────────┐
      │              EqualizerEnv  (Gymnasium)                │
      │                                                       │
-     │   action  ─▶  device sizes (W/L, Rs, Cs, gm, DFE tap) │
+     │   action  ─▶  6 CTLE knobs: W/L, Itail, Rs, Cs, Rload │
      │                       │                               │
      │                       ▼                               │
-     │        CTLE+DFE netlist  ──▶  ngspice / PySpice        │
-     │                       │            (across PVT)        │
+     │        CTLE netlist  ──▶  ngspice / PySpice           │
+     │                       │            (across PVT)       │
      │                       ▼                               │
      │        measures: peaking, HD3, noise, P, area, eye    │
+     │        (eye measured AFTER a 1-tap DFE, auto-adapted  │
+     │         to the first post-cursor — always on, and     │
+     │         never a searched variable)                    │
      │                       │                               │
      │                       ▼                               │
-     │        reward = −worst-corner distance-to-spec        │
-     └──────────────────────────────────────────────────────┘
+     │        reward = clipped margin sum + pass bonus,      │
+     │        at ONE corner. Worst-corner is the --pvt       │
+     │        path and the shipped policy did NOT use        │
+     │        it (results/seq_clean40k_train.json).          │
+     └───────────────────────────────────────────────────────┘
                                 │
                                 ▼
               RL agent (PPO / DDPG · stable-baselines3)
@@ -159,8 +165,10 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
   parameter sweep the poster names as the baseline. It supplies feasibility, not sizing
   precision; on its own it does not hit a *requested* boost above a matched-chance null,
   and that is reported as the boundary of the RL claim, not hidden.
-- **G3.2 closes the requested spec.** A constraint-aware numerical stage that refines the
-  PPO handoff. On a 40-spec held-out set it cut median target error from **1.886 dB
+- **G3.2 closes the requested spec.** A numerical stage that refines the PPO handoff,
+  constrained to the requested boost and the peak-frequency band (`boost_axis`,
+  `peak_axis`, `band_ghz` at `final_comparison.py:128-132`) — *not* to the acceptance
+  limits a user may tighten, which enter only at verification. On a 40-spec held-out set it cut median target error from **1.886 dB
   (PPO→CMA-ES baseline) to 0.231 dB** at roughly half the refinement budget, and the
   coverage explanation that killed the earlier retargeting result runs the wrong way here
   (`docs/REPRODUCE.md` §20.2). **Strict solve counts do not clear their matched chance line
@@ -168,6 +176,30 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
 - **The delivered circuit passes all 45 PVT corners** (`results/delivered_circuit.json`):
   target 8.920 dB over a 14.83 dB channel, worst-corner error 1.081 dB, DC gain the binding
   constraint. 1 of 22 held-out candidates was PVT-clean; optimisation ran at TT only.
+
+**What the training never asked for.** Stated here because it is the first thing a
+reader should be able to check about an RL entry, and because both facts are readable
+straight off the trainer's own config files (`results/*_train.json`, nine of them):
+
+- **No policy in this repo was ever trained against corner variation.** `pvt: False` in
+  all nine configs, the frozen `seq_clean40k` included. A worst-corner reward path
+  exists and works — `self.pvt` selects the lowest-reward V×T corner rather than the
+  nominal one (`src/eqrl/envs/sequential_env.py:274`) — and no checkpoint has used it.
+  Note what it is and is not even when switched on: it sweeps voltage and temperature
+  at `self.corner`, a *single* process corner, so it would not by itself amount to
+  training across the 45-corner grid the spec table names. Robustness today is
+  something we *measure afterwards* rather than optimise for, and the 1-of-22 rate
+  above is the direct consequence.
+- **Training targets spanned 5–11 dB; the published requirement is 3–12 dB.**
+  `target_range: [5.0, 11.0]` in all nine configs, and the 32-spec benchmark draws
+  5.01–10.99 dB — so the held-out set is held out in *specs*, not in *range*. The outer
+  2 dB at each end is untrained and untested, and the 0% solve rate in the
+  negative-margin regime is a coverage gap of the same kind rather than a limit of the
+  method: `channel_range: [8.0, 16.0]` against those targets makes "requested boost
+  exceeds channel loss" a thin sliver of what the agent ever saw.
+
+Both are being addressed on a separately named checkpoint. The frozen path and every
+number derived from it are unchanged either way.
 
 **Infrastructure, on real SKY130:**
 
@@ -182,8 +214,14 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
 - **The declared action space is 20.4% physically valid**: 51 of 250 uniform samples
   (`results/space_validity.json`). The tail-current range was capped at 1 mA on measured
   physics (nothing valid above it across 90 samples); no other range was narrowed.
-- `area` cannot fail as a constraint: worst design anywhere is 0.0113 mm² against a
-  0.05 mm² budget. Measured, not live.
+- `area` cannot fail as a constraint: every term of `area_mm2` is increasing in its own
+  variable, so the upper corner of `ACTION_SPACE` is the true supremum — **0.002227 mm²
+  against a 0.05 mm² budget, a 22× margin** (`src/eqrl/circuits/ctle.py:62-75`; 200k
+  log-uniform samples peak at 0.002069, consistent). This is an analytic *bound over the
+  whole space*, not a worst case observed in the runs we happened to do. It replaces an
+  earlier 0.0113 mm² figure that predated capping the tail current at 1 mA — the mirror
+  term scales with `i_tail`, and narrowing the range by 20× was never propagated to that
+  number.
 
 **How the record reads.** This repo kept its own retracted results in the git history
 rather than deleting them: an early 32/32 retargeting number was selection bias, an early

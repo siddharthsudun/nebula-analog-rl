@@ -168,6 +168,23 @@ is still 15–170x inside the project's 1.5 dB strict criterion.
 
 ### 4.2 `fastest`-floor characterization, 32 fresh specs (spec-seed 99)
 
+> ### ⚠️ THIS SECTION DESCRIBES A MECHANISM THAT NO LONGER EXISTS
+>
+> The `fastest` hedge and the floor-budget escalation were both **removed** by `30a90901f`
+> (2026-09-06 15:40), the same commit that replaced `fastest`'s stage 1 — see §4.3 warning
+> item 4. `pipeline.py:211` now reads "No floor-budget escalation", and `pipeline.py:956`
+> describes stage 2 as "the SAME frozen `g32_solve`, fixed small budget, **no floor**".
+>
+> `results/fastest_floor_sweep_seed99.json` has mtime 2026-09-06 03:24, twelve hours before
+> that commit. So every number below — 17/32 hedge-accepted, 15/32 floor-fires, the 15/15
+> exact-match result — measures code that has since been deleted. **None of it may be
+> quoted as a property of the shipped system.**
+>
+> Kept, not deleted, for the same reason §6's 0/32 blocks are kept: the floor's design bound
+> ("no worse than running `default`") held *exactly* rather than approximately on every one
+> of 15 cases, and that is a real, well-measured result about a mechanism we then chose to
+> remove. It is evidence about how we work, not about what we ship.
+
 `scratch_compare_fastest_floor.py` runs `fastest` and `default` on a **fresh, nonzero**
 spec-seed (99 — never seen by any mode-selection decision, per v1 §6's own methodology
 rule) and records, whenever the floor applies, whether `fastest`'s outcome exactly matches
@@ -218,6 +235,94 @@ Raw data: `results/mode_sweep_seed99.json`. Launched only after 4.1 and 4.2 fini
 keep this machine's SPICE-eval contention predictable while the seed-audit background chain
 is also running.
 
+> ### ⚠️ READ BEFORE QUOTING ANY NUMBER IN THIS SECTION
+>
+> **1. `accurate` no longer exists.** It was deleted in `4b9863d05` ("Thinking gets its
+> real budget; delete accurate"). The row below is a valid *historical* measurement of a
+> mode that was live when `results/mode_sweep_seed99.json` was produced; it is not a
+> description of the current system. Current `MODES` = `default, fastest, thinking,
+> retarget, auto`.
+>
+> **2. The budget-matched baseline now EXISTS, and it kills the headline.** Computed by
+> silq-opus over the same pool of 26 achieved boosts at tol ±1.5 dB, as a function of
+> budget B (two independent spec draws):
+>
+> | budget B | chance, seed 0 | chance, seed 137 | |
+> |---|---|---|---|
+> | 1 | 9.6/32 | 10.8/32 | |
+> | 4 | 22.1/32 | 23.3/32 | |
+> | 7.6 | 26.9/32 | 27.6/32 | `fastest`'s reported budget |
+> | 8.4 | 27.5/32 | 28.1/32 | `default`'s reported budget |
+> | 12.3 | **29.4/32** | 29.7/32 | `thinking`'s reported budget |
+> | 20 | 31.0/32 | 31.1/32 | |
+>
+> At `thinking`'s 12.3 evals/spec the spec-blind line is **29.4/32**. `thinking`'s 30/32
+> is **+0.6**. Worse for the other row: `default` and `fastest` at 22/32 sit **BELOW**
+> their own 27.5 and 26.9 lines. And the bootstrapped 95% CI on the line itself at budget
+> 12.3 is **[22.6, 31.5]/32** — the pool is only 26 boosts, so at high budget the baseline
+> is too poorly determined to support a claim in *either* direction.
+>
+> **The "+36% relative improvement" and "only mode that buys solve rate" claims below are
+> retracted. Do not quote them, put them on a poster, or show them to a judge.**
+>
+> **2b. The reason the line is that high is a property of the METRIC, and this cuts both
+> ways.** `PREREG["tol"] = 1.5` dB is the preregistered acceptance bar. At that tolerance a
+> single spec-blind draw from the achieved-boost pool lands inside the bar roughly **27%**
+> of the time, so the null *saturates* — a handful of draws is already near ceiling. That is
+> why the line reaches 29.4/32 by budget 12.3 and why its CI is so wide there. The honest
+> reading is that **the preregistered test has almost no power at the budgets our modes
+> actually run**: it cannot distinguish a good search from a bad one, in either direction.
+>
+> Two things follow, and the second is the one that matters:
+> - It does **not** rescue the retracted claims above. "The test is underpowered" is not
+>   evidence that the effect is real.
+> - It does **not** license moving the bar. Re-headlining at a tighter tolerance because
+>   1.5 dB flatters chance would be post-hoc bar-moving on a *preregistered* threshold —
+>   precisely the move this repo's prereg documents exist to prevent. The headline stays at
+>   1.5 dB. The correct presentation is a **power analysis** — solve rate and chance line as
+>   functions of tolerance, plotted together, with each mode's own internal stopping
+>   tolerance annotated so a row that merely reflects a stopping rule cannot be misread as a
+>   result. `scratchpad/tol_power.py` (silq-opus) does this.
+>
+> One convention caveat, recorded so nobody re-litigates it later: `final_report.py:272-274`
+> charges chance `k = min(distinct designs produced, designs passing loose feasibility)`,
+> not one draw per evaluation — "re-evaluating one design five times is not five independent
+> chances at the target". Our stage 2 is a bisection, i.e. a dependent refinement of one
+> design, so the raw-evaluation convention above is the *pessimistic* one. We are using it
+> anyway: `final_report.py` is frozen, predates this question, and we already took a public
+> retraction under it. Picking the flattering convention after seeing the unflattering one
+> is exactly the error this repo exists to avoid.
+>
+> **3. ~~What in this section IS safe to quote: the identical-10-spec finding.~~
+> RETRACTED — see item 4.** The finding is real for the modes that were live when this
+> sweep ran, but it is not the deep fact about our system it was read as. All three modes
+> shared a PPO stage 1, so failing on identical specs is *the same rollout three times*.
+> The three identical solve counts (24 loose / 22 strict for `default`, `accurate` and
+> `fastest` alike, all with a 5-evaluation floor) are the signature of one shared search,
+> not of three searches agreeing. On current code the shipped modes fail on **different**
+> specs. Consequence: the argument that "ensembling our modes recovers nothing" rested on
+> a finding that no longer applies, so ensembling is not ruled out any more. That is not a
+> proposal to build one — only a retraction of the reason we dismissed it.
+>
+> **4. `fastest` in this table is a DIFFERENT ALGORITHM from the shipped `fastest`.**
+> Commit `30a90901f` ("Add the retarget arm and make Fastest actually fast") did not tweak
+> a budget — it replaced stage 1 outright:
+>
+> ```
+> before:  policy, env = fc.load_policy(model)                      # every mode, fastest included
+>          fastest = full PPO rollout -> fastest_stage2 (surrogate hedge + floor escalation)
+> after:   policy, env = (None, None) if mode == "fastest" else fc.load_policy(model)
+>          fastest = surrogate_stage1 (corpus lookup + ONE real eval) -> plain g32_solve, budget 3
+> ```
+>
+> `results/mode_sweep_seed99.json` has mtime 2026-09-06 07:04; `30a90901f` landed
+> 2026-09-06 15:40. **Every `fastest` number in this document — including the 22/32 and the
+> 7.6 evals/spec — measures a PPO-based search that no longer exists. The shipped `fastest`
+> contains no PPO at all.** This is a third stale-number class, independent of the mode-list
+> staleness (item 1) and the missing baseline (item 2), and it applies to numbers whose
+> baseline item 2 has now supplied. It also means the five-mode re-run in progress is not a
+> refresh of this table — it is the *first* measurement of `fastest` as users actually get it.
+
 **FINAL NUMBERS.** All 32 specs, all 4 modes, complete (`"done": 32` in the JSON):
 
 | mode | loose | strict | solved | total evals | mean evals/spec |
@@ -233,8 +338,9 @@ specs** (1, 5, 6, 8, 9, 10, 18, 21, 26, 28 — 8 outright `unsolved`, 2
 tighter budget (`fastest`) unlocks a single one of them — confirms, at n=32 on fresh data,
 that these three modes share one underlying search and only trade its cost, not its solve
 rate. `thinking`'s restart diversity fixes **8 of those 10** (1, 6, 8, 10, 18, 21, 26, 28),
-raising strict solve rate from 22/32 (68.75%) to 30/32 (93.75%) — a +36% relative
-improvement — for 47% more evaluations (395 vs 268). The 2 specs `thinking` still can't
+raising strict solve rate from 22/32 to 30/32 for 47% more evaluations (395 vs 268)
+— **but see the warning above: without a budget-matched chance line at 12.3 evals/spec,
+this comparison cannot distinguish restart diversity from simply spending more.** The 2 specs `thinking` still can't
 close (5, 9) match the "other failure mode" pattern already named in §1 (spec 12 there):
 restart diversity fixes basin-selection failures, not every failure.
 
@@ -249,8 +355,8 @@ Cost side, restated plainly:
   `fastest` results several times worse than `default`'s on an identical spec — none flipped
   strict pass/fail in this sample, but the margin against the 1.5 dB criterion is visibly
   thinner for `fastest` than for the other three modes.
-- `thinking` is the only mode that buys solve rate, not just precision or cost, and it does
-  so exactly where v1 said it should (the feasibility-wall failures), at a cost premium that
+- `thinking` is the only mode whose solve count rises — **unverified as a real effect**
+  until the budget-matched baseline lands; it does so exactly where v1 said it should (the feasibility-wall failures), at a cost premium that
   is now measured rather than assumed.
 
 ---
@@ -329,7 +435,10 @@ this session prioritized).
   (§1)**; on a completely fresh, never-before-seen 32-spec set (spec-seed 99), `thinking`
   fixes **8 of the 10 specs that `default`/`accurate`/`fastest` all fail identically on**,
   taking strict solve rate from 22/32 to 30/32 (§4.3). Same conclusion, two independent
-  samples.
+  samples. **[RETRACTED — see §4.3 warning items 2 and 3.** The budget-matched chance line
+  at `thinking`'s 12.3 evals/spec is 29.4/32, so 30/32 is +0.6 and inside the baseline's own
+  CI; and the three modes that "fail identically" shared a PPO stage 1, so that agreement is
+  one rollout counted three times.**]**
 - Both `thinking` and `fastest` had real, identified waste (v1 §2, §6); both now have a
   bounded fix, each independently verified on a synthetic edge case, a previously-recorded
   real case, and a fresh 32-spec sweep, with **zero regressions in solve rate** across all of
@@ -337,12 +446,15 @@ this session prioritized).
   status regressions (§4.1); `fastest`'s floor exactly matches `default`'s outcome on every
   one of 15/15 rejected-hedge specs (§4.2) — the floor's design bound is not approximate, it
   is exact in every case observed.
-- The fresh 32-spec sweep (§4.3) also puts a number on something v1 only argued
+- **[RETRACTED — see §4.3 warning items 3 and 4.]** The fresh 32-spec sweep (§4.3) also puts a number on something v1 only argued
   qualitatively: `default`, `accurate`, and `fastest` are **the same search with different
   budgets** — they solve the identical 22/32 specs every time, because none of them can
   escape a bad basin without a restart. Only `thinking` changes *which* specs get solved,
   not just how cheaply. That is the real justification for keeping `thinking` as a distinct
-  fourth mode rather than a slower version of the other three.
+  fourth mode rather than a slower version of the other three. — This paragraph was *right
+  about the mechanism and wrong about what it proves*. Three modes sharing one PPO stage 1
+  is why they agreed; it is not evidence that mode diversity cannot help, and `thinking`'s
+  distinctness is not established by a solve count that does not clear its own chance line.
 - `accurate` is unchanged this pass — its limitation is now precisely characterized both
   qualitatively (v1 §3, §5.1) and quantitatively (§4.3: +16% evals over `default` for +0
   specs solved) rather than papered over with a mode that would have duplicated `thinking`.

@@ -38,6 +38,12 @@ results/*.err
 # run alone produced 44,280 of them, 5.0 GB. It is an on-disk audit trail, not history.
 results/raw/
 
+# The same store, when an experiment is given its own output directory instead of the
+# shared one. delivered_eye_audit's 45-corner run writes 765 of these, 12 MB, beside the
+# 57 JSON summaries that ARE the result. Same reasoning as above: the audit trail stays
+# on disk, the measurement is committed.
+results/*/raw/
+
 # Surrogate corpora: 18 MB each, and regenerable in ~20 min from results/raw by
 # `surrogate_audit --rebuild`. What has to be reproducible is the PARSER and its
 # ground-truth check, both of which are tracked; the blob is a cache.

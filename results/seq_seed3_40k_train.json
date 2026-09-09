@@ -1,0 +1,30 @@
+{
+  "model": "results\\seq_seed3_40k.zip",
+  "timesteps": 19520,
+  "n_sims": 22080,
+  "n_invalid": 5317,
+  "wall_minutes": 107.9,
+  "seed": 3,
+  "fast": true,
+  "guarded": true,
+  "shaped_invalid": false,
+  "pvt": false,
+  "horizon": 20,
+  "n_envs": 8,
+  "step_size": 0.18,
+  "target_range": [
+    5.0,
+    11.0
+  ],
+  "channel_range": [
+    8.0,
+    16.0
+  ],
+  "resumed_from": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\checkpoints\\seq_seed3_40k_20480_steps.zip",
+  "feasible_decode": false,
+  "anchor_baseline": false,
+  "anchor_noise": 0.0,
+  "boost_tol": null,
+  "target_weight": null,
+  "target_price_ref_db": null
+}

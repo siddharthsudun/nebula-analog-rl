@@ -411,12 +411,18 @@ class TestPipelineSky130:
 
 
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
-def test_w_dfe_is_not_a_dead_parameter():
-    """w_dfe now drives a real 1-tap DFE receiver stage (circuits/dfe.py): a transient
-    testbench where the tap subtracts the first post-cursor. It has no `.ac` effect by
-    construction (a DFE is a sampled decision block, not a linear filter — that is why it
-    is a separate stage, not part of the CTLE `.ac` deck). So we exercise it in the
-    transient domain, where it belongs: sweeping the tap must change the eye at the slicer.
+def test_dfe_tap_sweep_changes_the_slicer_eye():
+    """`dfe_stage_eye` is wired to its tap argument, and the eye peaks at full
+    post-cursor cancellation (tap == c1).
+
+    Scope, stated exactly, because this test used to be named for a claim it does not
+    make: it passes a bare float tap, constructs no `DesignVars` and never touches
+    `w_dfe`, so it says nothing about whether that field is live. (It is not: see
+    `tests/test_dfe_is_off_the_scoring_path.py`.) What it does check is that the
+    behavioural DFE stage in `circuits/dfe.py` responds to its tap at all — the stage has
+    no `.ac` effect by construction (a DFE is a sampled decision block, not a linear
+    filter, which is why it is a separate stage rather than part of the CTLE `.ac` deck),
+    so it can only be exercised in the transient domain.
     """
     from eqrl.circuits.dfe import dfe_stage_eye
 

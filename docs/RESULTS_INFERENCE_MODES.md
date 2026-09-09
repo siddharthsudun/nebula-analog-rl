@@ -55,7 +55,8 @@ is present and loads in 1.50 s.
 ## 2. Do they work? Yes — 4 modes × 3 specs, all `solved`
 
 Re-measured against HEAD on 06 Sep 2026 13:5x, same script, same specs
-(`scratchpad/mode_bench.py`; raw in `scratchpad/mode_bench_head.json`). Where the 02:33
+(`scratchpad/mode_bench.py`; the raw JSON it wrote is not in the tree and not on disk,
+so the bracketed comparisons below cannot be re-derived from this repository). Where the 02:33
 edits moved a number, the superseded pre-edit value is shown in brackets.
 
 | spec | mode | optimizer evals | abs err (dB) | wall |
@@ -295,7 +296,7 @@ with `k_eff` corrected to `k * len(candidates)` so cost accounting stays honest)
 |---|---|---|
 | adaptive `thinking` | `results/thinking_adaptive_before_after.json` | 146 → 125 evals over 8 specs (−14%), **0 regressions** |
 | `fastest` floor | `results/fastest_floor_sweep_seed99.json` | in flight; floor applied on 4 of first 9 specs |
-| both, §2 re-bench | `scratchpad/mode_bench_head.json` | `thinking` −31%/−59%/−48% evals on the 3 specs; `fastest` error 0.497 → **0.004** on spec 3 |
+| both, §2 re-bench | raw JSON **not in tree** | `thinking` −31%/−59%/−48% evals on the 3 specs; `fastest` error 0.497 → **0.004** on spec 3 |
 
 **Verdict after re-measurement (06 Sep, 13:5x).** Both edits are improvements on this
 bench and neither needs reverting. `thinking` does strictly less work — early exit

@@ -53,16 +53,28 @@ A receiver equalizer that undoes channel loss at high frequency. Two blocks:
   tap; the "tap weight" is a knob the agent tunes. (Keep this lightweight — the CTLE is
   where the analog sizing action is.)
 
-### Design variables (the RL action space) — first cut
-| Variable | Meaning | Rough range |
+### Design variables (the RL action space)
+Six continuous knobs, exactly as implemented in `ACTION_SPACE` (`src/eqrl/circuits/ctle.py:124`):
+
+| Variable | Meaning | Range |
 |---|---|---|
-| W_in, L_in | input diff-pair transistor size | W 1–100 µm, L 0.15–1 µm |
-| I_tail | tail bias current | 0.1–5 mA |
+| W_in | input diff-pair width | 1–100 µm |
+| L_in | input diff-pair length | 0.15–1 µm |
+| I_tail | tail bias current | 0.05–1.0 mA |
 | Rs | degeneration resistor | 100 Ω – 5 kΩ |
 | Cs | degeneration cap | 10 fF – 2 pF |
 | R_load | load resistor | 100 Ω – 5 kΩ |
-| C_load (parasitic model) | load cap | fixed / small range |
-| w_dfe | 1-tap DFE weight | 0 – 0.5·UI |
+
+**Not action variables, by deliberate choice:**
+- **`w_dfe`** (`ctle.py:37`) is a field on `DesignVars` but is pinned at 0.0 and
+  excluded from `ACTION_SPACE` (declared at `ctle.py:124`; the exclusion of
+  `w_dfe`, and the reason for it, at `ctle.py:97-99`). The 1-tap DFE is a receiver-DSP block, not an
+  analog knob: it is applied at the slicer and **adapted at runtime to the measured first
+  post-cursor** in the eye engine (`src/eqrl/sim/eye.py:120-128`). It is always on — the
+  eye metric in `measure_all` is post-DFE (`src/eqrl/sim/measures.py:174`), so every
+  reward and all 45 PVT corners are scored with it active. Sizing a tap at design time
+  would model a receiver nobody builds; a real DFE adapts to the channel it sees.
+- **`C_load`** is a fixed parasitic model, not searched.
 
 Start continuous (PPO/DDPG); optionally discretize per-knob (AutoCkt style) if training
 is unstable.

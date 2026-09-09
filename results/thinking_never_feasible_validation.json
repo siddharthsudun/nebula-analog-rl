@@ -1,0 +1,380 @@
+{
+ "n": 12,
+ "done": 12,
+ "became_feasible": 11,
+ "solved": 10,
+ "rows": [
+  {
+   "spec": 3,
+   "target_boost_db": 6.210674806642437,
+   "channel_loss_db": 9.744149096685888,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.008751255946922498,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.014202897153651861,
+     "n_loose_pass": 5,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.008751255946922498,
+     "n_loose_pass": 3,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 17
+  },
+  {
+   "spec": 4,
+   "target_boost_db": 9.299507815541496,
+   "channel_loss_db": 11.7655973653542,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.013276355710752696,
+   "winner_seed_offset": 4001,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.013276355710752696,
+     "n_loose_pass": 4,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.01887788311714189,
+     "n_loose_pass": 3,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 18
+  },
+  {
+   "spec": 5,
+   "target_boost_db": 7.491331583844269,
+   "channel_loss_db": 10.793182437740956,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.002102736956204332,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 2.8995607726462582,
+     "n_loose_pass": 7,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.002102736956204332,
+     "n_loose_pass": 6,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 18
+  },
+  {
+   "spec": 6,
+   "target_boost_db": 5.383122518862152,
+   "channel_loss_db": 11.637329327292466,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.007602642484249245,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.010266117326583668,
+     "n_loose_pass": 3,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.007602642484249245,
+     "n_loose_pass": 3,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 17
+  },
+  {
+   "spec": 9,
+   "target_boost_db": 8.748514263069376,
+   "channel_loss_db": 13.941635631108575,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.015013900731267071,
+   "winner_seed_offset": 4001,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.015013900731267071,
+     "n_loose_pass": 5,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 2.2640924038773056,
+     "n_loose_pass": 17,
+     "reached_target": false
+    }
+   ],
+   "optimizer_evals": 19
+  },
+  {
+   "spec": 10,
+   "target_boost_db": 5.10930413467248,
+   "channel_loss_db": 13.234057197856991,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.003795665716049612,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.00731980105270047,
+     "n_loose_pass": 5,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.003795665716049612,
+     "n_loose_pass": 5,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 18
+  },
+  {
+   "spec": 12,
+   "target_boost_db": 10.63417547537611,
+   "channel_loss_db": 8.102584947766726,
+   "orig_reason": "rescue ladder did not restore guard validity",
+   "became_feasible": false,
+   "status": "unsolved",
+   "best_abs_err_db": null,
+   "winner_seed_offset": 0,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    }
+   ],
+   "optimizer_evals": 18
+  },
+  {
+   "spec": 26,
+   "target_boost_db": 10.954672672582856,
+   "channel_loss_db": 10.472218512139404,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "closed_but_failed_verification",
+   "best_abs_err_db": 1.83157818972977,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 1.83157818972977,
+     "n_loose_pass": 1,
+     "reached_target": false
+    }
+   ],
+   "optimizer_evals": 21
+  },
+  {
+   "spec": 27,
+   "target_boost_db": 9.695064600889893,
+   "channel_loss_db": 9.330890410974206,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.007456498805249012,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 2.5118595244777957,
+     "n_loose_pass": 5,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.007456498805249012,
+     "n_loose_pass": 4,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 18
+  },
+  {
+   "spec": 29,
+   "target_boost_db": 6.454279228699364,
+   "channel_loss_db": 11.141014242608765,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.004694765273225876,
+   "winner_seed_offset": 4001,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.004694765273225876,
+     "n_loose_pass": 5,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.026167326571830962,
+     "n_loose_pass": 3,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 19
+  },
+  {
+   "spec": 32,
+   "target_boost_db": 8.022231529788279,
+   "channel_loss_db": 8.900987324044937,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.025663238241660835,
+   "winner_seed_offset": 4001,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": 0.025663238241660835,
+     "n_loose_pass": 2,
+     "reached_target": true
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    }
+   ],
+   "optimizer_evals": 17
+  },
+  {
+   "spec": 34,
+   "target_boost_db": 7.800735634092993,
+   "channel_loss_db": 9.670651333057238,
+   "orig_reason": "2-D repair did not reach feasibility",
+   "became_feasible": true,
+   "status": "solved",
+   "best_abs_err_db": 0.014560633795987599,
+   "winner_seed_offset": 9007,
+   "rollouts": [
+    {
+     "seed_offset": 0,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 4001,
+     "best_abs_err_db": null,
+     "n_loose_pass": 0,
+     "reached_target": false
+    },
+    {
+     "seed_offset": 9007,
+     "best_abs_err_db": 0.014560633795987599,
+     "n_loose_pass": 4,
+     "reached_target": true
+    }
+   ],
+   "optimizer_evals": 18
+  }
+ ]
+}

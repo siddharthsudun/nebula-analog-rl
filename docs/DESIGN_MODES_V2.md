@@ -1,15 +1,49 @@
 # The four inference modes: what they must do, and what it takes to get there
 
-**Status:** implementation spec, handed off. Nothing here is implemented.
-**Date:** 06 Sep 2026.
-**Note on evidence:** every number below is measured in this session, not estimated. The
-script behind each claim is named so the implementer can re-run it.
+**Status:** HISTORICAL IMPLEMENTATION SPEC, 06 Sep 2026. Superseded in part — see the
+correction block below. Kept because it records the reasoning behind decisions that were
+taken, and because two of its conclusions were later measured and turned out wrong. It is
+not a description of the current system.
+
+> ### ⚠️ WHAT THIS DOCUMENT NOW GETS WRONG
+>
+> **The title is stale.** There are five modes, not four. Current `MODES`
+> (`src/eqrl/pipeline.py:75`) = `default, fastest, thinking, retarget, auto` — plus
+> `g32_acceptance`, added 07 Sep 2026, which this V2 spec predates and does not cover.
+> It is deliberately absent from `UI_MODES`; see `docs/PREREG_G32_ACCEPTANCE.md`.
+>
+> **"Nothing here is implemented" was true on 06 Sep and is false now.** §2 shipped as
+> `fastest`, §3 as `thinking`, §6 as `retarget` (see the ✅ block in §6 itself, which
+> directly contradicts this line). `auto` — the mode the dashboard actually lands on —
+> was built after this spec and is not described anywhere in this document.
+>
+> **§4 "Accurate" describes a mode that no longer exists.** It was deleted in
+> `4b9863d05` ("Thinking gets its real budget; delete accurate"). Read §4 as a record of
+> an experiment and its reasoning, not as a spec for anything live. Every `accurate`
+> row in this file, §8's acceptance table included, benchmarks a deleted mode.
+>
+> **§6 shipped and then failed.** The ✅ block in §6 was written before the arm was
+> measured on a fresh seed. It fires **0/32** — see the ❌ block further down §6, which
+> is the later and correct verdict. The ✅ and ❌ blocks are both retained deliberately:
+> the sequence is the honest record of building something and then measuring it away.
+>
+> **Solve rates in this file carry no chance-matched baseline.** Our own preregistered
+> analysis (`docs/PREREG_TARGET_CONDITIONED.md:187`) found PPO's strict 16/32
+> indistinguishable from its chance line (16.91/32, p = 0.76), and the line climbs
+> steeply with evaluation budget (`REPRODUCE.md:252`: 9.6/32 at budget 1, 22.1/32 at
+> budget 4). No bare "N/32" in this document may be quoted to a reader without that
+> reference point.
+
+**Note on evidence:** every number below was measured in the session that produced it, not
+estimated. The script behind each claim is named so it can be re-run — and several of them
+have been, with results that contradict the text around them. Where that happened it is
+marked inline.
 
 This document answers one question per mode: *is the requested behaviour reachable on the
-current architecture, and if so what has to change?* The short answer: **three of the four
-are reachable, one of them only after relaxing a specific guard, and all four are blocked in
-the same subset of cases by a structural gap that none of the four modes addresses.**
-
+current architecture, and if so what has to change?* Its answer at the time: **three of the
+four are reachable, one of them only after relaxing a specific guard, and all four are
+blocked in the same subset of cases by a structural gap that none of the four addresses.**
+That last clause is the part that held up best.
 ---
 
 ## 0. The one measurement everything rests on
@@ -111,7 +145,7 @@ Two notes:
 that values may not match simulation, minimal accuracy loss.
 
 **The blocker:** a < 5 s budget is ~9 `measure_all`. **PPO stage 1 alone is 11.** The current
-`fastest` mode only shrinks the *stage-2* budget (`FASTEST_BUDGET = 4`), which is why it
+`fastest` mode only shrinks the *stage-2* budget (`FASTEST_BUDGET = 3` as of `pipeline.py:216`; this spec said 4), which is why it
 measured 11.6–18.6 s and saved nothing on 2 of 3 specs. **You cannot reach 5 s by tuning
 stage 2. Stage 1 is the cost.**
 
@@ -185,6 +219,12 @@ exists.** Something better does exist; it costs DC gain.
 ---
 
 ## 4. Accurate — measured, and the premise is right
+
+> **⚠️ `accurate` WAS DELETED** in `4b9863d05`. It is not in `MODES` and has no button.
+> This section is retained as the record of the DC-gain-floor relaxation experiment,
+> which is still the live idea; the mode that was going to carry it is not. If the
+> relaxation is ever revived it must be a threaded call parameter, never a module-global
+> rebind — the web server is one process serving concurrent sessions.
 
 **Requested:** ~Default's time, SPICE, deprioritise feasibility (guard may be weakened), hit
 within **0.05 dB**.
@@ -374,7 +414,8 @@ error actually lives:
 | 2 | no guard-valid design at all | stage 1 | both unsolved |
 | **0** | **axis pinned at a bound** | **§6, this arm** | — |
 
-Default on this seed: 18/32 within 0.5 dB, 8 unsolved.
+Default on this seed: 18/32 within 0.5 dB, 8 unsolved. **Bare figure — no chance-matched
+baseline was computed for it, so it states what happened, not that it beat anything.**
 
 **Three conclusions, in order of what they change.**
 
@@ -412,6 +453,13 @@ Everything in §2, §3, §4 and §6 is legal **only** in this shape:
 
 Extend `scratchpad/mode_bench.py` to **at least 12 specs** — every conclusion above rests on n=5,
 and three of the four interesting cases appeared exactly once each. Then:
+
+> **⚠️ This table is stale in three ways:** the `fast` row names a mode now called
+> `fastest`; the `accurate` row grades a mode that was deleted; and the `§6 arm` row says
+> "not built" when it was built, shipped as `retarget`, and then measured at 0/32 on a
+> fresh seed. `scratchpad/mode_bench.py`'s later artifact (`mode_bench32.json`) is itself
+> withdrawn — it predates the deletion of `accurate`, so its rows benchmark a mode that
+> was already gone. Treat the criteria as intent; treat the "current" column as expired.
 
 | mode | criterion | current |
 |---|---|---|

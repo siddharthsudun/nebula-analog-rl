@@ -72,15 +72,97 @@ FALLBACK = "fallback_fixed_design_not_ai"   #: see `design(..., allow_fallback=T
 #: which replaces stage 1 with a corpus lookup; see `eqrl.experiments.fastest_hedge`.
 #: "default" is byte-identical to this module's pre-mode behaviour: r = fc.PREREG["r"],
 #: stop_abs_err_db left at None so g32_solve reads fc.PREREG itself.
-MODES = ("default", "fastest", "thinking", "retarget", "auto")
+MODES = ("default", "fastest", "thinking", "retarget", "auto", "g32_acceptance")
 
-#: Auto: run "fastest" and, only if it did not come back SOLVED, escalate to "thinking".
-#: This is the mode a person who has not read this file should be on: the n=32 sweep
-#: (results/mode_sweep_seed99.json) has fastest solving 22/32 in a median of a few
-#: seconds and thinking solving 30/32 at roughly ten times the simulator cost, so paying
-#: thinking's price only on the specs fastest misses is strictly better than either alone.
-#: Nothing new is searched: it is the two frozen modes, in sequence, with the first
-#: attempt's cost and verdict kept in the result rather than discarded.
+#: g32_acceptance: "thinking", with the user's ACCEPTANCE CONSTRAINTS applied to the corpus
+#: pool that proposes restart designs, instead of only to the verdict at the end. It is a
+#: separate mode and not a change to "thinking", so every published thinking number stands.
+#:
+#: IT IS INERT ON THE BENCHMARK, AND THE UI MUST SAY SO -- but "inert on the benchmark" is
+#: not "inert at the defaults", and an earlier version of this comment conflated the two.
+#: Measured on the 32 spec draws (`scratchpad/g32_acceptance_viability.py`): at the default
+#: spec it removes ZERO rows from the 512-row near-target pool and changes ZERO of 32
+#: selected seed sets, bit-identically. `area` cannot bite at the default ceiling at all --
+#: the analytic supremum over the whole action space is 0.002227 mm^2 against 0.05 mm^2.
+#:
+#: `boost_range` HOWEVER CAN BITE AT THE DEFAULTS NEAR THE EDGES, because the pool is the
+#: rows nearest the target IN BOOST and a target near a range boundary pulls in rows from
+#: the far side of it. Scanned, not bisected -- a first pass bisected for a threshold and
+#: reported [3.0664, 11.2125], and there is no threshold there to find. At 0.01 dB:
+#:
+#:      3.00-3.04 dB    seeds differ
+#:      3.05-11.13 dB   seeds IDENTICAL, no exceptions across the whole interval
+#:      11.14-12.00 dB  differ at 76 of 121 sampled targets, RAGGED -- 11.15-11.18, 11.20,
+#:                      11.21, 11.27, 11.28, 11.30, 11.32 and 11.87 are still identical
+#:
+#: Removing pool rows does not have to move the selection: farthest-point can pick the same
+#: designs from the smaller pool. At 3.05 dB the mask drops 76 rows and the seeds do not
+#: change at all. So the quiet interval is a measured fact and the noisy region is genuinely
+#: patchy; quoting a two-sided band would assert a monotonicity that was measured to fail.
+#:
+#: The 32 draws span 5.01-10.99 dB, wholly inside the quiet interval, which is why the sweep
+#: could not see any of this. Where it does bite, the mode is a small correctness
+#: improvement rather than nothing: it stops restarts being proposed from designs whose
+#: recorded boost is outside the range the run will accept.
+#:
+#: So the UI copy must say it cannot change the result FOR A TARGET IN 3.05-11.13 dB AT THE
+#: DEFAULT SPEC -- not that it is inert unconditionally, which would be false at the edges,
+#: and not that it always helps outside, which would be false at 11.87.
+#:
+#: So it exists for the case the competition does not score: a user who tightens the boost
+#: range or the area ceiling and wants the SEARCH to respect that, rather than discovering
+#: at verification time that every restart was proposed from a region their constraint
+#: excludes. Its comparison is against `_reselect_for_requirements` at
+#: REQUIREMENT_RESELECT_CAP, under tightened requirements -- not against chance, and not at
+#: the defaults, where both are provably the same number.
+#:
+#: NOT AN ESCALATION TARGET. `AUTO_ESCALATE` stays "thinking" deliberately: "auto" is the
+#: mode for someone who has not read this file, and silently routing them into an arm whose
+#: numbers are not the preregistered ones is exactly the substitution this project keeps
+#: refusing to make elsewhere.
+G32_ACCEPTANCE_BASE = "thinking"
+
+#: Auto: run AUTO_FIRST, and only if that attempt did not come back SOLVED, run
+#: AUTO_ESCALATE. Nothing new is searched -- it is the two frozen modes in sequence. What
+#: follows is read off `_auto` below, which is the whole mechanism:
+#:
+#:   * "fastest" runs first, with this call's model / spec_index / tol / probe paths and
+#:     the caller's `requirements` passed through unchanged.
+#:   * The escalation test is exactly `first["status"] == SOLVED`, so UNSOLVED,
+#:     CLOSED_NOT_VERIFIED and FALLBACK all escalate. SOLVED already means the independent
+#:     ten-check verification passed, so a verified answer is never re-searched.
+#:   * The escalation is a FULL, independent "thinking" run. Nothing from the first attempt
+#:     warms it up -- no start, no design, no trace is carried over. Only the first
+#:     attempt's status, guidance, best boost and cost are kept, under `result["auto"]`.
+#:   * On escalation the request pays for both runs. `measure_all_total` and
+#:     `spice_analyses_total` fold the first attempt in; `optimizer_evals` deliberately
+#:     does not, and reports the escalated run alone with the first attempt's figure beside
+#:     it as `optimizer_evals_prior_attempts`.
+#:   * Only the TOP-LEVEL `mode` is relabelled "auto". `provenance.mode` and
+#:     `provenance.mode_detail` still name the mode that actually searched.
+#:
+#: THE ROUTING RULE RESTS ON NO COMMITTED MEASUREMENT, and this is worse than the numbers
+#: merely being stale. An earlier version of this comment justified the ordering with an
+#: n=32 sweep -- "fastest 22/32, thinking 30/32" -- read out of
+#: `results/mode_sweep_seed99.json`. THAT FILE WAS NEVER COMMITTED TO THIS REPOSITORY. It
+#: appears in no commit on any branch; it exists only as an untracked local file, so no
+#: reader of this tree can check the claim it carried. The numbers are therefore withdrawn
+#: rather than restated. Both arms of that comparison were superseded anyway: `30a90901f`
+#: replaced "fastest"'s stage 1 outright (PPO rollout -> corpus lookup plus one real
+#: evaluation), and `4b9863d05` gave "thinking" 8 rollouts, r=25, a 0.01 dB stop and
+#: corpus-proposed restarts in place of 3 rollouts at r=15. Section 4.3 of
+#: `docs/RESULTS_INFERENCE_MODES_V2.md` carries the warning banner for that sweep, and its
+#: own item 2 separately retracts the comparison those numbers were used to license.
+#:
+#: What survives is a structural argument, not evidence. By construction auto verifies on a
+#: SUPERSET of the specs "fastest" verifies on, because it escalates on exactly the ones
+#: "fastest" did not verify. The cost trade is genuinely two-sided: auto is cheaper than
+#: "thinking" on every spec "fastest" verifies, and strictly MORE expensive than "thinking"
+#: on every spec it escalates on, since the first attempt is paid for and then discarded.
+#: Whether that trade is favourable on average depends on how often "fastest" verifies --
+#: which is exactly the quantity the withdrawn numbers claimed to supply and which nothing
+#: in this tree currently measures. A committed 32-spec sweep of the shipped modes is owed;
+#: until one lands, quote no solve rate and no cost saving for this mode.
 AUTO_FIRST, AUTO_ESCALATE = "fastest", "thinking"
 
 #: Acceptance constraints a caller may set alongside the target and channel. These are
@@ -199,6 +281,21 @@ THINKING_TIEBREAK_BAND_DB = 0.25
 #: at Default's own `fc.PREREG` values so that ANY difference between this mode and
 #: "default" is attributable to the second axis and to nothing else. That is what makes
 #: this arm measurable; do not "improve" it by also raising r.
+#:
+#: MEASURED, INERT, AND KEPT ANYWAY -- recorded here so the fact does not live only in a
+#: commit message. Measured in `437412e96` at n=32 on spec-seed 137, a FRESH draw: the n=8
+#: result that motivated this arm came from a set that contained the known pinned case and
+#: so was selection-biased. On that draw the arm FIRED ON 0 OF 32 SPECS. Re-derived from
+#: the committed rows in `scratchpad/retarget_ab32.json`: 0/32 fired, 32/32 identical
+#: status and abs_err against "default", and a measure_all delta of exactly 0 on every one
+#: of the 32. "no admissible step remains" -- the only exit this arm acts on -- does not
+#: occur once in the file. (The commit message's bucket table quotes 6 budget-exhausted
+#: and 3 wall specs; the committed rows say 4 and 5. Trust the rows.)
+#:
+#: It stays because it is free -- 32/32 identical outputs at +0 measure_all cannot regress
+#: anything -- and because it is budget-starved rather than merely useless: specs that exit
+#: "budget exhausted" never get far enough for a second axis to be tried at all. Whether
+#: raising r would make the pinned exit appear is UNTESTED and must not be assumed.
 RETARGET_PROBE_EVALS = 3
 
 
@@ -620,7 +717,9 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
 
     mode_detail: dict[str, Any] = {"mode": mode}
 
-    if mode == "thinking":
+    # g32_acceptance shares this branch entirely -- see G32_ACCEPTANCE_BASE. The two differ
+    # at exactly one line, the diverse_seeds call below, and nowhere else.
+    if mode in ("thinking", "g32_acceptance"):
         # ---- N independent PPO rollouts, each closed by the frozen G3.2 -------------
         # Adaptive (docs/RESULTS_INFERENCE_MODES.md section 6.2): offsets are spent in
         # order and stop the moment one reaches target. Restart diversity is worth its
@@ -684,9 +783,20 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
                 surrogate, _cx, _rad = load_fastest_assets()
                 tried = np.array([x for c in candidates for x in c["xs"]],
                                  dtype=np.float64)
-                seeds = diverse_seeds(target_boost_db, surrogate,
-                                      spec_for(target_boost_db, channel_loss_db, tol),
-                                      THINKING_SURROGATE_STARTS, exclude=tried)
+                # THE ONE LINE THAT DIFFERS BETWEEN "thinking" AND "g32_acceptance".
+                # "thinking" passes the COMPETITION spec here, deliberately: its published
+                # numbers must not move when a user sets a requirement, so its restarts are
+                # proposed from the same pool on every run. "g32_acceptance" passes
+                # `user_spec` and turns the filter on, so a tightened boost range or area
+                # ceiling narrows the pool the restarts are drawn from instead of only
+                # rejecting them at verification. Both still hand every proposal to the
+                # same guarded evaluator -- the corpus decides where to look, never what
+                # passes.
+                accept = mode == "g32_acceptance"
+                seeds = diverse_seeds(
+                    target_boost_db, surrogate,
+                    user_spec if accept else spec_for(target_boost_db, channel_loss_db, tol),
+                    THINKING_SURROGATE_STARTS, exclude=tried, acceptance=accept)
             except Exception:
                 seeds = []          # no corpus on disk -> Thinking is just best-of-N PPO
             for x0 in seeds:
@@ -735,6 +845,32 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             c for c in candidates
             if c["arm"]["best_design"] is not None
             and c["arm"]["best_abs_err"] <= best_err + THINKING_TIEBREAK_BAND_DB]
+        # CAN THIS BRANCH EVER CHANGE AN OUTCOME? YES -- established by reading the code,
+        # not assumed, and stated here because "this arm is inert" is the kind of claim
+        # this file keeps having to retract. `most_accurate` is always a member of `band`
+        # whenever it has a design (its own error trivially satisfies the bound), so the
+        # branch fires exactly when a SECOND candidate carries a design within
+        # THINKING_TIEBREAK_BAND_DB and beats it on headroom. That state is reachable:
+        # `candidates` only grows past one when no earlier restart reached target, and
+        # independent restarts land on different designs with different `dc_gain_db`. The
+        # winner then supplies `design`, `netlist`, `info` and `guidance`, so a swap is
+        # fully observable in the result.
+        #
+        # Two bounds on a swap, both read off the code rather than measured:
+        #   * Every band member has a real headroom. `fc.summarize` returns `best_design`
+        #     None exactly when the trace holds no `loose_pass`, and `_headroom` scans the
+        #     same records, so band membership implies `headroom_db` is not None. The
+        #     float("-inf") fallback below is unreachable for a band member and is there
+        #     only to keep the sort key total.
+        #   * A swap cannot by itself flip the `boost_target` check: the band is 0.25 dB
+        #     and `hard_pass` scores that check at `fc.PREREG["tol"]`, which is 1.5 dB. It
+        #     CAN change every other reported measure, the netlist, and
+        #     `g32_reached_target` -- band membership does not test `reached_target`, so a
+        #     candidate that stopped short may displace one that reached target.
+        #
+        # HOW OFTEN IT ACTUALLY FIRES IS NOT MEASURED. No committed artifact in this tree
+        # records a firing rate for this rule; `mode_detail["tiebreak"]` below exists to
+        # collect one. Do not describe this branch as a no-op -- the code does not say so.
         if len(band) > 1:
             # Highest headroom wins; a candidate with no headroom to report cannot win the
             # tiebreak, and remaining ties fall back to the more accurate one.
@@ -784,6 +920,22 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         mode_detail["adaptive_stopped_early"] = (
             n_ppo < min(THINKING_ROLLOUTS, len(THINKING_SEED_OFFSETS))
             and not governor_stopped)
+        if mode == "g32_acceptance":
+            # SELF-REPORTING, because this mode's honest answer is usually "I did nothing".
+            # `pool_narrowed` is False whenever the acceptance filter admitted every row
+            # the unfiltered pool would have, which at the competition defaults is always.
+            # Recording it means a result can state its own inertness instead of leaving a
+            # reader to infer that a mode ran and mattered because it was selected.
+            mode_detail["acceptance"] = {
+                "applied_to": "restart seed pool (thinking_starts.diverse_seeds)",
+                "verification_path": "UNCHANGED -- same guarded evaluator and hard_pass",
+                "requirements_set": sorted(req_diff),
+                "inert_at_defaults": not req_diff,
+                "note": ("no requirement was tightened, so this run is bit-identical to "
+                         "thinking" if not req_diff else
+                         "requirements tightened; restart pool was filtered before "
+                         "farthest-point selection"),
+            }
 
     elif mode == "fastest":
         # ---- stage 1 REPLACEMENT: corpus lookup, no PPO, one real evaluation ---------

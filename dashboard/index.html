@@ -34,13 +34,15 @@
   <!-- ================= NAV ================= -->
   <header class="nav">
     <div class="wrap nav-inner">
-      <a class="brand" href="#" id="brand-link">
-        <span class="brand-word">sil<span class="q">Q</span></span>
-        <span class="brand-for">built for
+      <div class="brand">
+        <a class="brand-link" href="#" id="brand-link">
+          <span class="brand-word">sil<span class="q">Q</span></span>
+        </a>
+        <a class="brand-for" href="https://www.asteralabs.com" target="_blank" rel="noopener noreferrer" aria-label="Astera Labs website">built for
           <img class="logo-dark" src="/static/media/astera-labs-logo-dark.png" alt="Astera Labs" />
           <img class="logo-light" src="/static/media/astera-labs-logo-light.png" alt="Astera Labs" />
-        </span>
-      </a>
+        </a>
+      </div>
       <nav class="nav-tabs" aria-label="Views">
         <button class="nav-tab active" data-view="design" type="button">Design</button>
         <button class="nav-tab" data-view="lab" type="button">Lab</button>
@@ -205,6 +207,22 @@
             <div class="result" id="result"></div>
           </div>
         </div>
+
+        <section class="candidate-gallery" id="candidate-gallery" aria-labelledby="gallery-title">
+          <div class="gallery-head">
+            <div>
+              <div class="eyebrow">Candidate comparison</div>
+              <h2 id="gallery-title">What the guard keeps and rejects</h2>
+              <p id="gallery-scope">Loading the artifact-backed candidate selection.</p>
+            </div>
+            <button class="btn" id="gallery-run" type="button" disabled>Measure gallery</button>
+          </div>
+          <div class="gallery-notice" id="gallery-notice" aria-live="polite"></div>
+          <div class="gallery-grid" id="gallery-grid">
+            <div class="gallery-empty"><span class="spinner"></span>loading candidates</div>
+          </div>
+          <p class="gallery-caveat">This curated set does not re-estimate the historical 24/28 rate or claim that every rejected circuit has a closed eye. DC-gain requirements and transistor saturation are shown separately because they make different claims.</p>
+        </section>
 
         <section class="history" id="history">
           <div class="history-head"><h2>Recent designs</h2><button class="link-btn" id="history-clear" type="button">Clear</button></div>

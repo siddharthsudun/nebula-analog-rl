@@ -105,7 +105,8 @@ decision for the team.
    The *validity criterion* is genuinely shared — every method routes through one
    `evaluate()`.
 2. **RL's simulation cost is under-reported by about 2×.** Each RL step calls
-   `env.step()`, which simulates at `sequential_env.py:295`, and then `evaluate()`, which
+   `env.step()`, which reaches the simulator through `_measure`
+   (`sequential_env.py:266-267`), and then `evaluate()`, which
    simulates again. `solve_rl` counts one. A reported "median 4 sims" is ~8 real
    simulations, and any amortization break-even doubles accordingly.
 3. **Train/test mismatch in the env.** Training ran `guarded=True, fast=True`;
@@ -397,7 +398,12 @@ A regressor over the SPICE runs already on disk in `results/raw`:
 
     normalized 6-D design  ->  (dc_gain_db, boost_db, peak_freq_ghz)
 
-The corpus holds 414,955 recorded runs, 374,455 of which carry an `acx.data`. All three
+The RAW ARCHIVE under `results/raw` held 414,955 recorded runs at the time of this
+section, 374,455 of which carried an `acx.data`. (That is the archive, not the
+surrogate corpus built from it: the rebuild reported further down this document
+yields **374,588** rows, and the two numbers are different quantities measured at
+different times. Both words were "corpus" in an earlier draft, which is how they
+came to look like a contradiction.) All three
 target-relevant metrics derive from the AC run alone (`sim/measures.py:peaking`), so the
 dataset is recoverable by PARSING FILES ALREADY ON DISK. It costs zero new simulation.
 
