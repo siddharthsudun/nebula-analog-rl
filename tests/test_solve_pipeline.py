@@ -51,6 +51,8 @@ class _FakeSolver:
         self._best = best_design
         self._reached = reached
         self._n_steps = n_steps
+        self.band = "not-called"
+        self.ev = None
 
     # -- the bits pipeline.design calls ------------------------------------------------
     def _check_constants(self):
@@ -65,8 +67,14 @@ class _FakeSolver:
     class Evaluation:
         def __init__(self):
             self.n_sim = 7
+            #: What acceptance spec the search was handed. None means the frozen
+            #: competition bar; anything else means the run is steering on the user's
+            #: own requirements. Recorded so a test can assert the wiring exists.
+            self.accept = "not-called"
 
-        def make_eval(self, channel):
+        def make_eval(self, channel, accept=None):
+            self.accept = accept
+
             def evaluate(x, target):
                 return None, -10.0, "stub"
             return evaluate
@@ -79,7 +87,10 @@ class _FakeSolver:
         trace = [None]
         return xs, trace, None
 
-    def g32_solve(self, evaluate, xs, s1, target, plane, ladder, budget):
+    def g32_solve(self, evaluate, xs, s1, target, plane, ladder, budget,
+                  stop_abs_err_db=None, band=None):
+        #: The peak band the 2-D repair was aimed at, for the same reason as `accept`.
+        self.band = band
         info = {"steps": [{"phase": "advance", "boost_db": 7.0, "abs_err": 1.9}]
                          * self._n_steps,
                 "start_source": "stage1 (free)", "reached_target": self._reached,

@@ -111,7 +111,7 @@ def _check_constants() -> None:
 # The G3.2 constrained solver, transcribed from g32_repair.main().run
 # --------------------------------------------------------------------------------------
 def g32_solve(evaluate, xs, s1trace, target, plane, ladder, budget,
-              stop_abs_err_db: float | None = None):
+              stop_abs_err_db: float | None = None, band: tuple | None = None):
     """Returns (trace, info, x_f, rec_f, budget_left).
 
     The three extra return values are what arm C needs to continue: the design the solver
@@ -129,8 +129,14 @@ def g32_solve(evaluate, xs, s1trace, target, plane, ladder, budget,
     jp = DIMS.index(plane["peak_axis"])
     S_BOOST = plane["d_boost_db_per_unit"]
     S_PEAK_BOOST = plane["peak_axis_d_boost_db_per_unit"]
-    LO, HI = plane["band_ghz"]
-    AIM = plane["peak_aim_ghz"]
+    # `band` retargets the 2-D repair at a peak band the CALLER asked for, in place of
+    # the probe's. Only the band moves: every slope below is a measured sensitivity of the
+    # topology (`d_ln_peak_per_unit`, `peak_axis_d_boost_db_per_unit`), not a property of
+    # where the band happens to sit, so aiming somewhere else reuses them unchanged. AIM is
+    # the band's geometric mean, which is exactly how `plane_from_probe` derives its own.
+    # None -> the probe's band, so every existing caller is byte-identical.
+    LO, HI = plane["band_ghz"] if band is None else (float(band[0]), float(band[1]))
+    AIM = plane["peak_aim_ghz"] if band is None else float((LO * HI) ** 0.5)
 
     trace, steps = [], []
     left = [budget]
@@ -405,17 +411,42 @@ class Evaluation:
                                                    channel_loss_db=channel)
         return self.guards[channel]
 
-    def make_eval(self, channel: float):
+    def make_eval(self, channel: float, accept=None):
         """One evaluation, recording the UNION of what both frozen arms record.
 
         The guard, hard_pass and the CMA-ES objective are byte-identical to
         hybrid_audit.evaluate; peak_freq_ghz and `failing` are what g32_repair.evaluate
         additionally needs. Recording a field neither solver reads changes no decision.
+
+        `accept` is the acceptance spec `loose_pass` is judged against. None means
+        DEFAULT_SPEC -- the frozen benchmark's meaning of feasible, and what every
+        existing caller gets.
+
+        WHY IT EXISTS. `loose_pass` is not a report; it is the SEARCH's feasibility
+        signal. `g32_solve` repairs while it is False and bisects only where it is True,
+        and `summarize` picks the returned design from the records where it is True. So a
+        requirement this function cannot see is a requirement the search cannot steer on,
+        however prominently it appears in the final verdict. Measured, not argued: asking
+        for a 2.00-2.50 GHz peak returned the SAME circuit as the default band, down to
+        the last digit of boost (7.99946757129063 dB at 1.5093219 GHz), with zero repair
+        steps -- then failed it on `peak_in_band`. The band was a filter bolted onto the
+        end of a search that had never heard of it.
+
+        The GUARD is deliberately still built on DEFAULT_SPEC (`guard_for`): device
+        physics is not the user's to relax, and only the acceptance layer moves here.
+
+        `boost_target_tol_db` is stripped: `hard_pass` would otherwise add its
+        `boost_target` check to `loose_pass`, and the whole of `g32_solve` Stage B is a
+        bisection that walks boost toward the target THROUGH the feasible set. Making
+        feasibility require already being on target would leave it nothing to walk.
         """
+        base = DEFAULT_SPEC if accept is None else dataclasses.replace(
+            accept, boost_target_tol_db=None)
+
         def evaluate(x, target):
             self.n_sim += 1
             dv = decode_action(np.asarray(x))
-            spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=target,
+            spec = dataclasses.replace(base, target_boost_db=target,
                                        channel_loss_db=channel)
             try:
                 v = self.guard_for(channel).evaluate(dv, vdd=spec.vdd_nominal)
@@ -430,6 +461,16 @@ class Evaluation:
                    "dc_gain_db": float(m.dc_gain_db), "loose_pass": bool(ok),
                    "failing": [c for c, good in checks.items() if not good],
                    "design": dataclasses.asdict(dv)}
+            if accept is not None:
+                # The competition verdict on the SAME measurement, so a search that
+                # steered on a tighter bar and found nothing can still report the best
+                # design it saw instead of an empty result. Added only on the steered
+                # path: at the defaults the record stays exactly the shape the frozen
+                # arms write. See pipeline._summarize_relaxed for the one reader.
+                cok, cchecks = hard_pass(m, dataclasses.replace(
+                    DEFAULT_SPEC, target_boost_db=target, channel_loss_db=channel))
+                rec["competition_pass"] = bool(cok)
+                rec["competition_failing"] = [c for c, g in cchecks.items() if not g]
             return rec, float(score), None
         return evaluate
 

@@ -1327,7 +1327,21 @@ function requirementsHtml(r) {
     return `<div class="kv-row"><span class="kv-k">${escapeHtml(meta.label)}</span><span class="kv-v">${escapeHtml(val)} <span class="req-tag ${escapeHtml(q.direction || "")}">${escapeHtml(q.direction || "")}</span>${def ? ` <span class="help-hint" style="display:inline;margin:0;">(competition ${escapeHtml(def)})</span>` : ""}</span></div>`;
   }).join("");
   const resel = r.provenance && r.provenance.requirement_reselection;
-  return `<div class="panel"><div class="panel-head"><span class="panel-title">Your acceptance limits</span><span class="panel-meta">${escapeHtml(r.spec.scored_against || "")}</span></div>${rows}${resel && resel.applied ? `<div class="help-hint" style="margin-top:8px;">The most accurate candidate failed one of these limits, so the next candidate from the search trace that passes them was re-verified and delivered instead.</div>` : ""}</div>`;
+  //: Whether these limits STEERED the search or only judged it afterwards. The
+  //: distinction is the whole point of the panel: a limit the search could not see was a
+  //: limit that could only ever reject the answer, never improve it.
+  const steer = r.provenance && r.provenance.mode_detail
+    && r.provenance.mode_detail.requirement_steering;
+  let steerHtml = "";
+  if (steer) {
+    const band = steer.peak_band_ghz
+      ? ` The peak-frequency repair aimed at ${fmt(steer.peak_band_ghz[0], 2)}–${fmt(steer.peak_band_ghz[1], 2)} GHz rather than the competition band.`
+      : "";
+    steerHtml = steer.fell_back_to_competition_bar
+      ? `<div class="req-steer warn"><strong>Nothing the search measured met these limits.</strong> The closest circuit it found is shown above, and the checks it misses are named in the verification panel.${band} Try widening the limit, a different target, or Thinking mode, which searches from several independent starts.</div>`
+      : `<div class="req-steer">The search steered on these limits — they decided which measurements counted as feasible, not just whether the final answer passed.${band}</div>`;
+  }
+  return `<div class="panel"><div class="panel-head"><span class="panel-title">Your acceptance limits</span><span class="panel-meta">${escapeHtml(r.spec.scored_against || "")}</span></div>${rows}${resel && resel.applied ? `<div class="help-hint" style="margin-top:8px;">The most accurate candidate failed one of these limits, so the next candidate from the search trace that passes them was re-verified and delivered instead.</div>` : ""}${steerHtml}</div>`;
 }
 
 function guidanceHtml(r) {

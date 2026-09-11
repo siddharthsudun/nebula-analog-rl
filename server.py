@@ -1626,8 +1626,14 @@ def _narrating():
                       "inference only.")
         return out
 
-    def make_eval(self, channel):
-        inner = orig_make(self, channel)
+    def make_eval(self, channel, *a, **kw):
+        # Signature-transparent on purpose. This wrapper only narrates; every argument
+        # belongs to the frozen evaluator and is forwarded untouched. Spelling the
+        # parameters out here once cost a live 500 on EVERY request -- `make_eval` grew
+        # an `accept=` keyword for peak-band steering and the whole dashboard failed with
+        # `unexpected keyword argument 'accept'` while the unit tests, which never patch
+        # through this wrapper, stayed green. `*a, **kw` cannot drift.
+        inner = orig_make(self, channel, *a, **kw)
 
         def evaluate(x, target):
             n["sim"] += 1

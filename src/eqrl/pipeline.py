@@ -369,6 +369,59 @@ def requirements_diff(spec: Spec) -> list[dict[str, Any]]:
     return out
 
 
+# --------------------------------------------------------------------------------------
+# Making a requirement STEER the search instead of only judging it afterwards.
+#
+# Every REQUIREMENT_FIELD is read by `hard_pass`, and `hard_pass` is what produces
+# `loose_pass` inside the search evaluator. `loose_pass` is not a report: `g32_solve`
+# repairs while it is False, bisects only where it is True, and `summarize` picks the
+# returned design from the records where it is True. So a requirement the evaluator is not
+# told about is a requirement the search cannot steer on, however prominently it appears in
+# the final verdict -- it can only ever reject the answer, never improve it.
+#
+# The peak band gets a second, stronger treatment: not just a gate but an AIM POINT.
+# `g32_solve`'s 2-D repair already knows how to move the peak -- it carries a measured
+# `d_ln_peak_per_unit` from the probe -- it was simply always aiming at the probe's band.
+# See `_search_band`.
+# --------------------------------------------------------------------------------------
+
+
+def _search_spec(user_spec: Spec, req_diff: list) -> Spec | None:
+    """The acceptance spec the SEARCH steers on, or None to leave it frozen.
+
+    None whenever the user changed nothing, which is what keeps every published number in
+    this tree reproducible: with no requirement set this function returns None and the
+    search evaluator is constructed exactly as the benchmark constructs it.
+    """
+    return dataclasses.replace(user_spec, boost_target_tol_db=None) if req_diff else None
+
+
+def _search_band(user_spec: Spec, req_diff: list) -> tuple[float, float] | None:
+    """The peak band `g32_solve` should aim its 2-D repair at, or None for the probe's.
+
+    Returned only when the user actually moved a band edge. The probe's own band is
+    [1.25, 2.5] -- the competition default -- so at defaults this is None and the repair
+    is the frozen one.
+    """
+    if not ({d["field"] for d in req_diff} & {"peak_freq_lo_ghz", "peak_freq_hi_ghz"}):
+        return None
+    return (float(user_spec.peak_freq_lo_ghz), float(user_spec.peak_freq_hi_ghz))
+
+
+def _summarize_relaxed(fc, trace: list, target: float, tol: float) -> dict:
+    """`fc.summarize` scored on the COMPETITION verdict instead of the user's.
+
+    Used only as a fallback: when the search steered on a tightened requirement and
+    nothing satisfied it, this recovers the best design the run actually saw so the
+    engineer gets a circuit and a named failing check rather than an empty result. The
+    frozen `summarize` is reused verbatim on a re-labelled copy of the same records --
+    the alternative, a second transcription of it, is how the two arms drifted before.
+    """
+    relaxed = [dict(e, loose_pass=e.get("competition_pass", e["loose_pass"]))
+               for e in trace if e]
+    return fc.summarize(relaxed, target, tol)
+
+
 def spec_for(target_boost_db: float, channel_loss_db: float, tol: float,
              requirements: dict | None = None) -> Spec:
     """The requirement set the result is verified against.
@@ -761,8 +814,13 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
     plane = fc.plane_from_probe(peak_probe)
     ladder = fc.rescue_order_from_probe(rescue_probe)
 
+    # The search steers on the USER's acceptance spec, not the competition's. Without
+    # this the requested peak band reached the run only as a final verdict, and the
+    # search returned the identical circuit whatever band was asked for.
+    search_spec = _search_spec(user_spec, req_diff)
+    search_band = _search_band(user_spec, req_diff)
     ev = fc.Evaluation()
-    evaluate = ev.make_eval(channel_loss_db)
+    evaluate = ev.make_eval(channel_loss_db, accept=search_spec)
     from eqrl.request_budget import active
     if active.get() is not None:
         evaluate = active.get().bind(evaluate)
@@ -810,7 +868,7 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
             with counting() as c2_i:
                 g2_i, info_i, _xf, _rf, left_i = fc.g32_solve(
                     evaluate, xs_i, s1_i, target_boost_db, plane, ladder, THINKING_R,
-                    stop_abs_err_db=THINKING_STOP_ABS_ERR_DB)
+                    stop_abs_err_db=THINKING_STOP_ABS_ERR_DB, band=search_band)
             for key in c2:
                 c2[key] += c2_i[key]
             candidates.append({
@@ -819,32 +877,19 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
                 "arm": fc.summarize(s1_only_i + g2_i, target_boost_db, tol)})
             return info_i["reached_target"]
 
-        for offset in THINKING_SEED_OFFSETS[:THINKING_ROLLOUTS]:
-            if candidates and _spent() >= THINKING_MEASURE_ALL_BUDGET:
-                governor_stopped = True
-                break
-            with counting() as c1_i:
-                xs_i, s1_i, term_i = fc.stage1_rollout(
-                    evaluate, policy, env, spec_index + offset, target_boost_db,
-                    channel_loss_db, k)
-            for key in c1:
-                c1[key] += c1_i[key]
-            if _close(xs_i, s1_i, term_i, "ppo:%d" % offset):
-                break
-
-        # ---- corpus-proposed starts, ONLY if no PPO rollout reached target -----------
+        # ---- corpus-proposed starts ---------------------------------------------------
         # See eqrl.experiments.thinking_starts: the failures this addresses are ones where
         # no start ever reached the feasible set, which more budget from the same start
         # cannot fix. Each start costs ONE real guarded evaluation, not PPO's five, and the
         # corpus never judges -- g32_solve and the verifier still decide.
         n_surrogate = 0
-        if candidates and not any(c["info"]["reached_target"] for c in candidates):
+
+        def _corpus_seeds(tried):
+            """Corpus-proposed starting designs, or [] when there is no corpus on disk."""
             try:
                 from eqrl.experiments.fastest_hedge import load_fastest_assets
 
                 surrogate, _cx, _rad = load_fastest_assets()
-                tried = np.array([x for c in candidates for x in c["xs"]],
-                                 dtype=np.float64)
                 # THE ONE LINE THAT DIFFERS BETWEEN "thinking" AND "g32_acceptance".
                 # "thinking" passes the COMPETITION spec here, deliberately: its published
                 # numbers must not move when a user sets a requirement, so its restarts are
@@ -854,15 +899,27 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
                 # rejecting them at verification. Both still hand every proposal to the
                 # same guarded evaluator -- the corpus decides where to look, never what
                 # passes.
-                accept = mode == "g32_acceptance"
-                seeds = diverse_seeds(
+                # `g32_acceptance` always filters. "thinking" now filters too, but ONLY
+                # when the user actually set a requirement -- which is the condition under
+                # which its published numbers are not being reproduced anyway, since those
+                # runs set none. At the defaults `req_diff` is empty, `accept` is False,
+                # and the restart pool is drawn exactly as before.
+                accept = mode == "g32_acceptance" or bool(req_diff)
+                return diverse_seeds(
                     target_boost_db, surrogate,
                     user_spec if accept else spec_for(target_boost_db, channel_loss_db, tol),
                     THINKING_SURROGATE_STARTS, exclude=tried, acceptance=accept)
             except Exception:
-                seeds = []          # no corpus on disk -> Thinking is just best-of-N PPO
+                return []           # no corpus on disk -> Thinking is just best-of-N PPO
+
+        def _run_seeds(seeds) -> bool:
+            """Close each seed in turn. True as soon as one reaches target."""
+            nonlocal n_surrogate, governor_stopped
             for x0 in seeds:
-                if _spent() >= THINKING_MEASURE_ALL_BUDGET:
+                # `candidates and` makes this a no-op at the post-PPO call site, where
+                # candidates is always non-empty, and stops it firing spuriously on the
+                # band-first call below, where nothing has been spent yet.
+                if candidates and _spent() >= THINKING_MEASURE_ALL_BUDGET:
                     governor_stopped = True
                     break
                 with counting() as c1_i:
@@ -871,7 +928,51 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
                     c1[key] += c1_i[key]
                 n_surrogate += 1
                 if _close([x0], [rec0], None, "surrogate:%d" % n_surrogate):
+                    return True
+            return False
+
+        # ---- start ORDER ---------------------------------------------------------------
+        # Default order is PPO first, corpus only as a rescue, and that order is frozen:
+        # every published Thinking number was produced by it.
+        #
+        # When the user asks for a peak BAND, that order is measured to be wrong. The
+        # policy was trained against one fixed band -- `SequentialEnv.reset()` randomizes
+        # `_target` and `_channel` and never `base_spec`'s band -- so its starts land
+        # outside a retargeted one, no restart clears the 0.01 dB early exit, all five
+        # rollouts run, and the measure_all governor then blows before the corpus starts
+        # are reached at all. Measured at 2.00-2.50 GHz: 5 PPO restarts, 105/100 spent,
+        # governor stopped, `n_surrogate_starts` 0, 43.5 s unbounded against a 40 s
+        # ceiling. The corpus is the ONLY generator here that can see the requested band
+        # (`thinking_starts.plausible_mask` screens on it), which is why Fastest lands in a
+        # retargeted band in 0.8 s -- so on a band ask the cheap informed starts are spent
+        # before the expensive blind ones.
+        #
+        # `search_band` is None at the competition defaults, so `band_first` is False and
+        # the frozen order is untouched. Pinned by
+        # TestNothingMovesAtTheCompetitionDefaults.
+        band_first = search_band is not None
+        reached = _run_seeds(_corpus_seeds(None)) if band_first else False
+
+        if not reached:
+            for offset in THINKING_SEED_OFFSETS[:THINKING_ROLLOUTS]:
+                if candidates and _spent() >= THINKING_MEASURE_ALL_BUDGET:
+                    governor_stopped = True
                     break
+                with counting() as c1_i:
+                    xs_i, s1_i, term_i = fc.stage1_rollout(
+                        evaluate, policy, env, spec_index + offset, target_boost_db,
+                        channel_loss_db, k)
+                for key in c1:
+                    c1[key] += c1_i[key]
+                if _close(xs_i, s1_i, term_i, "ppo:%d" % offset):
+                    break
+
+        # The rescue draw, ONLY if no PPO rollout reached target -- and only when the
+        # corpus has not already been drawn above, since it is the same pool.
+        if (not band_first and candidates
+                and not any(c["info"]["reached_target"] for c in candidates)):
+            tried = np.array([x for c in candidates for x in c["xs"]], dtype=np.float64)
+            _run_seeds(_corpus_seeds(tried))
 
         # ---- winner selection: accuracy first, then corner robustness ---------------
         # See THINKING_TIEBREAK_BAND_DB for the measurement this rests on. Accuracy is
@@ -1007,7 +1108,12 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
         from eqrl.experiments.fastest_hedge import load_fastest_assets, surrogate_stage1
 
         surrogate, _corpus_X, _radius = load_fastest_assets()
-        seed_spec = spec_for(target_boost_db, channel_loss_db, tol)
+        # The corpus records each design's own measured `peak_freq_ghz`, and
+        # `propose_seed_candidates` already narrows on it -- it was simply never handed
+        # the user's band. Passing `user_spec` costs nothing (a mask over an array that is
+        # already in memory) and starts Fastest INSIDE the requested band instead of
+        # spending its 3-evaluation stage-2 budget walking there.
+        seed_spec = user_spec if req_diff else spec_for(target_boost_db, channel_loss_db, tol)
         with counting() as c1:
             xs, s1, term_at = surrogate_stage1(evaluate, target_boost_db, surrogate,
                                                seed_spec)
@@ -1021,7 +1127,8 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
         # ---- stage 2: the SAME frozen g32_solve, fixed small budget, no floor --------
         with counting() as c2:
             g2, info, _x_f, _rec_f, left = fc.g32_solve(
-                evaluate, xs, s1, target_boost_db, plane, ladder, FASTEST_BUDGET)
+                evaluate, xs, s1, target_boost_db, plane, ladder, FASTEST_BUDGET,
+                band=search_band)
         seed_rec = s1[0]
         mode_detail["surrogate_seed"] = {
             "attempts": len(xs),
@@ -1058,9 +1165,36 @@ def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPE
             # fc.PREREG itself and "default" stays byte-identical to the frozen record.
             with counting() as c2:
                 g2, info, _x_f, _rec_f, left = fc.g32_solve(
-                    evaluate, xs, s1, target_boost_db, plane, ladder, fc.PREREG["r"])
+                    evaluate, xs, s1, target_boost_db, plane, ladder, fc.PREREG["r"],
+                    band=search_band)
 
         arm_b = fc.summarize(s1_only + g2, target_boost_db, tol)
+
+    # ---- what the steering did, and the fallback when it found nothing ---------------
+    # A tightened bar can be unreachable -- a band the topology cannot put its peak in at
+    # this boost, say. Steering toward it is still right, but returning NOTHING because of
+    # it would be a regression: before the search could see the band it at least handed
+    # back a circuit and named the check it failed. So if nothing cleared the user's bar,
+    # fall back to the best design this same run measured under the competition bar and
+    # let `verify` below report exactly which requirement it misses.
+    steering_relaxed = False
+    if search_spec is not None:
+        if arm_b["best_design"] is None:
+            relaxed = _summarize_relaxed(fc, s1_only + g2, target_boost_db, tol)
+            if relaxed["best_design"] is not None:
+                arm_b, steering_relaxed = relaxed, True
+        mode_detail["requirement_steering"] = {
+            "steered_on": sorted(d["field"] for d in req_diff),
+            "peak_band_ghz": list(search_band) if search_band else None,
+            "feasibility": "loose_pass scored against the user's acceptance spec",
+            "repair_aim": ("g32_solve 2-D repair retargeted at the requested band"
+                           if search_band else "probe band (no band requirement set)"),
+            "fell_back_to_competition_bar": steering_relaxed,
+            "note": ("nothing the search measured met the tightened requirement; the best "
+                     "design under the competition bar is returned and verification below "
+                     "names the requirement it misses" if steering_relaxed else
+                     "the returned design was selected under the user's own requirements"),
+        }
 
     stage1 = fc.summarize(s1_only, target_boost_db, tol)
 

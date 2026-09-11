@@ -172,7 +172,7 @@ is still 15–170x inside the project's 1.5 dB strict criterion.
 >
 > The `fastest` hedge and the floor-budget escalation were both **removed** by `30a90901f`
 > (2026-09-06 15:40), the same commit that replaced `fastest`'s stage 1 — see §4.3 warning
-> item 4. `pipeline.py:219` now reads "No floor-budget escalation". `pipeline.py:1021`
+> item 4. `pipeline.py:219` now reads "No floor-budget escalation". `pipeline.py:1127`
 > reads "stage 2: the SAME frozen g32_solve, fixed small budget, no floor".
 >
 > `results/fastest_floor_sweep_seed99.json` has mtime 2026-09-06 03:24, twelve hours before

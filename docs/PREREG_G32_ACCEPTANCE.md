@@ -198,7 +198,7 @@ evidence of something.
 
 ## 4. The preregistered comparison
 
-**Null:** `_reselect_for_requirements` (`pipeline.py:594-641`) at
+**Null:** `_reselect_for_requirements` (`pipeline.py:649-696`) at
 `REQUIREMENT_RESELECT_CAP = 4` — the mechanism already in the codebase for honouring a
 tightened requirement, which re-verifies up to four alternative designs *from the same trace*
 after verification fails.
