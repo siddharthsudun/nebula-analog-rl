@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from eqrl.circuits.dfe import (dfe_stage_eye, dfe_testbench_netlist, optimal_tap)
-from tests.ngspice_caps import poly_sources_supported
+from tests.ngspice_caps import dfe_testbench_supported
 
 
 def _ngspice():
@@ -24,8 +24,8 @@ def _ngspice():
 #: than fail. They are NOT skipped on the ngspice builds SETUP.md pins, which is where
 #: every recorded DFE number comes from.
 needs_poly = pytest.mark.skipif(
-    not poly_sources_supported(),
-    reason="this ngspice cannot run POLY-form controlled sources")
+    not dfe_testbench_supported(),
+    reason="this ngspice cannot simulate the POLY-based DFE testbench")
 
 
 def test_netlist_contains_the_dfe_summing_node():
