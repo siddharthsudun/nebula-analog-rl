@@ -4,6 +4,11 @@ import re
 
 NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)"
 INTENT = r"\bsnr\b|signal[ -]to[ -]noise|external\s+noise"
+#: The same concept the INTENT test accepts, for the rules that read a VALUE off it.
+#: Those were "snr" only, so "signal-to-noise ratio of 25 dB" switched SNR on and then
+#: dropped the 25 -- the request recognised, its number not -- which lands the user in
+#: Advanced being asked for a figure they had already given.
+SNR_WORD = r"(?:\bsnr\b|signal[ -]to[ -]noise(?:\s+ratio)?)"
 OFF = r"(?:ignore|disable|without|no|skip|exclude|don't\s+(?:use|consider)|do\s+not\s+(?:use|consider))\s+(?:the\s+)?(?:snr|signal[ -]to[ -]noise|external\s+noise)\b|\bsnr\s*(?:off|disabled)\b"
 KEYS = {"mode", "input_snr_db", "value_vrms", "budget_vrms", "low_vrms", "high_vrms",
         "signal_reference", "signal_value_v", "bandwidth_hz"}
@@ -17,15 +22,15 @@ def parse_noise_intent(text, llm=None):
         return {"enabled": False, "source": "absent", "request": None, "warnings": []}
     found = {}
     warnings = []
-    unsupported = bool(re.search(r"\boutput\s+snr|\bsnr\s*(?:>|<|at least|at most|above|below|between)|(?:minimum|maximum|target)\s+snr|\bsnr\s+target", t))
-    snr = re.search(rf"\b(?:input\s+)?snr\s*(?:of|=|:|is|at)?\s*({NUMBER})\s*db\b", t)
-    snr = snr or re.search(rf"({NUMBER})\s*db\s+(?:input\s+)?snr\b", t)
+    unsupported = bool(re.search(rf"\boutput\s+{SNR_WORD}|{SNR_WORD}\s*(?:>|<|at least|at most|above|below|between)|(?:minimum|maximum|target)\s+{SNR_WORD}|{SNR_WORD}\s+target", t))
+    snr = re.search(rf"(?:input\s+)?{SNR_WORD}\s*(?:of|=|:|is|at)?\s*({NUMBER})\s*db\b", t)
+    snr = snr or re.search(rf"({NUMBER})\s*db\s+(?:input\s+)?{SNR_WORD}", t)
     if snr:
         found.update(mode="measured", input_snr_db=float(snr[1]))
     noise = re.search(rf"external\s+noise\s*(?:of|=|:|is|at)?\s*({NUMBER})\s*(mv|uv|v)\s*(?:rms)?", t)
     if noise:
         found.update(mode="measured", value_vrms=float(noise[1])*{"v": 1, "mv": 1e-3, "uv": 1e-6}[noise[2]])
-    if re.search(r"(?:unknown\s+(?:snr|external\s+noise)|(?:snr|external\s+noise)\s+(?:is\s+)?unknown)", t):
+    if re.search(rf"(?:unknown\s+(?:{SNR_WORD}|external\s+noise)|(?:{SNR_WORD}|external\s+noise)\s+(?:is\s+)?unknown)", t):
         found["mode"] = "unknown"
     signal = re.search(rf"({NUMBER})\s*(mv|v)\s*(vpp|pp|peak.to.peak)", t)
     if signal:

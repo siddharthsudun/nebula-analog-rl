@@ -60,6 +60,11 @@ Rules:
   "lossy channel" mean channel_loss_db.
 - A range like "8 to 10 dB of boost" sets target_boost_db to the midpoint and records an
   assumption; "3-12 dB tunable" sets boost_db_min/boost_db_max.
+- A peak/peaking FREQUENCY stated as a RANGE sets peak_freq_lo_ghz and peak_freq_hi_ghz,
+  lowest first. Stated as a SINGLE value ("peak at 3 GHz") it is the band CENTRE: set
+  peak_freq_lo_ghz to 0.9x and peak_freq_hi_ghz to 1.1x that value and record an
+  _assumptions entry saying so. Nyquist, data rate, bandwidth and supply are NOT the
+  peak frequency, however close they sit to the word "peaking".
 - Never add an _assumptions entry for a field the user named unambiguously.
 - SNR is STRICTLY OPTIONAL and separate from noise_vrms_max (receiver device noise).
   Only when the user explicitly asks to consider SNR or external noise, include
@@ -449,6 +454,7 @@ _SPELLED_UNIT = [
     (r"\bwatts?\b", "W"),
     (r"\bmilli[\s-]*volts?\b", "mV"),
     (r"\bgiga[\s-]*hertz\b", "GHz"),
+    (r"\bmega[\s-]*hertz\b", "MHz"),
     (r"\bgigabits?\s*(?:per|/)\s*(?:second|s)\b", "Gbps"),
     (r"\bohms?\b", "Ohm"),
     (r"\bsquare\s*millimet(?:er|re)s?\b", "mm2"),
@@ -509,6 +515,25 @@ _GAP_NOGAIN = r"(?:(?!dB|gain|boost|peaking|amplification)[^\n])*?"
 #: The mirror image for the boost rules: "boost over a lossy 14 dB link" must not let the
 #: boost label run forward across "lossy" and claim the channel figure.
 _GAP_NOLOSS = r"(?:(?!dB|loss|lose|losing|lossy|channel|attenuat|insertion)[^\n])*?"
+#: Every word that names the CTLE's peak LOCATION. "fpeak" is the schematic-annotation
+#: spelling and turns up in pasted spec tables; the plural and gerund both occur in prose.
+_PEAK = r"\bf?peak(?:ing|s)?\b"
+#: A gap between a peak word and the frequency it introduces that may cross no OTHER
+#: frequency-bearing noun. Without it "9 dB of peaking for a 5 GHz Nyquist link" reads
+#: the Nyquist figure as a requested peak band -- a requirement the user never stated,
+#: which then reorders the search (see pipeline._search_band) around the wrong band.
+_GAP_NOFREQ = (r"(?:(?!nyquist|data\s*rate|\bGb|\bGT|bandwidth|baud|symbol\s*rate"
+               r"|supply|vdd)[^\n])*?")
+#: ...and the mirror guard on the far side: in SerDes prose "9 dB peaking at 4 GHz
+#: Nyquist" quotes the boost measured AT Nyquist, not a request to move the peak there.
+_NOT_NYQ = r"(?!\s*(?:nyquist|nrz|pam|(?:of\s+)?(?:bandwidth|bw)\b))"
+#: A point ask ("peak at 3 GHz") names a centre, but the Spec stores a band and
+#: `hard_pass`'s peak_in_band needs two edges. +/-10% is the width: measured against the
+#: 374,588-row corpus (scratchpad/band_reach.py) it leaves between 1,879 and 14,299
+#: candidate designs everywhere from 1.5 to 5 GHz, where +/-5% leaves as few as 759 --
+#: and the corpus is the only start generator that can see a requested band at all.
+PEAK_POINT_TOL = 0.10
+
 #: The connectors that may sit between a label and the number it introduces. A label-then-
 #: number rule needs a TIGHT join, not a free gap: "3 dB dc gain over a 14 dB channel"
 #: lets a free gap run from "dc gain" all the way to 14 and file the channel loss as the
@@ -546,6 +571,8 @@ def _heuristic(text: str) -> ParseResult:
     if "data_rate_gbps" not in kw:
         take("data_rate_gbps", rf"({_N})\s*GT/?s")
     take("nyquist_ghz", rf"nyquist[^\n]*?({_N})\s*GHz")
+    if "nyquist_ghz" not in kw:
+        take("nyquist_ghz", rf"({_N})\s*GHz\s*(?:of\s*)?nyquist")
     if "data_rate_gbps" not in kw:
         for pat, name, gbps in STANDARDS:
             if re.search(pat, text, re.I):
@@ -602,10 +629,33 @@ def _heuristic(text: str) -> ParseResult:
     if "target_boost_db" not in kw and "boost_db_min" not in kw:
         take("target_boost_db", rf"({_N}){_NOT_DB}\s*(?:of\s*)?{_BOOST}")
 
-    if m := re.search(rf"peak[^\n]*?({_N})\s*(?:GHz)?\s*(?:{_R}|and)\s*({_N})\s*GHz", text,
-                      re.I):
-        kw["peak_freq_lo_ghz"], kw["peak_freq_hi_ghz"] = (float(m.group(1)),
-                                                          float(m.group(2)))
+    # -- peak location ----------------------------------------------------------------
+    # A band ask, in either unit and either order. The edges are SORTED: "peak between
+    # 2.5 and 2 GHz" is a band, not an empty one, and an inverted pair would reach
+    # `hard_pass` as a peak_in_band check that nothing can ever satisfy.
+    _FU = r"(G|M)Hz"
+    if m := re.search(rf"{_PEAK}{_GAP_NOFREQ}({_N})\s*(?:{_FU})?\s*(?:{_R}|and)\s*"
+                      rf"({_N})\s*{_FU}{_NOT_NYQ}", text, re.I):
+        unit = 1e-3 if (m.group(m.lastindex) or "G").upper() == "M" else 1.0
+        lo, hi = sorted((float(m.group(1)) * unit, float(m.group(3)) * unit))
+        kw["peak_freq_lo_ghz"], kw["peak_freq_hi_ghz"] = lo, hi
+    else:
+        # A POINT ask names a centre and no width. Both word orders occur: "peak at
+        # 3 GHz" and "a 3 GHz peak". Reading one needs a judgement call, so it makes the
+        # call and DECLARES it -- planting a band the user never bounded, silently, is
+        # exactly the fabrication this parser was rewritten to remove.
+        for pat in (rf"{_PEAK}{_GAP_NOFREQ}({_N})\s*{_FU}{_NOT_NYQ}",
+                    rf"({_N})\s*{_FU}\s*(?:\w+\s+){{0,2}}?{_PEAK}"):
+            if m := re.search(pat, text, re.I):
+                f = float(m.group(1)) * (1e-3 if m.group(2).upper() == "M" else 1.0)
+                kw["peak_freq_lo_ghz"] = f * (1.0 - PEAK_POINT_TOL)
+                kw["peak_freq_hi_ghz"] = f * (1.0 + PEAK_POINT_TOL)
+                assume["peak_freq_lo_ghz"] = assume["peak_freq_hi_ghz"] = (
+                    f'read "{f:g} GHz" as the CENTRE of the peaking band and allowed '
+                    f"+/-{PEAK_POINT_TOL * 100:g}% around it "
+                    f"({f * (1 - PEAK_POINT_TOL):.3g}-{f * (1 + PEAK_POINT_TOL):.3g} GHz)."
+                    " Set both band edges to bound it yourself.")
+                break
 
     # -- hard constraints -------------------------------------------------------------
     take("hd3_db_max", rf"(?:hd3|third[- ]harmonic|linearity)[^\n]*?({_N})\s*dBc?")

@@ -48,6 +48,72 @@ class TestSpecFor:
         assert pipeline.requirements_diff(s) == []
 
 
+class TestEveryLimitBinds:
+    """All eleven settable limits, moved, and followed through to the verdict.
+
+    Three things can break independently for any one of them and only the third is
+    visible from the outside: `spec_for` can store the value, `requirements_diff` can
+    label the direction (the sign is inverted for the four fields where tighter means
+    HIGHER -- the two minimums, the boost floor and the band's low edge), and `hard_pass`
+    can actually read the field. A limit that is stored and labelled but never read is
+    the worst of the three: the interface shows the user a tightened bar and the run
+    passes anyway, which is the exact failure `spec_for` refuses an unknown field to
+    avoid. So this checks a measurement that sits BETWEEN the default and the new limit,
+    which passes at the default and must fail once the limit moves.
+    """
+
+    #: A measurement that clears the competition spec on every check, so a failure below
+    #: belongs to the limit under test and nothing else.
+    BASE = dict(dc_gain_db=6.0, peak_gain_db=15.0, boost_db=9.0, peak_freq_ghz=1.8,
+                hd3_db=-40.0, noise_vrms=1.0e-3, power_w=10e-3, area_mm2=0.03,
+                eye_h_ui=0.5, eye_v_mv=150.0, ok=True)
+
+    #: field -> (the measured attribute it constrains, a value between the default and
+    #: the tightened limit, that tightened limit).
+    BIND = {
+        "power_w_max":      ("power_w",       12e-3,  9e-3),
+        "noise_vrms_max":   ("noise_vrms",    1.2e-3, 0.8e-3),
+        "hd3_db_max":       ("hd3_db",       -35.0,  -45.0),
+        "area_mm2_max":     ("area_mm2",      0.04,   0.02),
+        "eye_h_ui_min":     ("eye_h_ui",      0.45,   0.55),
+        "eye_v_mv_min":     ("eye_v_mv",      120.0,  180.0),
+        "boost_db_min":     ("boost_db",      9.0,    10.0),
+        "boost_db_max":     ("boost_db",      9.0,    8.0),
+        "peak_freq_lo_ghz": ("peak_freq_ghz", 1.8,    2.0),
+        "peak_freq_hi_ghz": ("peak_freq_ghz", 1.8,    1.6),
+        "dc_gain_db_min":   ("dc_gain_db",    6.0,    9.0),
+    }
+
+    def test_the_matrix_covers_every_settable_field(self):
+        """A field added to REQUIREMENT_FIELDS without a row here would be silently
+        untested, which is how a stored-but-never-read limit gets in."""
+        assert set(self.BIND) == set(pipeline.REQUIREMENT_FIELDS)
+
+    @pytest.mark.parametrize("field", pipeline.REQUIREMENT_FIELDS)
+    def test_a_tightened_limit_is_applied_labelled_and_enforced(self, field):
+        from eqrl.sim.measures import Measures
+        from eqrl.specs import hard_pass
+
+        attr, measured, tight = self.BIND[field]
+        m = dataclasses.replace(Measures(**self.BASE), **{attr: measured})
+        assert hard_pass(m, DEFAULT_SPEC)[0], (
+            "the baseline must pass the competition spec, or this proves nothing")
+
+        spec = pipeline.spec_for(9.0, DEFAULT_SPEC.channel_loss_db, 1.5, {field: tight})
+        assert getattr(spec, field) == pytest.approx(tight), "spec_for dropped the value"
+
+        entry = next((d for d in pipeline.requirements_diff(spec) if d["field"] == field),
+                     None)
+        assert entry is not None, "the override was not reported in the diff"
+        assert entry["direction"] == "tighter", (
+            f"{field} moved to {tight} is tighter than {getattr(DEFAULT_SPEC, field)}, "
+            f"but was labelled {entry['direction']!r}")
+
+        assert not hard_pass(m, spec)[0], (
+            f"{field} was stored and labelled but never enforced: the design still "
+            f"passes with {attr}={measured} against a limit of {tight}")
+
+
 class TestStamping:
     def test_plain_run_is_scored_against_the_competition(self, stub):
         stub(best_design=AI_DESIGN)

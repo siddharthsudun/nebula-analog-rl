@@ -112,3 +112,40 @@ def test_nominal_api_never_invokes_snr_when_omitted(monkeypatch):
     assert len(payloads) == 1
     assert payloads[0]['noise_request'] is None
     assert not server._run_lock.locked(), "the run lock must be released before returning"
+
+
+@pytest.mark.parametrize('text', [
+    'signal-to-noise ratio of 25 dB',
+    'signal to noise ratio of 25 dB',
+    'signal-to-noise of 25 dB',
+    'input SNR of 25 dB',
+    '25 dB input SNR',
+    'SNR = 25 dB',
+])
+def test_every_way_of_saying_snr_carries_its_number_too(text):
+    """The INTENT test and the VALUE rules must accept the same vocabulary.
+
+    They did not: INTENT matched "signal-to-noise" but the value rules anchored on the
+    three letters "snr", so the spelled-out phrasing switched SNR ON and dropped the
+    figure. The user then saw an SNR panel demanding a measured input SNR they had just
+    typed -- the worst of both readings, and indistinguishable from the number being
+    unreadable."""
+    parsed = parse_noise_intent(text)
+    assert parsed['enabled']
+    assert parsed['request']['input_snr_db'] == pytest.approx(25.)
+    assert parsed['request']['mode'] == 'measured'
+
+
+@pytest.mark.parametrize('text', [
+    'signal-to-noise ratio above 20 dB',
+    'target signal-to-noise ratio 20 dB',
+    'output signal-to-noise ratio of 20 dB',
+])
+def test_an_output_snr_target_is_refused_in_words_as_well_as_letters(text):
+    """The mirror of the test above: widening the vocabulary must widen the REFUSAL with
+    it. An output-SNR target read as a measured input SNR is not a near miss -- it is a
+    different quantity, and executing it would score the run against a number the user
+    never measured."""
+    parsed = parse_noise_intent(text)
+    assert any('unsupported' in w.lower() for w in parsed['warnings'])
+    assert 'input_snr_db' not in parsed['request']

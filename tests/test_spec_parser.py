@@ -222,6 +222,83 @@ def test_corpus(text, want):
         assert got[key] == pytest.approx(value)
 
 
+class TestPeakBand:
+    """The requested peak band, which is the one field that REORDERS the search.
+
+    Every other requirement only judges a candidate at the end. A peak band is different:
+    `pipeline._search_band` turns it into the corpus-first start order, and
+    `g32_solve`'s AIM is the band's geometric centre. So a band this reader invents is
+    not a cosmetic misread -- it sends the search somewhere the user never asked for,
+    and a band it MISSES leaves the search steering on the competition default while the
+    verdict is judged against the ask.
+    """
+
+    @pytest.mark.parametrize("text", [
+        "peak between 2 and 2.5 GHz",
+        "peak from 2 to 2.5 GHz",
+        "peaking band 2.0-2.5 GHz",
+        "peak band 2 GHz to 2.5 GHz",
+        "peak in the 2 - 2.5 GHz band",
+        "9 dB boost peaking between 2.0 and 2.5 GHz",
+        "peak band 2000 to 2500 MHz",
+    ])
+    def test_a_stated_band_is_read_verbatim(self, text):
+        got = rec(text)
+        assert got["peak_freq_lo_ghz"] == pytest.approx(2.0)
+        assert got["peak_freq_hi_ghz"] == pytest.approx(2.5)
+        assert "peak_freq_lo_ghz" not in parse(text).assumptions, (
+            "a band the user bounded themselves required no judgement call")
+
+    def test_an_inverted_band_is_sorted_not_passed_through(self):
+        """`hard_pass`'s peak_in_band is `lo <= f <= hi`. Inverted, nothing satisfies it.
+
+        Sorting is not tidiness: an unsorted pair reaches the acceptance spec as a check
+        that fails every design, and the run reports "no design met the requirement"
+        about a requirement the user never actually set.
+        """
+        got = rec("peak between 2.5 and 2 GHz")
+        assert (got["peak_freq_lo_ghz"], got["peak_freq_hi_ghz"]) == pytest.approx((2.0, 2.5))
+
+    @pytest.mark.parametrize("text,centre", [
+        ("peak the response at 3 GHz", 3.0),
+        ("peak frequency of 2.4 GHz", 2.4),
+        ("peaking frequency 2.4 GHz", 2.4),
+        ("put the peak at 4 GHz", 4.0),
+        ("peak near 2.4 GHz", 2.4),
+        ("centre the peak on 3.5 GHz", 3.5),
+        ("peak gain around 1.8 GHz", 1.8),
+        ("fpeak 2.2 GHz", 2.2),
+        ("peak at 2400 MHz", 2.4),
+        ("peaking centered at 3 GHz", 3.0),
+        ("a 3 GHz peak, 9 dB of boost", 3.0),
+    ])
+    def test_a_point_ask_becomes_a_declared_band(self, text, centre):
+        """A point names a centre; the Spec stores two edges. The width is a judgement
+        call, so it is made once, in one constant, and REPORTED -- the same contract the
+        bare-"gain" reading is held to."""
+        r = parse(text)
+        tol = sp.PEAK_POINT_TOL
+        assert r.recognised["peak_freq_lo_ghz"] == pytest.approx(centre * (1 - tol))
+        assert r.recognised["peak_freq_hi_ghz"] == pytest.approx(centre * (1 + tol))
+        for key in ("peak_freq_lo_ghz", "peak_freq_hi_ghz"):
+            assert key in r.assumptions, f"{key} was widened without telling the user"
+
+    @pytest.mark.parametrize("text", [
+        "peaking between 8 and 10 dB",              # a boost range, not a band
+        "peak gain of 9 dB on an 8 Gbps link",      # the rate is not the peak
+        "9 dB of peaking for a 5 GHz Nyquist link",  # nor is Nyquist, said before it
+        "9 dB peaking at 4 GHz Nyquist",            # nor said after it
+        "peaking EQ for an 8 Gbps link",
+        "peaking CTLE, supply 1.2 V, 0.02 mm2",
+        "peaking EQ with 4 GHz of bandwidth",       # nor the bandwidth
+        "Nyquist 4 GHz",
+    ])
+    def test_another_quantity_in_GHz_is_never_the_peak_band(self, text):
+        got = rec(text)
+        assert "peak_freq_lo_ghz" not in got and "peak_freq_hi_ghz" not in got, (
+            f"invented a peak band from {text!r}: {got}")
+
+
 class TestNoFalsePositives:
     """The unit-less fallbacks must not claim a number that belongs to another field."""
 
@@ -327,3 +404,44 @@ class TestJsonExtraction:
     ])
     def test_extract(self, raw, want):
         assert sp._extract_json(raw) == want
+
+
+class TestTheKeySurfaceCannotDrift:
+    """The four places a field name has to appear, checked against each other.
+
+    A field can be added to `Spec` and wired through `REQUIREMENT_FIELDS` while the LLM
+    never learns it exists, or advertised to the LLM and then dropped by the merge, or
+    accepted with no plausibility box so a unit slip reaches a slider. Each of those is a
+    one-line omission in a different file and none of them fails anything today -- the
+    request simply comes back with the field missing, which is indistinguishable from the
+    user not having asked for it.
+    """
+
+    @staticmethod
+    def _advertised() -> set:
+        import re
+        m = re.search(r"Allowed keys:(.*?)\.\n", sp._SYSTEM, re.S)
+        assert m, "the system prompt no longer lists its allowed keys"
+        return set(re.findall(r"[a-z0-9_]+", m.group(1)))
+
+    def test_nothing_advertised_is_dropped_by_the_merge(self):
+        assert self._advertised() - sp.SPEC_FIELDS == set()
+
+    def test_nothing_mergeable_is_hidden_from_the_llm(self):
+        assert sp.SPEC_FIELDS - self._advertised() == set()
+
+    def test_every_advertised_key_has_a_plausibility_box(self):
+        assert self._advertised() - set(sp.PLAUSIBLE) == set()
+
+    def test_every_settable_requirement_is_something_the_llm_can_return(self):
+        from eqrl.pipeline import REQUIREMENT_FIELDS
+        assert set(REQUIREMENT_FIELDS) - self._advertised() == set()
+
+    def test_the_llm_is_told_the_same_point_ask_convention_the_rules_use(self):
+        """Both readers must turn "peak at 3 GHz" into the same band, or every point ask
+        arrives as a conflict the user has to arbitrate over a convention neither of them
+        chose."""
+        assert "peak_freq_lo_ghz to 0.9x" in sp._SYSTEM
+        assert sp.PEAK_POINT_TOL == 0.10, (
+            "the prompt spells 0.9x/1.1x literally; a different tolerance here would make "
+            "the two readers disagree on every point ask")

@@ -455,7 +455,7 @@ function setRequirementSI(field, si) {
   if (!r || !reqInputs[field]) return false;
   const disp = si * r.scale;
   reqInputs[field].value = String(Math.round(disp * 1e6) / 1e6);
-  return true;
+  return { landed: disp, clamped: false };   // a number box has no rail to fall off
 }
 
 /** One edge of the band, from the language reader or from a Claude-vs-keyword override.
@@ -467,10 +467,15 @@ function setBandEdge(field, si) {
   const step = Number(lo.step) || 0.05, min = Number(lo.min), max = Number(lo.max);
   const v = Math.min(Math.max(si, min), max);
   const snap = (x) => Number((Math.round(x / step) * step).toFixed(6));
+  const knob = field === "peak_freq_lo_ghz" ? lo : hi;
   if (field === "peak_freq_lo_ghz") lo.value = snap(Math.max(min, Math.min(v, Number(hi.value) - step)));
   else hi.value = snap(Math.min(max, Math.max(v, Number(lo.value) + step)));
   updateBand();
-  return true;
+  // What the knob could NOT represent is the caller's to report. The rail is one octave
+  // wide on purpose, so an ask outside it is a legitimate refusal -- but a refusal the
+  // user never sees is indistinguishable from the run having honoured them.
+  return { landed: Number(knob.value), lo: min, hi: max,
+           clamped: Math.abs(Number(knob.value) - si) > step / 2 };
 }
 
 /** The two-knob band, wired once /api/pipeline/defaults has said what the competition
@@ -588,18 +593,35 @@ function setReaderBadge(state, label) {
   $("#reader-label").textContent = label;
 }
 
+// Every control here has a deliberately narrow rail -- target boost 3-12 dB, channel loss
+// 6-20 dB, the peak band one octave -- because the problem statement is what makes those
+// ranges tunable. So an ask outside a rail is a legitimate refusal. What it is NOT is a
+// number to quietly round into range: before this was reported, "peak at 3 GHz" landed the
+// band knobs on 2.45-2.50 GHz and sent THAT to the API as the user's own requirement, and
+// the run then reported it satisfied. A constraint the user believes is in force and is
+// not is the quietest way this dashboard could mislead them, which is the same standard
+// pipeline.spec_for holds itself to when it refuses an unknown requirement field.
 function applyParse(spec) {
   applyParsedNoise(spec.noise);
   const target = $("#target"), channel = $("#channel");
+  const outOfRange = [];
+  const rail = (el, asked) => {
+    const lo = Number(el.min), hi = Number(el.max);
+    const v = Math.min(Math.max(asked, lo), hi);
+    el.value = v;
+    return { landed: v, lo, hi, clamped: Math.abs(v - asked) > 1e-9 };
+  };
+  const note = (row, r) => { if (r && r.clamped) outOfRange.push({ row, ...r }); };
   for (const row of spec.fields || []) {
-    if (row.field === "target_boost_db") { target.value = Math.min(Math.max(row.asked, Number(target.min)), Number(target.max)); updateTarget(); }
-    else if (row.field === "channel_loss_db") { channel.value = Math.min(Math.max(row.asked, Number(channel.min)), Number(channel.max)); updateChannel(); }
-    else if (row.role === "scores") setRequirementSI(row.field, row.asked);
+    if (row.field === "target_boost_db") { note(row, rail(target, row.asked)); updateTarget(); }
+    else if (row.field === "channel_loss_db") { note(row, rail(channel, row.asked)); updateChannel(); }
+    else if (row.role === "scores") note(row, setRequirementSI(row.field, row.asked));
   }
   refreshRequirementTags();
+  return outOfRange;
 }
 
-function renderChips(spec) {
+function renderChips(spec, outOfRange = []) {
   const strip = $("#parse-strip");
   const rows = spec.fields || [];
   const chips = rows.map((r) => {
@@ -621,6 +643,7 @@ function renderChips(spec) {
     if (r.conflict_llm) notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(r.label)}</strong>: the keyword reader and Claude disagree (${escapeHtml(prettyDisp(r.conflict_llm.heuristic * (r.asked_disp / r.asked || 1), r.unit))} vs ${escapeHtml(prettyDisp(r.conflict_llm.llm * (r.asked_disp / r.asked || 1), r.unit))}). The keyword value is applied; click the chip to use Claude's.</div></div>`);
   }
   for (const w of spec.warnings || []) notes.push(`<div class="note warn">${ICONS.info}<div>${escapeHtml(w)}</div></div>`);
+  for (const c of outOfRange) notes.push(`<div class="note bad">${ICONS.xCircle}<div><strong>${escapeHtml(c.row.label)}</strong>: you asked for ${escapeHtml(prettyDisp(c.row.asked_disp, c.row.unit))}, but this control only spans ${escapeHtml(compactNum(c.lo))}–${escapeHtml(compactNum(c.hi))} ${escapeHtml(c.row.unit)}. The run will be scored at ${escapeHtml(prettyDisp(c.landed, c.row.unit))}, <em>not</em> at what you asked for.</div></div>`);
   const reader = spec.llm_backend ? `Claude (${spec.llm_backend}) and the keyword reader` : "keyword reader";
   const head = `<div class="parse-empty">${reader}: ${rows.length} field${rows.length === 1 ? "" : "s"} recognised. Anything you wrote that is not listed was not understood; anything not listed at all stays at its default.</div>`;
   strip.innerHTML = `<div class="chips">${chips.join("")}</div>${notes.length ? `<div class="parse-notes">${notes.join("")}</div>` : ""}${head}`;
@@ -654,8 +677,7 @@ async function parseNow(text, backend) {
     if (seq !== parseSeq && backend === "off") return null;   // a newer keystroke won
     lastParse = spec; lastParseText = text;
     if (backend !== "off") llmReadText = text;
-    renderChips(spec);
-    applyParse(spec);
+    renderChips(spec, applyParse(spec));
     if (spec.llm_backend) setReaderBadge("llm", `Claude read it in ${fmt((spec.llm_ms || 0) / 1000, 1)} s`);
     else if (backend !== "off") setReaderBadge("", "Claude unavailable, keyword reader only");
     return spec;
