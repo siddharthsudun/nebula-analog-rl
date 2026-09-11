@@ -80,20 +80,35 @@ def test_nominal_transfer_preserves_predictions_with_new_columns_zero():
 
 
 def test_nominal_api_never_invokes_snr_when_omitted(monkeypatch):
+    """A run that asks for no SNR must not touch the SNR path at all.
+
+    Rewritten for the resident-worker dispatch: `pipeline_run` no longer calls `design`
+    in-process, it hands ONE payload to `eqrl.runtime`. So the thing to assert is that the
+    dispatched payload carries `noise_request=None` and that exactly one dispatch happens.
+
+    Patching `ready` is not decoration. An unready runtime answers 503 *and*
+    `_runtime_unavailable()` schedules a warm-up, which takes `_run_lock` on a background
+    thread and holds it for the length of a real prepare(). That is correct in the server
+    -- a request landing mid-warm-up gets an honest 409 instead of racing the one resident
+    libngspice process -- but in a test it leaves the lock held for whatever runs next,
+    which is what made `test_runtime_watchdog` fail only when this module preceded it.
+    """
     import server
+    from eqrl import runtime
     import eqrl.llm.snr_parser as noise_parser
     import eqrl.snr_pipeline as noise_pipeline
-    from contextlib import nullcontext
     monkeypatch.setattr(noise_parser, 'resolve_snr_request', lambda *a: pytest.fail('SNR parsing while off'))
     monkeypatch.setattr(noise_pipeline, 'attach_noise_result', lambda *a, **k: pytest.fail('SNR scoring while off'))
-    monkeypatch.setattr(server, '_narrating', nullcontext)
-    calls = []
-    def design(*a, **k):
-        calls.append((a,k))
-        return {'status':'solved', 'verification':{'passed':True}}
-    monkeypatch.setattr(server, 'design', design)
-    monkeypatch.setattr(server, 'describe', lambda r: 'Nominal result')
+    payloads = []
+    class Worker:
+        def run(self, payload, limit, emit):
+            payloads.append(payload)
+            return {'status': 'solved', 'verification': {'passed': True}}
+    monkeypatch.setattr(runtime, 'ready', lambda: True)
+    monkeypatch.setattr(runtime, 'get_runtime', lambda: Worker())
     result = server.pipeline_run(server.PipelineRunRequest(target_boost_db=9.))
     assert result['status'] == 'solved'
     assert 'noise_evaluation' not in result
-    assert len(calls) == 1
+    assert len(payloads) == 1
+    assert payloads[0]['noise_request'] is None
+    assert not server._run_lock.locked(), "the run lock must be released before returning"
