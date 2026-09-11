@@ -52,8 +52,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 #: Artifact paths look like `results/foo.json`. Restricted to the data directories and to
 #: data extensions: source files are `test_citations.py`'s job, not this one.
+#: The lookbehind, not \b: \b matches between "static/" and "data/", so a real path such
+#: as `dashboard/static/data/mode-evidence.json` was read as a citation of a nonexistent
+#: `data/mode-evidence.json` and failed the dead-reference test over a committed file. A
+#: path segment is only a citation when nothing path-like precedes it.
 _ARTIFACT = re.compile(
-    r"\b((?:results|scratchpad|data|artifacts)/[A-Za-z0-9_./-]+"
+    r"(?<![A-Za-z0-9_./-])((?:results|scratchpad|data|artifacts)/[A-Za-z0-9_./-]+"
     r"\.(?:json|npz|zip|csv|jsonl|pt|pkl))")
 
 #: A field citation is deliberately machine-readable: ``artifact.json → nested.field``.

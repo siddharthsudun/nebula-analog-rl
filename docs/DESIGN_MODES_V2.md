@@ -8,7 +8,7 @@ not a description of the current system.
 > ### ⚠️ WHAT THIS DOCUMENT NOW GETS WRONG
 >
 > **The title is stale.** There are five modes, not four. Current `MODES`
-> (`src/eqrl/pipeline.py:75`) = `default, fastest, thinking, retarget, auto` — plus
+> (`src/eqrl/pipeline.py:77`) = `default, fastest, thinking, retarget, auto` — plus
 > `g32_acceptance`, added 07 Sep 2026, which this V2 spec predates and does not cover.
 > It is deliberately absent from `UI_MODES`; see `docs/PREREG_G32_ACCEPTANCE.md`.
 >
@@ -145,7 +145,7 @@ Two notes:
 that values may not match simulation, minimal accuracy loss.
 
 **The blocker:** a < 5 s budget is ~9 `measure_all`. **PPO stage 1 alone is 11.** The current
-`fastest` mode only shrinks the *stage-2* budget (`FASTEST_BUDGET = 3` as of `pipeline.py:216`; this spec said 4), which is why it
+`fastest` mode only shrinks the *stage-2* budget (`FASTEST_BUDGET` is 3 at `pipeline.py:224`; this spec said 4), which is why it
 measured 11.6–18.6 s and saved nothing on 2 of 3 specs. **You cannot reach 5 s by tuning
 stage 2. Stage 1 is the cost.**
 

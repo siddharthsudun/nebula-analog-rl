@@ -66,7 +66,7 @@ _NOISE = {"None", "True", "False", "ok", "n", "k", "x", "m", "spec", "self", "dv
 #: escalation", and ` was extracted as a symbol and duly failed to appear in any code.
 #: Requiring no whitespace is what separates a name from the sentence around it.
 _LOOKS_LIKE_CODE = re.compile(r"""^[A-Za-z_][A-Za-z0-9_.\[\]()'"-]*$""")
-#: `pipeline.py:211 now reads "No floor-budget escalation"` quotes the target's own text.
+#: `pipeline.py:219 now reads "No floor-budget escalation"` quotes the target's own text.
 #: That is a STRONGER claim than naming a symbol -- it asserts the words at that line --
 #: so it is checked the same way, and a citation carrying one is not "unattributable".
 #:
