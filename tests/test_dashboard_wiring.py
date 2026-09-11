@@ -62,9 +62,12 @@ def test_the_boot_handler_owns_every_panel_initializer():
     start = text.index('document.addEventListener("DOMContentLoaded"')
     boot = text[start:]
     defined = set(_INIT_DEF.findall(text))
-    # `initComposer`/`initHistory` are deliberately chained off `initSpec`, because they
-    # read the defaults it fetches. Everything else is booted directly.
-    chained = {"initComposer", "initHistory"}
+    # `initComposer`/`initHistory`/`initBand` are deliberately chained off `initSpec`,
+    # because they read the defaults it fetches -- `initBand` takes the rail's own ends
+    # from the two peak-band requirement defaults, so booting it directly would build the
+    # slider before the server has said what the competition band is. Everything else is
+    # booted directly.
+    chained = {"initComposer", "initHistory", "initBand"}
     missing = sorted(f for f in defined - chained if f not in boot)
     assert not missing, (
         f"these initializers are never reached from the boot handler: {', '.join(missing)}")

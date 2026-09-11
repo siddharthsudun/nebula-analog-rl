@@ -59,6 +59,14 @@ MENTION_ALLOWED = ATTR_READ_ALLOWED | {
     "circuits/ctle.py",
     "experiments/qualify_delivered.py",
     "experiments/robust_library.py",
+    # `pareto.py` names it to CARRY it, not to read it. The neighbour sweep perturbs a
+    # design through `decode_action(encode_action(...))`, and the action vector is the six
+    # searched parameters -- so the round trip would silently reset `w_dfe` to its default.
+    # Line 77 puts the original value back. The value is never consulted: `w_dfe` appears
+    # nowhere in sim/, evaluator.py, specs.py or solve.py, and measure_all on the same
+    # design at w_dfe=0.0 and w_dfe=8.0 returns bit-identical measures (checked
+    # 2026-09-11). It is a dict key being preserved, not a knob being used.
+    "pareto.py",
 }
 
 _ATTR_READ = re.compile(r"\.\s*w_dfe\b")
