@@ -178,3 +178,22 @@ class TestFinalizeHonesty:
 def test_objectives_reject_a_negative_measurement():
     with pytest.raises(ValueError):
         pareto.objectives(item(-1.0, 1e-6, 0.01, 8.0), 8.0)
+
+
+def test_stream_ids_reference_and_published_choices_are_stable():
+    from eqrl.pipeline import spec_for
+    spec=spec_for(8,12,1.5)
+    primary=item(.005,.0005,.02,8,tag="primary")
+    a=item(.003,.0007,.02,8,tag="a")
+    result=dict(design=primary['design'],verification=primary['verification'],pareto=dict(measured_items=[a]))
+    pareto.finalize(result,spec)
+    before={pareto.design_key(i['design']):i['id'] for i in result['pareto']['items']}
+    assert result['pareto']['items'][0]['design']==primary['design']
+    better=item(.002,.0004,.01,8,tag="better")
+    result['pareto']['measured_items']=[a,better]
+    pareto.finalize(result,spec)
+    after={pareto.design_key(i['design']):i['id'] for i in result['pareto']['items']}
+    assert all(after[k]==v for k,v in before.items())
+    assert result['pareto']['items'][0]['design']==primary['design']
+    assert result['pareto']['items'][0]['on_frontier'] is False
+    assert len(after)==len(result['pareto']['items'])

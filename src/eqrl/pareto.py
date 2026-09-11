@@ -54,7 +54,7 @@ def choose(items, target, cap=3):
 
 def proposals(result, spec, cap):
     from eqrl.experiments.fastest_hedge import load_fastest_assets
-    from eqrl.circuits.ctle import decode_action
+    from eqrl.circuits.ctle import decode_action, encode_action, DesignVars
     surrogate, _, _ = load_fastest_assets()
     order = np.argsort(abs(surrogate.Y[:,1] - spec.target_boost_db), kind="stable")
     order = [i for i in order if abs(surrogate.Y[i,1] - spec.target_boost_db) <= spec.boost_target_tol_db][:240]
@@ -65,10 +65,21 @@ def proposals(result, spec, cap):
                 sorted(designs,key=lambda d:-d["w_in"]),
                 sorted(designs,key=lambda d:d["w_in"]*d["l_in"])]
     chosen = result.get("design")
+    local = []
+    if chosen:
+        # Deliberately explore competing quantities around the already valid circuit.
+        # These sizing moves are proposals only; every result is freshly guarded.
+        for factor in (.92, 1.08, .84, 1.16):
+            for field in ("i_tail", "w_in", "l_in", "r_load", "rs", "cs"):
+                proposal = dict(chosen)
+                proposal[field] *= factor
+                proposal = asdict(decode_action(encode_action(DesignVars(**proposal))))
+                proposal["w_dfe"] = chosen.get("w_dfe",0.0)
+                local.append(proposal)
     seen = {design_key(chosen)} if chosen else set()
     out = []
     traces = [e["design"] for e in result.pop("_pareto_trace",[]) if e and e.get("design") and e.get("loose_pass")]
-    for d in traces[:4] + [d for group in zip(*rankings) for d in group]:
+    for d in local[:18] + traces[:4] + [d for group in zip(*rankings) for d in group]:
         key = design_key(d)
         if key in seen:
             continue

@@ -56,8 +56,11 @@ class TestStartupPrewarm:
         warm = _function((ROOT / "server.py").read_text(encoding="utf-8"), "_warm_up")
         called = {n.func.id for n in ast.walk(warm)
                   if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
-        for required in ("get_pool", "get_evaluator", "load_policy"):
+        for required in ("prepare", "get_evaluator", "load_policy"):
             assert required in called, f"{required} was dropped from warm-up"
+        worker = _function((ROOT / "src/eqrl/runtime.py").read_text(encoding="utf-8"), "worker_main")
+        worker_calls = {n.func.id for n in ast.walk(worker) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name)}
+        assert {"get_pool","load_policy","load_fastest_assets"} <= worker_calls
 
 
 class TestSearchReserve:

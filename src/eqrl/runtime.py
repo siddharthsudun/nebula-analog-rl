@@ -138,8 +138,6 @@ atexit.register(close)
 
 
 def worker_main():
-    import faulthandler
-    faulthandler.dump_traceback_later(12,repeat=True,file=sys.stderr)
     from contextlib import redirect_stdout
     from eqrl.agents.train_noise_pilot import _configure_ngspice
     print("runtime: configure",file=sys.stderr,flush=True)
@@ -163,14 +161,13 @@ def worker_main():
         server.get_evaluator('tt',fast=True,channel_loss_db=12.)
         load_policy(str(ROOT/pl.POLICY));load_fastest_assets()
         print('runtime: ready',file=sys.stderr,flush=True)
-    faulthandler.cancel_dump_traceback_later()
     # Initialize native libraries before a background CRT stdin read starts.
     threading.Thread(target=read_commands,daemon=True).start()
     send('ready')
     while True:
         command=commands.get();cancel.clear()
         request_id=command['id'];payload=command['payload'];deadline=command['deadline']
-        def emit(stage, text, **extra):send('progress',request_id,event=dict(stage=stage,text=text,**extra))
+        def emit(stage, text, kind='note', **extra):send('progress',request_id,event=dict(stage=stage,text=text,kind=kind,**extra))
         try:
             with redirect_stdout(sys.stderr):
                 server._emit=emit

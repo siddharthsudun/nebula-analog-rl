@@ -38,8 +38,12 @@ def main() -> None:
     for tgt, chan, si in SPECS:
         for mode in ("default", "accurate"):
             t = time.perf_counter()
+            # pvt=False: this times the nominal search against the <5s/~60s mode
+            # targets. PVT repair (pipeline.design()'s default now) is a fixed
+            # ~80-150s post-verification stage unrelated to which mode ran, and
+            # would swamp exactly the timing signal this script exists to measure.
             r = pl.design(target_boost_db=tgt, channel_loss_db=chan,
-                          spec_index=si, mode=mode)
+                          spec_index=si, mode=mode, pvt=False)
             dt = time.perf_counter() - t
             p, c = r["provenance"], r["cost"]
             v = r.get("verification") or {}

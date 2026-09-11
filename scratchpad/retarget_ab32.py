@@ -57,8 +57,11 @@ def main() -> None:
         for mode in ("default", "retarget"):
             t = time.perf_counter()
             try:
+                # pvt=False: default's rows here are joined into mode_bench32.py against
+                # accurate/thinking, and this A/B's own wall-time column is read as
+                # search cost, not as search + an unrelated ~80-150s PVT repair stage.
                 r = pl.design(target_boost_db=tgt, channel_loss_db=chan, spec_index=i,
-                              mode=mode)
+                              mode=mode, pvt=False)
             except Exception as exc:                      # keep the run going; record it
                 rows.append({"i": i, "target": tgt, "chan": chan, "mode": mode,
                              "error": "%s: %s" % (type(exc).__name__, exc)})

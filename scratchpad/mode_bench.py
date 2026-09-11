@@ -57,8 +57,12 @@ def main() -> None:
         for mode in MODES:
             t = time.perf_counter()
             try:
+                # pvt=False: this is a mode-vs-mode nominal comparison; PVT repair (now
+                # pipeline.design()'s default) is a shared post-verification stage, not
+                # something any mode controls, and would swamp every other cost/wall
+                # column here with its own ~80-150s if left on.
                 r = pl.design(target_boost_db=tgt, channel_loss_db=chan,
-                              spec_index=si, mode=mode)
+                              spec_index=si, mode=mode, pvt=False)
                 dt = time.perf_counter() - t
                 v = r.get("verification") or {}
                 m = v.get("measures") or {}

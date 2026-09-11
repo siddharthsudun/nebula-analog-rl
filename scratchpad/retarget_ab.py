@@ -44,8 +44,12 @@ def main() -> None:
     for tgt, chan, si in SPECS:
         for mode in ("default", "retarget"):
             t = time.perf_counter()
+            # pvt=False: default/retarget must be isolated to exactly one difference
+            # (the pinned boost axis). PVT repair is a shared post-verification stage
+            # neither mode controls, so leaving it on would add ~80-150s of unrelated
+            # noise to the wall-time column this A/B depends on.
             r = pl.design(target_boost_db=tgt, channel_loss_db=chan, spec_index=si,
-                          mode=mode)
+                          mode=mode, pvt=False)
             dt = time.perf_counter() - t
             v = r.get("verification") or {}
             p, c = r["provenance"], r["cost"]

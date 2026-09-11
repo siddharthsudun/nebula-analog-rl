@@ -43,8 +43,11 @@ def main() -> None:
         for mode in MODES:
             t = time.perf_counter()
             try:
+                # pvt=False: joined against retarget_ab32.json's default-mode rows,
+                # which predate PVT repair entirely -- leaving PVT on here would make
+                # the two sides of the join incomparable.
                 r = pl.design(target_boost_db=tgt, channel_loss_db=chan, spec_index=i,
-                              mode=mode)
+                              mode=mode, pvt=False)
             except Exception as exc:
                 rows.append({"i": i, "target": tgt, "chan": chan, "mode": mode,
                              "error": "%s: %s" % (type(exc).__name__, exc)})
