@@ -7,7 +7,7 @@ circuit out.
         |
     G3.2 constrained refinement      specification closure            (up to r evaluations)
         |
-    independent guarded SPICE verification
+    guarded nominal verification -> PVT sizing repair -> independent full-grid verification
         |
     final circuit + resulting specs
 
@@ -18,13 +18,15 @@ demo therefore described two different architectures, and the demo could not rep
 delivered circuit. This module is the one place that architecture lives, and `eqrl.solve`
 is now a thin front end over it.
 
-NOTHING HERE IS A NEW CONTROLLER. Stage 1, the guarded evaluation, and G3.2 are IMPORTED
+NOMINAL STAGES REUSE EXISTING CONTROLLERS. Stage 1, the guarded evaluation, and G3.2 are IMPORTED
 from `experiments.final_comparison` -- the same functions arm B runs, under the same
 constants, checked by the same `_check_constants()` guard, and re-proved against the frozen
 artifacts by that module's `--gate`. A second transcription of G3.2 would be a second
 controller with the same name, which is exactly what the frozen record must not acquire.
 Changes no reward, PPO hyperparameter, design bound, guard, hard_pass, controller constant,
-frozen model or benchmark criterion.
+frozen model or benchmark criterion. The additional PVT sizing stage lives in
+`pvt_repair`; production defaults to this stage after nominal verification.
+Use pvt=False only to explicitly reproduce the historical nominal benchmark.
 
 THE VERIFICATION STEP IS NOT THE SEARCH'S OWN OPINION. G3.2 stops on the nine-check
 `loose_pass` plus a target-error test; this module then re-measures the design it returned
@@ -185,6 +187,12 @@ _TIGHTER_IS_LOWER = frozenset({"power_w_max", "noise_vrms_max", "hd3_db_max",
 #: may re-verify. Each costs one measure_all. Bounded so a user constraint the search did
 #: not steer on cannot turn a five-evaluation run into a fifty-evaluation one.
 REQUIREMENT_RESELECT_CAP = 4
+
+#: How many alternative designs from the same search trace get a full, independent
+#: verify() call so result["alternatives"] can offer real tradeoffs, not estimates.
+#: Unlike REQUIREMENT_RESELECT_CAP this runs on EVERY solved request, not only on a
+#: failure, so it is deliberately smaller.
+ALTERNATIVES_CAP = 3
 
 #: Optional progress hook: `notify(stage, text)`. The dashboard installs one so events
 #: that happen INSIDE design() (auto-mode escalation, requirement re-selection) reach
@@ -421,7 +429,7 @@ def verify(dv: DesignVars, spec: Spec) -> dict[str, Any]:
     return out
 
 
-def _cost(fc, k: int, info: dict, left: int, c1: dict, c2: dict) -> dict[str, Any]:
+def _cost(fc, k: int, info: dict, left: int, c1: dict, c2: dict, *, corpus_seed=False) -> dict[str, Any]:
     """The run's simulator cost in all three units REPRODUCE.md section 13 distinguishes.
 
     `c1` and `c2` are counted, not derived. Verification is added later by `design`,
@@ -439,7 +447,7 @@ def _cost(fc, k: int, info: dict, left: int, c1: dict, c2: dict) -> dict[str, An
     not this task's call to make.
     """
     steps = len(info["steps"])
-    charged = (k * fc.PREREG["ppo_measure_all_per_eval"]
+    charged = (k * (1 if corpus_seed else fc.PREREG["ppo_measure_all_per_eval"])
                + steps * fc.PREREG["search_measure_all_per_eval"])
     search_m = c1["measure_all"] + c2["measure_all"]
     return {
@@ -558,7 +566,7 @@ def _guidance(mode: str, info: dict, arm_b: dict, target_boost_db: float) -> dic
 def _auto(target_boost_db, channel_loss_db, kw) -> dict[str, Any]:
     """AUTO_FIRST, then AUTO_ESCALATE only if the first attempt was not SOLVED."""
     _note("search", "Auto mode: trying the corpus-seeded fast search first.")
-    first = design(target_boost_db, channel_loss_db, mode=AUTO_FIRST, **kw)
+    first = design(target_boost_db, channel_loss_db, mode=AUTO_FIRST, pvt=False, **kw)
     if first["status"] == SOLVED:
         first["auto"] = {"escalated": False, "first_mode": AUTO_FIRST,
                          "first_status": SOLVED}
@@ -567,7 +575,7 @@ def _auto(target_boost_db, channel_loss_db, kw) -> dict[str, Any]:
     why = first["guidance"]["headline"]
     _note("search", f"Fast search did not verify ({why}). Escalating to Thinking: "
                     f"multiple independent restarts with a larger budget.")
-    final = design(target_boost_db, channel_loss_db, mode=AUTO_ESCALATE, **kw)
+    final = design(target_boost_db, channel_loss_db, mode=AUTO_ESCALATE, pvt=False, **kw)
     fc1 = first["cost"]
     final["auto"] = {
         "escalated": True, "first_mode": AUTO_FIRST, "first_status": first["status"],
@@ -612,6 +620,10 @@ def _reselect_for_requirements(result: dict, trace: list, spec: Spec, tol: float
     user_checks = {check_of[f] for f in diff}
     if not set(v.get("failing") or []) <= user_checks:
         return
+    from eqrl.request_budget import active
+    if active.get() is not None:
+        result["_pareto_trace"] = trace
+        return
     chosen = result["design"]
     pool = [e for e in trace if e and e["loose_pass"] and e.get("design")
             and e["design"] != chosen
@@ -648,7 +660,54 @@ def _add_verification_cost_extra(cost: dict[str, Any], c: dict) -> None:
     cost["spice_analyses_total"] += c["analysis"]
 
 
-def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
+def _add_alternatives_cost(cost: dict[str, Any], c: dict) -> None:
+    cost["measure_all_alternatives"] = cost.get("measure_all_alternatives", 0) + c["measure_all"]
+    cost["measure_all_total"] += c["measure_all"]
+    cost["spice_analyses_alternatives"] = cost.get("spice_analyses_alternatives", 0) + c["analysis"]
+    cost["spice_analyses_total"] += c["analysis"]
+
+
+def _attach_alternatives(result: dict, trace: list, spec: Spec, tol: float, counting) -> None:
+    """After a SOLVED result, independently verify up to ALTERNATIVES_CAP other
+    guard-valid designs from the same search trace, so the result can offer real
+    tradeoffs instead of exactly one circuit. Nominal (pre-PVT) only -- PVT repair runs
+    once, in design(), after this returns, and is never re-run per alternative. A no-op
+    unless result["status"] == SOLVED. Mutates `result` in place."""
+    if result["status"] != SOLVED:
+        return
+    chosen = result["design"]
+    pool = [e for e in trace if e and e["loose_pass"] and e.get("design")
+            and e["design"] != chosen
+            and abs(e["boost_db"] - spec.target_boost_db) <= tol]
+    pool.sort(key=lambda e: abs(e["boost_db"] - spec.target_boost_db))
+
+    cost = result["cost"]
+    cost.setdefault("measure_all_alternatives", 0)
+    cost.setdefault("spice_analyses_alternatives", 0)
+
+    tried, items = [], []
+    for e in pool[:ALTERNATIVES_CAP]:
+        dv = DesignVars(**e["design"])
+        with counting() as c:
+            v2 = verify(dv, spec)
+        _add_alternatives_cost(cost, c)
+        tried.append({"boost_db": e["boost_db"], "passed": bool(v2["passed"]),
+                      "failing": v2.get("failing")})
+        if v2["passed"]:
+            items.append({"design": dict(e["design"]), "boost_db": e["boost_db"],
+                          "abs_err_db": abs(e["boost_db"] - spec.target_boost_db),
+                          "verification": v2})
+
+    result["alternatives"] = {
+        "cap": ALTERNATIVES_CAP,
+        "pool_size": len(pool),
+        "tried": tried,
+        "items": items,
+        "scope": "nominal (pre-PVT) designs only; not run through PVT repair",
+    }
+
+
+def _design_nominal(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
            *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
            peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
            allow_fallback: bool = False, mode: str = "default",
@@ -704,6 +763,9 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
 
     ev = fc.Evaluation()
     evaluate = ev.make_eval(channel_loss_db)
+    from eqrl.request_budget import active
+    if active.get() is not None:
+        evaluate = active.get().bind(evaluate)
     # "fastest" never rolls out PPO -- see the mode dispatch below -- so it has no use for
     # the policy/env pair, and loading them would be pure overhead this mode exists to cut.
     policy, env = (None, None) if mode == "fastest" else fc.load_policy(model)
@@ -938,10 +1000,10 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             }
 
     elif mode == "fastest":
-        # ---- stage 1 REPLACEMENT: corpus lookup, no PPO, one real evaluation ---------
+        # ---- stage 1: corpus lookup, bounded retries on guard-invalid seeds ---------
         # See eqrl.experiments.fastest_hedge.surrogate_stage1's docstring for why this is
-        # sound with no channel awareness in the corpus, and why exactly one real
-        # evaluation (not zero) is spent before g32_solve ever sees the candidate.
+        # sound with no channel awareness in the corpus. Every attempted seed is
+        # actually measured; a guard-valid first seed ends this stage immediately.
         from eqrl.experiments.fastest_hedge import load_fastest_assets, surrogate_stage1
 
         surrogate, _corpus_X, _radius = load_fastest_assets()
@@ -950,8 +1012,11 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             xs, s1, term_at = surrogate_stage1(evaluate, target_boost_db, surrogate,
                                                seed_spec)
         s1_only = [e for e in s1 if e]
-        k_eff = 1  # one real evaluation was spent (confirming the corpus candidate), not
-                   # PREREG["k"]=5 -- `optimizer_evals`/`stage1_evals` must say so honestly
+        # 1 real evaluation ordinarily, up to 4 when rejected seeds require another
+        # distinct corpus
+        # seed -- either way this is len(xs), not PREREG["k"]=5.
+        # `optimizer_evals`/`stage1_evals` must say so honestly.
+        k_eff = len(xs)
 
         # ---- stage 2: the SAME frozen g32_solve, fixed small budget, no floor --------
         with counting() as c2:
@@ -959,6 +1024,8 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
                 evaluate, xs, s1, target_boost_db, plane, ladder, FASTEST_BUDGET)
         seed_rec = s1[0]
         mode_detail["surrogate_seed"] = {
+            "attempts": len(xs),
+            "guard_valid_attempts": sum(e is not None for e in s1),
             "candidate_boost_db": None if seed_rec is None else seed_rec["boost_db"],
             "target_boost_db": target_boost_db,
             "candidate_guard_valid": seed_rec is not None,
@@ -1035,7 +1102,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
             "hand_tuning": "none",
         },
         "guidance": _guidance(mode, info, arm_b, target_boost_db),
-        "cost": _cost(fc, k_eff, info, left, c1, c2),
+        "cost": _cost(fc, k_eff, info, left, c1, c2, corpus_seed=mode == "fastest"),
         "solver": arm_b,
         "design": arm_b["best_design"],
         "netlist": None,
@@ -1058,6 +1125,7 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
         result["netlist"] = netlist(dv, vdd=spec.vdd_nominal, temp_c=27.0, corner="tt",
                                     analysis="ac", models="sky130")
         result["status"] = SOLVED if v["passed"] else CLOSED_NOT_VERIFIED
+        _attach_alternatives(result, s1_only + g2, spec, tol, counting)
         return _plain(result)
 
     # ---- nothing guard-valid came out of the architecture -----------------------------
@@ -1086,6 +1154,33 @@ def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel
     return _plain(result)
 
 
+def design(target_boost_db: float, channel_loss_db: float = DEFAULT_SPEC.channel_loss_db,
+           *, model: str = POLICY, spec_index: int = 0, tol: float | None = None,
+           peak_probe: str = PEAK_PROBE, rescue_probe: str = RESCUE_PROBE,
+           allow_fallback: bool = False, mode: str = "default", requirements: dict | None = None,
+           pvt: bool = True, pvt_output=None, pvt_wall_seconds: float = 900,
+           wall_seconds: float | None = None, checkpoint=None) -> dict[str, Any]:
+    """PPO/G3.2 followed by automatic bounded PVT repair and independent acceptance.
+
+    pvt=False retains the historical nominal benchmark path explicitly. Production
+    requests use PVT by default; failures cannot report a solved circuit.
+    """
+    if wall_seconds is not None:
+        from eqrl.realtime import design_realtime
+        return design_realtime(target_boost_db, channel_loss_db, mode=mode, requirements=requirements,
+            model=model, spec_index=spec_index, tol=tol, peak_probe=peak_probe, rescue_probe=rescue_probe,
+            allow_fallback=allow_fallback, wall_seconds=wall_seconds, checkpoint=checkpoint)
+    result = _design_nominal(target_boost_db, channel_loss_db, model=model, spec_index=spec_index,
+        tol=tol, peak_probe=peak_probe, rescue_probe=rescue_probe, allow_fallback=allow_fallback,
+        mode=mode, requirements=requirements)
+    if pvt:
+        from eqrl.pvt_repair import apply_pvt_stage
+        spec = spec_for(target_boost_db, channel_loss_db, result['spec']['boost_tol_db'], requirements)
+        apply_pvt_stage(result, spec, output=pvt_output, seed=20260910+spec_index,
+                        wall_seconds=pvt_wall_seconds, notify=_note)
+    return _plain(result)
+
+
 def describe(r: dict[str, Any]) -> str:
     """A human-readable rendering of one result, for the CLI and for reports."""
     d = r["design"]
@@ -1102,10 +1197,10 @@ def describe(r: dict[str, Any]) -> str:
                    % (p["policy"], p["g32_start_source"], p["g32_reason"]))
         # Counted, not derived, and in all three units -- printing one number called
         # "simulations" is what made this line misleading before.
-        out.append("  cost          %d optimizer evals = %d measure_all "
-                   "(%d search + %d verification) = %d SPICE analyses"
+        out.append("  cost          %d nominal optimizer evals; %d measure_all "
+                   "(%d nominal search + %d nominal verification + %d PVT) = %d SPICE analyses"
                    % (c["optimizer_evals"], c["measure_all_total"],
-                      c["measure_all_search"], c["measure_all_verification"],
+                      c["measure_all_search"], c["measure_all_verification"], c.get("measure_all_pvt", 0),
                       c["spice_analyses_total"]))
     if d is None:
         out.append("\n  no design: the architecture produced nothing guard-valid.")
@@ -1152,5 +1247,11 @@ def describe(r: dict[str, Any]) -> str:
         out.append("  auto          %s" % (
             "fastest verified on the first attempt" if not auto["escalated"] else
             "fastest returned %s; escalated to thinking" % auto["first_status"]))
+    if r.get("pvt"):
+        pvt = r["pvt"]
+        out.append("  PVT           %s; %d corner evaluations; independent 45-corner acceptance: %s" %
+                   (pvt["status"], pvt["evaluations"], pvt["accepted"]))
+        if r["provenance"].get("fixed_anchor_reused"):
+            out.append("  final source  fixed delivered sizing, reverified for this specification")
     out.append("  status        %s" % r["status"])
     return "\n".join(out)

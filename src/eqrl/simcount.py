@@ -42,6 +42,16 @@ MEASURE_ALL_BINDINGS = (
 )
 
 
+_active_counts = []
+
+
+def add_worker_counts(counts):
+    """Include completed subprocess work in each enclosing counting scope."""
+    for active in _active_counts:
+        for key in ("measure_all", "analysis"):
+            active[key] += counts[key]
+
+
 @contextmanager
 def counting() -> Iterator[dict]:
     """Count measure_all calls and SPICE analyses inside the block.
@@ -90,9 +100,11 @@ def counting() -> Iterator[dict]:
         return real_analysis(self, cmd)
 
     NgspiceServer._analysis = counted_analysis
+    _active_counts.append(count)
     try:
         yield count
     finally:
+        _active_counts.pop()
         for mod, attr, original in saved:
             setattr(mod, attr, original)
         NgspiceServer._analysis = real_analysis
