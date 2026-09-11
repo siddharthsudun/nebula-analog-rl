@@ -12,6 +12,16 @@ import itertools
 import pytest
 
 from eqrl import pareto
+from eqrl.circuits import pdk
+
+#: `pareto.finalize` renders a SKY130 netlist for every choice it returns -- that is
+#: exactly what test_every_choice_carries_its_objectives_and_a_netlist pins -- so the
+#: tests that call it need the PDK on disk. Everything above them is pure selection
+#: arithmetic over synthetic measurements and runs anywhere, which is why this marker is
+#: on the finalize tests only and not on the module.
+needs_pdk = pytest.mark.skipif(
+    not pdk.available(),
+    reason="pareto.finalize renders a SKY130 netlist for every choice")
 
 #: Distinct circuits need distinct design keys, or `frontier`'s dedupe collapses them and
 #: a test passes for the wrong reason. Untagged items get a fresh sizing each call.
@@ -120,6 +130,7 @@ class TestChoose:
         assert pareto.design_key(off_target_cheap["design"]) in designs
 
 
+@needs_pdk
 class TestFinalizeHonesty:
     def _spec(self):
         from eqrl.specs import DEFAULT_SPEC
@@ -180,6 +191,7 @@ def test_objectives_reject_a_negative_measurement():
         pareto.objectives(item(-1.0, 1e-6, 0.01, 8.0), 8.0)
 
 
+@needs_pdk
 def test_stream_ids_reference_and_published_choices_are_stable():
     from eqrl.pipeline import spec_for
     spec=spec_for(8,12,1.5)

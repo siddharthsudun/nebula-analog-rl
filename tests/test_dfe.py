@@ -11,10 +11,21 @@ import numpy as np
 import pytest
 
 from eqrl.circuits.dfe import (dfe_stage_eye, dfe_testbench_netlist, optimal_tap)
+from tests.ngspice_caps import poly_sources_supported
 
 
 def _ngspice():
     return shutil.which("ngspice") is not None
+
+
+#: The DFE testbench is built entirely from POLY-form controlled sources, and Ubuntu's
+#: ngspice 42 cannot run them -- see tests/ngspice_caps.py. An ngspice that is present but
+#: cannot build the summing node measures nothing about this circuit, so these skip rather
+#: than fail. They are NOT skipped on the ngspice builds SETUP.md pins, which is where
+#: every recorded DFE number comes from.
+needs_poly = pytest.mark.skipif(
+    not poly_sources_supported(),
+    reason="this ngspice cannot run POLY-form controlled sources")
 
 
 def test_netlist_contains_the_dfe_summing_node():
@@ -26,6 +37,7 @@ def test_netlist_contains_the_dfe_summing_node():
     assert len(bits) > 0
 
 
+@needs_poly
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
 def test_optimal_tap_maximizes_the_eye():
     """A 1-tap DFE opens the eye most when its tap equals the first post-cursor c1 —
@@ -39,6 +51,7 @@ def test_optimal_tap_maximizes_the_eye():
     )
 
 
+@needs_poly
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
 def test_dfe_improves_the_eye_over_no_dfe():
     """Turning the DFE on (tap=c1) must open the eye vs leaving it off (tap=0)."""
@@ -48,6 +61,7 @@ def test_dfe_improves_the_eye_over_no_dfe():
     assert on > off, f"DFE did not help: off={off:.3f} on={on:.3f}"
 
 
+@needs_poly
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
 def test_dfe_handles_an_inverting_ctle():
     """Real CTLEs invert (c0 < 0). The eye height must still come out positive and the

@@ -22,6 +22,17 @@ if str(ROOT) not in sys.path:
 
 from eqrl import pareto                                         # noqa: E402
 from eqrl.specs import DEFAULT_SPEC                             # noqa: E402
+from eqrl.circuits import pdk                                   # noqa: E402
+
+#: The PVT pool is stubbed, but `_pareto_worker` still calls `pareto.finalize`, which
+#: renders a SKY130 netlist per published choice. Without the PDK that raises inside the
+#: worker, the worker correctly swallows it and publishes nothing -- which is the
+#: behaviour test_measurement_failure_does_not_raise_into_the_run asserts, and the exact
+#: opposite of what the three content tests below assert. So those three need the PDK;
+#: the cancellation and failure tests do not.
+needs_pdk = pytest.mark.skipif(
+    not pdk.available(),
+    reason="pareto.finalize renders a SKY130 netlist for every published choice")
 
 BASE_DESIGN = {"w_in": 5.5784369934553225e-05, "l_in": 3.9211895465850825e-07,
                "i_tail": 0.0007122746556997299, "rs": 3287.4510782957077,
@@ -87,6 +98,7 @@ def install(monkeypatch, srv, pool, n_candidates=10):
     monkeypatch.setattr("eqrl.pipeline.spec_for", lambda *a, **k: spec)
 
 
+@needs_pdk
 def test_alternatives_are_published_as_they_are_measured(monkeypatch, srv):
     pool = StubPool()
     install(monkeypatch, srv, pool)
@@ -102,6 +114,7 @@ def test_alternatives_are_published_as_they_are_measured(monkeypatch, srv):
         "batches stay small so a cancelled run is not stuck behind a long measurement"
 
 
+@needs_pdk
 def test_each_published_circuit_names_the_quantity_it_optimizes(monkeypatch, srv):
     install(monkeypatch, srv, StubPool())
     srv._pareto_worker(primary_result(), 8.0, 12.0, None, generation=0)
@@ -114,6 +127,7 @@ def test_each_published_circuit_names_the_quantity_it_optimizes(monkeypatch, srv
         assert set(choice["objectives"]) == set(pareto.OBJECTIVES)
 
 
+@needs_pdk
 def test_only_the_primary_circuit_keeps_its_pvt_pass(monkeypatch, srv):
     install(monkeypatch, srv, StubPool())
     result = primary_result()
