@@ -1771,6 +1771,19 @@ def pipeline_run(req: PipelineRunRequest):
     from eqrl.realtime import LIMITS
     if req.mode not in MODES:
         return _api_error(422,"invalid_request","Unknown mode",str(req.mode),"Choose a listed mode.")
+    if req.noise_request is not None:
+        # Parsed HERE, before the worker is handed anything. Resolution is pure arithmetic
+        # and costs nothing, while the worker only reaches it AFTER the search -- so an
+        # incomplete SNR request used to spend a whole simulator budget on a design the
+        # response then threw away as a 422. This is what makes "must not search" true,
+        # and it is why the error keeps its own code rather than the generic one.
+        from eqrl.llm.snr_parser import resolve_snr_request
+        try:
+            resolve_snr_request(req.noise_request,req.channel_loss_db)
+        except (ValueError,TypeError,KeyError) as exc:
+            return _api_error(422,"invalid_noise_request","The SNR request is incomplete",
+                str(exc) or "The SNR inputs do not describe one measurement.",
+                "Give the noise level and the signal amplitude it is measured against, or turn SNR off.")
     if not ready():
         return _runtime_unavailable()
     if not _run_lock.acquire(blocking=False):
