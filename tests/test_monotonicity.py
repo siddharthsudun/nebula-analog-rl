@@ -20,7 +20,6 @@ import numpy as np
 import pytest
 
 from eqrl.circuits.ctle import DesignVars
-from tests.ngspice_caps import dfe_testbench_supported
 
 N_POINTS = 7
 MONOTONIC_SLACK = 0.02       # tolerated fraction of the total span per backward step
@@ -411,9 +410,6 @@ class TestPipelineSky130:
         )
 
 
-#: POLY-form controlled sources, same as tests/test_dfe.py -- see tests/ngspice_caps.py.
-@pytest.mark.skipif(not dfe_testbench_supported(),
-                    reason="this ngspice cannot simulate the POLY-based DFE testbench")
 @pytest.mark.skipif(not _ngspice(), reason="ngspice not installed")
 def test_dfe_tap_sweep_changes_the_slicer_eye():
     """`dfe_stage_eye` is wired to its tap argument, and the eye peaks at full
