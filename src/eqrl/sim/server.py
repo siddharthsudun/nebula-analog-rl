@@ -164,6 +164,17 @@ class NgspiceServer:
             self._load(corner)
 
     def _prime(self, dv: DesignVars, vdd: float, temp_c: float) -> None:
+        # ngspice keeps every analysis result as a separate in-memory "plot" (ac1, ac2,
+        # tran1, ...) and never frees one on its own -- a documented shared-library
+        # behavior (ngspice-users: "ngspice shared library repeated simulations (memory
+        # leaks?)"). Over a long resident process (a benchmark loop, or a dashboard
+        # session that never restarts) that list grows without bound and every
+        # subsequent command gets slower, independent of which mode or how much real
+        # work it does -- measured locally as a ~60-75x per-eval slowdown by the ~30th
+        # call, identical in shape across every pipeline mode. The prior call's data is
+        # long since pulled out via wrdata + _read() by the time we get here, so nothing
+        # is lost by clearing it before priming the next one.
+        self._ng.exec_command("destroy all")
         p = dv_to_params(dv)
         p["vddp"] = vdd
         p["tempc"] = temp_c
@@ -311,6 +322,17 @@ class NgspiceServer:
         self._ng.exec_command(f"wrdata {out} vd")
         arr = self._read("tr.data")
         return {"t": arr[:, 0], "vd": arr[:, 1]}
+
+    def destroy_all_plots(self) -> None:
+        """Manually clear ngspice's accumulated result-plot history.
+
+        `_prime` already does this before every eval, so a healthy server never needs
+        it. Exposed for the dashboard's "Refresh" control: a server that has been
+        resident since before this fix shipped (or one some other code path primed
+        without going through `_prime`) can still be slow, and restarting the whole
+        process is heavier than clearing the one thing that's actually accumulating.
+        """
+        self._ng.exec_command("destroy all")
 
     def close(self) -> None:
         try:

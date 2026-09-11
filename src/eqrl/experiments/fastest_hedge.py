@@ -90,6 +90,46 @@ def load_fastest_assets(corpus_path: str | None = None) -> tuple[Any, np.ndarray
     return _ASSET_CACHE[path]
 
 
+def propose_seed_candidates(target: float, surrogate, spec=None, k: int = 2) -> list[np.ndarray]:
+    """Up to `k` distinct corpus designs, ranked by |own boost - target|, narrowed the
+    same way `propose_seed` narrows.
+
+    `propose_seed` picks only the top one. This ranks several so a caller whose first
+    pick comes back guard-invalid can try a genuinely DIFFERENT corpus design next,
+    rather than nudging the same rejected point (that is what g32_solve's rescue
+    ladder already does, and the mode-evidence benchmark shows it recovering 0 of 7
+    guard-invalid fastest-mode seeds -- see `results/mode_bench5.json` spec indices
+    7, 13, 14, 17, 21, 24, 27, every one exhausting its budget on rescue-laddering a
+    single bad seed instead of trying a different starting point).
+    """
+    Y = surrogate.Y
+    dc_gain, boost, peak = Y[:, 0], Y[:, 1], Y[:, 2]
+    mask = np.ones(len(Y), dtype=bool)
+    if spec is not None:
+        if spec.dc_gain_db_min is not None:
+            mask &= dc_gain >= spec.dc_gain_db_min
+        mask &= (peak >= spec.peak_freq_lo_ghz) & (peak <= spec.peak_freq_hi_ghz)
+        if not mask.any():
+            mask = np.ones(len(Y), dtype=bool)
+    err = np.where(mask, np.abs(boost - target), np.inf)
+    order = np.argsort(err)
+    if k < 1:
+        raise ValueError("seed count must be positive")
+    finite, seen = [], set()
+    for j in order:
+        if not np.isfinite(err[j]):
+            break
+        key = tuple(np.asarray(surrogate.X[j], dtype=np.float64))
+        if key not in seen:
+            finite.append(j)
+            seen.add(key)
+        if len(finite) == k:
+            break
+    if not finite:
+        finite = order[:k].tolist()
+    return [np.asarray(surrogate.X[j], dtype=np.float64) for j in finite]
+
+
 def propose_seed(target: float, surrogate, spec=None) -> np.ndarray:
     """A cold-start candidate design for Fastest's stage 1, with NO PPO rollout and NO
     real SPICE evaluation spent choosing it.
@@ -116,7 +156,8 @@ def propose_seed(target: float, surrogate, spec=None) -> np.ndarray:
     dc_gain, boost, peak = Y[:, 0], Y[:, 1], Y[:, 2]
     mask = np.ones(len(Y), dtype=bool)
     if spec is not None:
-        mask &= dc_gain >= spec.dc_gain_db_min
+        if spec.dc_gain_db_min is not None:
+            mask &= dc_gain >= spec.dc_gain_db_min
         mask &= (peak >= spec.peak_freq_lo_ghz) & (peak <= spec.peak_freq_hi_ghz)
         if not mask.any():
             mask = np.ones(len(Y), dtype=bool)
@@ -125,24 +166,51 @@ def propose_seed(target: float, surrogate, spec=None) -> np.ndarray:
     return np.asarray(surrogate.X[j], dtype=np.float64)
 
 
-def surrogate_stage1(evaluate, target: float, surrogate, spec=None):
+def surrogate_stage1(evaluate, target: float, surrogate, spec=None, *, retry_on_guard_invalid: bool = True,
+                     max_seed_evals: int = 4):
     """Fastest's stage 1, replacing the frozen PPO rollout entirely for this mode only.
 
     Returns `(xs, s1trace, term_at)` -- the exact shape `stage1_rollout` returns -- so
     every caller downstream (`g32_solve`'s "already feasible" / "guard-valid but off
     target" / "guard-invalid, rescue" cases, `summarize`, the cost accounting in
-    `pipeline.design`) sees this as just a one-point stage 1 and needs no special case.
+    `pipeline.design`) needs no special case for a stage 1 with up to four points.
     `term_at` is always `None`: that field records where a PPO episode terminated, and
     there is no episode here.
 
-    Exactly ONE real, guarded SPICE evaluation is spent, on `propose_seed`'s candidate --
-    the corpus proposes, it never gets to decide (`eqrl.surrogate`: "IT IS A RANKER, NEVER
-    A JUDGE"). Whatever the guard says about that candidate (feasible, off-target but
+    ONE real, guarded SPICE evaluation is spent, on `propose_seed`'s candidate -- the
+    corpus proposes, it never gets to decide (`eqrl.surrogate`: "IT IS A RANKER, NEVER A
+    JUDGE"). Whatever the guard says about that candidate (feasible, off-target but
     guard-valid, or guard-invalid) is exactly what `g32_solve` is built to start from.
+
+    RETRY, when that one evaluation comes back guard-invalid (`rec is None`): spend a
+    further real evaluations, up to max_seed_evals in total, on distinct designs (ranked by
+    boost, via `propose_seed_candidates`), rather than let `g32_solve`'s rescue ladder
+    locally nudge a design ngspice already rejected. Grounded in real failure data, not
+    speculation: `results/mode_bench5.json` shows fastest-mode's rescue ladder recovering
+    0 of 7 guard-invalid seeds, always exhausting the full stage-2 budget doing it. A
+    second corpus point is still cheap (one more real evaluation, same trust boundary --
+    the corpus never decides, g32_solve's "already feasible" scan over the measured points below
+    decides), and it is a different starting point instead of a local nudge of a bad one.
+    Only fires on guard-invalid; an off-target-but-guard-valid first seed is untouched --
+    g32_solve's existing bisection is exactly the right tool there.
     """
-    x0 = propose_seed(target, surrogate, spec)
-    rec, _score, _gcheck = evaluate(x0, target)
-    return [x0], [rec], None
+    # Bounded feasibility-first retry: stop immediately on the first guard-valid
+    # seed, leaving all previously valid first-seed behavior unchanged. The corpus
+    # only proposes; every attempted seed receives a complete real evaluation.
+    if retry_on_guard_invalid:
+        seeds = propose_seed_candidates(target, surrogate, spec, k=max_seed_evals)
+    else:
+        seeds = [propose_seed(target, surrogate, spec)]
+    x0 = seeds[0]
+    rec0, _score, _gcheck = evaluate(x0, target)
+    xs, s1 = [x0], [rec0]
+    for x1 in seeds[1:]:
+        if s1[-1] is not None:
+            break
+        rec1, _score, _gcheck = evaluate(x1, target)
+        xs.append(x1)
+        s1.append(rec1)
+    return xs, s1, None
 
 
 def propose_jump(x_f, target: float, plane: dict, surrogate, safety_radius: float,

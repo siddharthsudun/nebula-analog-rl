@@ -104,6 +104,25 @@ def wired(monkeypatch, tmp_path):
 DV = DesignVars(l_in=0.30e-6, i_tail=2e-3, r_load=1e3)
 
 
+def test_variant_probe_rejects_added_transistor_and_records_variant_deck(wired):
+    from dataclasses import replace
+    op = sane_op()
+    op = replace(op, devices=op.devices + (DeviceOP("XMcas", vds=0.1, vdsat=0.2),))
+    ev = wired(operating_point_probe=lambda srv: op,
+               netlist_builder=lambda dv, **kw: "* experimental variant\nXMcas a b c 0 model\n.end\n")
+    result = ev.evaluate(DV)
+    assert isinstance(result, Invalid)
+    assert result.check == Check.T2_NOT_SATURATED
+    assert "XMcas" in result.reason
+    assert any("experimental variant" in p.read_text() for p in result.artifact_dir.glob("*.cir"))
+
+
+@pytest.mark.parametrize("hook", ["netlist_builder", "operating_point_probe"])
+def test_experimental_netlist_and_probe_must_be_supplied_together(wired, hook):
+    with pytest.raises(GuardConfigError, match="supplied together"):
+        wired(**{hook: lambda *a, **kw: None})
+
+
 # ---------------------------------------------------------------------------
 
 class TestBackendGate:

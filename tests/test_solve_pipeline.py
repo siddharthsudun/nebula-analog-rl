@@ -95,6 +95,8 @@ class _FakeSolver:
 @pytest.fixture
 def stub(monkeypatch):
     """Install a fake solver + a fake verifier + a fake netlist writer."""
+    # These historical nominal-stage tests isolate PVT, covered by test_pvt_pipeline.
+    monkeypatch.setattr("eqrl.pvt_repair.apply_pvt_stage", lambda result, *a, **k: result)
     def install(*, best_design, passed=True, reached=True):
         fake = _FakeSolver(best_design=best_design, reached=reached)
         monkeypatch.setattr(pipeline, "_fc", lambda: fake)
@@ -305,14 +307,14 @@ def run(manifest):
     """The entry point, driven from the delivered circuit's own specification."""
     s = manifest["spec"]
     return pipeline.design(s["target_boost_db"], s["channel_loss_db"],
-                           spec_index=s["spec_index"])
+                           spec_index=s["spec_index"], pvt=False)
 
 
 @pytest.fixture(scope="module")
 def unreachable():
     # 20 dB is far outside the brief's 3-12 dB range and outside anything the action
     # space reaches, so the solver must fail to close it.
-    return pipeline.design(20.0, 14.83, spec_index=2)
+    return pipeline.design(20.0, 14.83, spec_index=2, pvt=False)
 
 
 @needs_sim
@@ -369,12 +371,13 @@ class TestEndToEndReproducesTheDeliveredCircuit:
         s = manifest["spec"]
         with counting() as outer:
             r = pipeline.design(s["target_boost_db"], s["channel_loss_db"],
-                                spec_index=s["spec_index"])
+                                spec_index=s["spec_index"], pvt=False)
         c = r["cost"]
         assert c["measure_all_total"] == outer["measure_all"]
         assert c["spice_analyses_total"] == outer["analysis"]
         assert c["measure_all_total"] == (c["measure_all_stage1"] + c["measure_all_stage2"]
-                                          + c["measure_all_verification"])
+                                          + c["measure_all_verification"]
+                                          + c.get("measure_all_alternatives", 0))
         assert c["measure_all_uncharged_by_prereg"] == (
             c["measure_all_search"] - c["measure_all_charged_by_prereg"])
 

@@ -58,10 +58,17 @@ def child(job, destination):
                 # to pipeline.design's existing independent-in-process verifier.
                 data["result"] = pipeline.verify(DesignVars(**job["design"]), spec)
             else:
+                # pvt=False: the protocol (docs/PROTOCOL_MODE_ERROR_AUDIT_20260909.md)
+                # audits search-stage error rates across auto/fastest/thinking under
+                # the fixed `bounded_calls` budget above. PVT repair (pipeline.design's
+                # default now) spends its own uncounted-by-this-audit corner
+                # evaluations and would both blow the analysis budget unpredictably and
+                # confound the per-mode comparison with a stage none of the modes
+                # control.
                 data["result"] = pipeline.design(
                     job["search_target"], job["channel"], model=job["model"],
                     mode=job["mode"], spec_index=job["spec_index"], tol=TOL,
-                    allow_fallback=False)
+                    allow_fallback=False, pvt=False)
             data["complete"] = True
     except (SearchHalted, AuditBudgetExceeded) as exc:
         data["error"] = f"{type(exc).__name__}: {exc}"

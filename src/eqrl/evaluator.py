@@ -95,18 +95,27 @@ def _adopt_server_data(server: Any, artifacts: RunArtifacts) -> None:
 def make_raw_eval(*, corner: str = "tt", fast: bool = True,
                   temp_c: float = 27.0, channel_loss_db: float = 12.0,
                   server_factory: Callable[[str], Any] | None = None,
-                  with_operating_point: bool = True):
+                  with_operating_point: bool = True,
+                  netlist_builder: Callable | None = None,
+                  operating_point_probe: Callable | None = None):
     """Build the `raw_eval` callable GuardedEvaluator expects.
 
     Returns `(Measures, RunArtifacts, OperatingPoint | None)`.
+    Experimental topologies must supply both their actual netlist builder and a
+    probe covering every instantiated device. Default callers retain the CTLE
+    builder and probe; all results still pass through the unchanged guard layer.
     """
     from eqrl.sim.server import get_server
+    if (netlist_builder is None) != (operating_point_probe is None):
+        raise GuardConfigError("experimental netlist and operating-point probe must be supplied together")
     factory = server_factory or get_server
+    make_netlist = netlist_builder or netlist
+    read_op = operating_point_probe or probe_operating_point
 
     def raw_eval(dv: DesignVars, *, artifacts: RunArtifacts, vdd: float = 1.8, **kw):
         srv = factory(corner)
         try:
-            artifacts.netlist = netlist(dv, vdd=vdd, temp_c=temp_c, corner=corner,
+            artifacts.netlist = make_netlist(dv, vdd=vdd, temp_c=temp_c, corner=corner,
                                         analysis="op", models="sky130")
         except FileNotFoundError as e:
             # A missing PDK is a broken setup, not a bad candidate. Raising
@@ -141,7 +150,7 @@ def make_raw_eval(*, corner: str = "tt", fast: bool = True,
                 # this fix was a statement about a different design. T2.8 was unaffected;
                 # it reads `dv` directly rather than the operating point.
                 srv._prime(dv, vdd, temp_c)
-                op = probe_operating_point(srv)
+                op = read_op(srv)
             from eqrl.sim import measures as _m
             # channel_loss_db must be threaded through. The eye metrics depend on it,
             # and Tier 4.15 checks them, so a guard built for one channel silently judges
@@ -189,12 +198,16 @@ def build_evaluator(spec: Spec = DEFAULT_SPEC, *, corner: str = "tt", fast: bool
                     monitor: SearchMonitor | None = None,
                     server_factory: Callable[[str], Any] | None = None,
                     with_operating_point: bool = True,
-                    check_backend: bool = True) -> GuardedEvaluator:
+                    check_backend: bool = True,
+                    netlist_builder: Callable | None = None,
+                    operating_point_probe: Callable | None = None) -> GuardedEvaluator:
     """Assemble a fully-wired GuardedEvaluator.
 
     Raises GuardConfigError at setup if the backend cannot support Tier 1 check 2 —
     see the module docstring. Pass check_backend=False only with a deliberate,
     written-down decision to run with that check disabled.
+    netlist_builder and operating_point_probe support explicit experimental
+    circuit adapters without replacing global functions or the default server.
     """
     from eqrl.sim.probe import make_corner_probe
     from eqrl.sim.server import get_server
@@ -208,7 +221,9 @@ def build_evaluator(spec: Spec = DEFAULT_SPEC, *, corner: str = "tt", fast: bool
                       channel_loss_db=(spec.channel_loss_db if channel_loss_db is None
                                        else channel_loss_db),
                       server_factory=factory,
-                      with_operating_point=with_operating_point),
+                      with_operating_point=with_operating_point,
+                      netlist_builder=netlist_builder,
+                      operating_point_probe=operating_point_probe),
         spec,
         store or ArtifactStore(),
         monitor,

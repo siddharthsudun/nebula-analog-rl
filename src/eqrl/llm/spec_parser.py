@@ -60,7 +60,16 @@ Rules:
   "lossy channel" mean channel_loss_db.
 - A range like "8 to 10 dB of boost" sets target_boost_db to the midpoint and records an
   assumption; "3-12 dB tunable" sets boost_db_min/boost_db_max.
-- Never add an _assumptions entry for a field the user named unambiguously."""
+- Never add an _assumptions entry for a field the user named unambiguously.
+- SNR is STRICTLY OPTIONAL and separate from noise_vrms_max (receiver device noise).
+  Only when the user explicitly asks to consider SNR or external noise, include
+  _noise_request: {mode: measured|estimated|unknown, input_snr_db OR value_vrms
+  OR budget_vrms OR low_vrms/high_vrms, signal_reference: tx_vpp|ctle_input_vrms,
+  signal_value_v, bandwidth_hz: [lowHz, highHz]}. Omit missing fields; no invented
+  signal or bandwidth. Unknown must be explicitly requested. SNR in dB means
+  measured INPUT SNR, not a boost or channel-loss target. Do not translate output
+  SNR targets into input SNR. If the user says ignore/disable SNR, omit this object.
+  External noise RMS is not the circuit's intrinsic noise_vrms_max constraint."""
 
 #: Extraction is a small, well-specified task; it does not need the largest model, and
 #: the demo wants a fast answer. Override with EQRL_SPEC_MODEL. Kept in one place so a
@@ -140,10 +149,11 @@ class ParseResult:
     llm_backend: str | None = None
     #: milliseconds the LLM reader took, for the UI's own honesty about latency
     llm_ms: float | None = None
+    noise: dict = field(default_factory=dict)
 
     @property
     def understood(self) -> bool:
-        return bool(self.recognised)
+        return bool(self.recognised) or bool(self.noise.get("enabled")) or self.noise.get("source") == "explicit_opt_out"
 
 
 def parse_spec(text: str, model: str | None = None) -> Spec:
@@ -275,6 +285,9 @@ def _llm_fields(text: str, model: str | None, which: str) -> tuple[dict, dict]:
     assumed = obj.pop("_assumptions", None) or {}
     fields: dict = {}
     for k, v in obj.items():
+        if k == "_noise_request" and isinstance(v, dict):
+            fields[k] = v
+            continue
         if k not in SPEC_FIELDS:
             continue
         try:
@@ -320,6 +333,7 @@ def parse_spec_verbose(text: str, model: str | None = None, *,
 
     which = _pick_backend(backend)
     llm_ms = None
+    noise_llm = None
     if which is not None and text.strip():
         t0 = time.perf_counter()
         try:
@@ -330,6 +344,7 @@ def parse_spec_verbose(text: str, model: str | None = None, *,
                             f"{type(e).__name__}: {str(e)[:120]}")
             which = None
         llm_ms = round((time.perf_counter() - t0) * 1000.0, 1)
+        noise_llm = lf.pop("_noise_request", None)
         lf = _plausible(lf, warnings, "The LLM reader")
         for k, v in lf.items():
             if k in kw:
@@ -358,8 +373,11 @@ def parse_spec_verbose(text: str, model: str | None = None, *,
 
     kw = _range_warnings(kw, warnings)
     source = "heuristic" if which is None else f"heuristic+{which}"
+    from eqrl.llm.snr_parser import parse_noise_intent
+    noise = parse_noise_intent(text, noise_llm)
+    warnings.extend(noise["warnings"])
     return ParseResult(Spec(**kw), kw, source, assumptions, sources, conflicts, warnings,
-                       llm_backend=which, llm_ms=llm_ms)
+                       llm_backend=which, llm_ms=llm_ms, noise=noise)
 
 
 def _range_warnings(kw: dict, warnings: list) -> dict:
@@ -595,7 +613,8 @@ def _heuristic(text: str) -> ParseResult:
         # "HD3 below 30 dB" means -30 dBc; nobody asks for positive distortion.
         kw["hd3_db_max"] = -kw["hd3_db_max"]
         assume["hd3_db_max"] = "read the HD3 figure as a magnitude below the carrier."
-    if m := re.search(rf"noise[^\n]*?({_N})\s*([munµ]?)V", text, re.I):
+    intrinsic_text = re.sub(r"external\s+noise|signal[ -]to[ -]noise", "external_snr", text, flags=re.I)
+    if m := re.search(rf"\bnoise\b[^\n,;]*?({_N})\s*([munµ]?)V", intrinsic_text, re.I):
         kw["noise_vrms_max"] = float(m.group(1)) * _SI[m.group(2).lower()]
     if m := re.search(rf"power[^\n]*?({_N})\s*([munµ]?)W", text, re.I):
         kw["power_w_max"] = float(m.group(1)) * _SI[m.group(2).lower()]
