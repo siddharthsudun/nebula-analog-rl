@@ -40,12 +40,14 @@ from eqrl.experiments.g32_peak_report import plane_from_probe
 from eqrl.experiments.g32_selfcal import PROBE_H, calibrate_plane
 
 # `final_comparison`, `target_audit` and `g32_rescue_probe` each perform the Windows
-# ngspice/PDK bootstrap at import time -- `os.environ["USERPROFILE"]`, which does not exist
-# on Linux. They are imported inside the functions that need them, the way `eqrl.pipeline`
-# already does it, so that `verdict`, `validity_gate` and the preregistered constants stay
-# importable with no PDK and no simulator. That is not a tidiness point: those are exactly
-# the checks CI has to be able to run, since they are what stop the criterion being edited
-# after the fact.
+# ngspice/PDK bootstrap at import time. That bootstrap used to read
+# `os.environ["USERPROFILE"]` outright and so raised `KeyError` on Linux; it now falls back
+# to `Path.home()`, which is why CI can collect the five test files that used to error at
+# import. The deferred imports below stay anyway: the bootstrap being survivable is not the
+# same as the PDK being present, and `verdict`, `validity_gate` and the preregistered
+# constants must stay importable with no PDK and no simulator at all. That is not a
+# tidiness point: those are exactly the checks CI has to be able to run, since they are
+# what stop the criterion being edited after the fact.
 
 #: The five fields `final_comparison.gate` diffs. The frozen arm in THIS harness has to
 #: reproduce the committed artifact on all of them, or the harness -- not the hypothesis --

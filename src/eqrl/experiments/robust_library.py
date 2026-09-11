@@ -15,11 +15,11 @@ from pathlib import Path
 
 import numpy as np
 
-P = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
+P = Path(os.environ.get("USERPROFILE") or Path.home()) / "eqrl-ngspice"
 os.environ.setdefault("NGSPICE_LIBRARY_PATH", str(P / "Library" / "bin" / "ngspice{}.dll"))
 os.environ.setdefault("SPICE_LIB_DIR", str(P / "Library" / "share" / "ngspice"))
-os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
-os.environ["PATH"] = f"{P/'shim'};{P/'Library'/'bin'};{os.environ['PATH']}"
+os.environ.setdefault("PDK_ROOT", str(Path(os.environ.get("USERPROFILE") or Path.home()) / "pdk"))
+os.environ["PATH"] = os.pathsep.join([str(P / "shim"), str(P / "Library" / "bin"), os.environ["PATH"]])
 if hasattr(os, "add_dll_directory"):
     os.add_dll_directory(str(P / "Library" / "bin"))
 

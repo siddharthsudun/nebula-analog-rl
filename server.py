@@ -30,9 +30,10 @@ if str(SRC) not in sys.path:
 # Same three-line ngspice/PDK bootstrap every eqrl/experiments/*.py module performs
 # at import time. eqrl.sim.server only locates the PySpice DLL, not PDK_ROOT, so any
 # entry point outside eqrl.experiments has to do this itself.
-_NGSPICE = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
-os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
-os.environ["PATH"] = f"{_NGSPICE / 'shim'};{_NGSPICE / 'Library' / 'bin'};{os.environ['PATH']}"
+_NGSPICE = Path(os.environ.get("USERPROFILE") or Path.home()) / "eqrl-ngspice"
+os.environ.setdefault("PDK_ROOT", str(Path(os.environ.get("USERPROFILE") or Path.home()) / "pdk"))
+os.environ["PATH"] = os.pathsep.join(
+    [str(_NGSPICE / "shim"), str(_NGSPICE / "Library" / "bin"), os.environ["PATH"]])
 
 from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.responses import FileResponse, JSONResponse, Response  # noqa: E402
