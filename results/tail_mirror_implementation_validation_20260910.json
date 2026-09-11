@@ -1,0 +1,21 @@
+{
+  "unit_tests_passed": 58,
+  "test_command": "pytest tests/test_tail_variants.py tests/test_evaluator.py tests/test_probe.py -q --basetemp=work/tail-variant/pytest-pair-guard",
+  "frozen_unchanged": true,
+  "source_sha256": {
+    "src/eqrl/circuits/tail_variants.py": "1b977cff48fb736f59d94933a4b7047ca8f51880f5333fe723bed4eef0bcd738",
+    "src/eqrl/evaluator.py": "a7de451d031a3b6266067d655d1f25fc7ea5eafdc25158757551daf726851ff1",
+    "src/eqrl/experiments/tail_mirror_pilot.py": "20dd443a5ea92fa42e9d5ca6fd6b3f8f78aec7cef4b59f1a69948349bed30b80",
+    "src/eqrl/experiments/vcm_physics_check.py": "5114b76208d3417a799fd9cc3280b9a3bba6619703d20bfdebdb7d8fa47bc87a",
+    "tests/test_tail_variants.py": "ae3d9748aca16a0bb8e6e54ec5853de9887a1dd26ec5c26225d4fee2eaab06cd",
+    "tests/test_evaluator.py": "1c4486251df30218e14d581b31e465bfd4232bd0cdd34d973c79c2c4d63cbfe8"
+  },
+  "post_simulation_changes": "evaluator adapter documentation and a fail-fast check requiring both hooks; valid paired-hook execution unchanged",
+  "physics_checks": {
+    "0.72": "5 passed",
+    "0.68": "5 passed",
+    "ac_evaluations": 48,
+    "wall_seconds": 291.2649999999994,
+    "artifact": "results/vcm_physics_check_20260910_v1"
+  }
+}

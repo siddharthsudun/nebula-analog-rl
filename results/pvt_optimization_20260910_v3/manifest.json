@@ -1,0 +1,41 @@
+{
+  "frozen_before": {
+    "results/seq_clean40k.zip": "8868965260d7d169f936020588f28f6d2d3f6a66011444a1d96f525d8f508ec9",
+    "results/delivered_circuit.json": "0ae6614d19d5ebcd8382cb0ced7662a07c9f30b295e30a7c7b28f4d89ece7298",
+    "src/eqrl/guards.py": "41870d334df66eb5139fbb893459de2e405eb3c911e4ed75ab8b8f29fe85dc3b",
+    "src/eqrl/sim/eye.py": "b9b161553315d109e6fe5b75598fcc39858d3d676b7e1934aa4d15255adde290",
+    "src/eqrl/experiments/final_report.py": "ef7cdb00db931abd4389835e2a54a82979dd1430e47c3097115ff22c082af05e",
+    "src/eqrl/specs.py": "11157850537f66c03944310162d8ba63b795172119a8704b1b6f1dd1679261b9",
+    "src/eqrl/envs/equalizer_env.py": "92056088ad832ae53c8db0dc07755ed11d2ad51f135dd682877e6895de206fab",
+    "src/eqrl/circuits/ctle.py": "7016f7dc9f9815db932fcaca6bd086fccf963e60580aa6e26c25d75fc4f9a87d"
+  },
+  "workers": [
+    {
+      "phase": "optimize",
+      "returncode": 0
+    },
+    {
+      "phase": "verify",
+      "returncode": 0
+    }
+  ],
+  "complete": true,
+  "source_sha256": {
+    "src/eqrl/pvt_refinement.py": "d8178f5986cc2e94ac67825b02c4c5e444583545f8adb814cf50a7f8acc89c87",
+    "src/eqrl/experiments/pvt_optimize.py": "23f26f19fb55a1cd8ae91f853eeb33f9e3d684f69b4569796a2ac299f006e5a9",
+    "results/pvt_signoff_seed23.json": "0c8a3c2593d221388027b27f22d5b5888f04f1a234c6427e3945d713b00062c7",
+    "results/delivered_circuit.json": "0ae6614d19d5ebcd8382cb0ced7662a07c9f30b295e30a7c7b28f4d89ece7298"
+  },
+  "seconds": 451.45300000000134,
+  "frozen_after": {
+    "results/seq_clean40k.zip": "8868965260d7d169f936020588f28f6d2d3f6a66011444a1d96f525d8f508ec9",
+    "results/delivered_circuit.json": "0ae6614d19d5ebcd8382cb0ced7662a07c9f30b295e30a7c7b28f4d89ece7298",
+    "src/eqrl/guards.py": "41870d334df66eb5139fbb893459de2e405eb3c911e4ed75ab8b8f29fe85dc3b",
+    "src/eqrl/sim/eye.py": "b9b161553315d109e6fe5b75598fcc39858d3d676b7e1934aa4d15255adde290",
+    "src/eqrl/experiments/final_report.py": "ef7cdb00db931abd4389835e2a54a82979dd1430e47c3097115ff22c082af05e",
+    "src/eqrl/specs.py": "11157850537f66c03944310162d8ba63b795172119a8704b1b6f1dd1679261b9",
+    "src/eqrl/envs/equalizer_env.py": "92056088ad832ae53c8db0dc07755ed11d2ad51f135dd682877e6895de206fab",
+    "src/eqrl/circuits/ctle.py": "7016f7dc9f9815db932fcaca6bd086fccf963e60580aa6e26c25d75fc4f9a87d"
+  },
+  "frozen_unchanged": true
+}

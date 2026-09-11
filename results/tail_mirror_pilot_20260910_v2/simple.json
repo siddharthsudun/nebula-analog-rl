@@ -1,0 +1,1515 @@
+{
+  "label": "simple",
+  "config": {
+    "kind": "simple",
+    "width_scale": 1.0,
+    "bias_width_ratio": 0.18
+  },
+  "corner": "tt",
+  "vdd": 1.8,
+  "temp_c": 27,
+  "fast": false,
+  "rows": [
+    {
+      "sample": "delivered",
+      "design": {
+        "w_in": 5.5784369934553225e-05,
+        "l_in": 3.9211895465850825e-07,
+        "i_tail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "r_load": 2450.2967834472656,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.6,
+      "requested_cm_v": 1.08,
+      "guard_valid": false,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041110_000001_38de8d51",
+      "simulator_parameters": {
+        "w": 55.784369934553226,
+        "l": 0.39211895465850827,
+        "itail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "rl": 2450.2967834472656,
+        "wb": 56.98197245597839,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 56.98197245597839,
+        "mt": 1,
+        "wq": 10.25675504207611,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.6
+      },
+      "health": {
+        "measured_cm_v": 1.08,
+        "nodes_v": {
+          "outp": 0.979855,
+          "outn": 0.979855,
+          "sp": 0.2920529,
+          "sn": 0.2920529,
+          "nbias": 0.8577743,
+          "cm": 1.08
+        },
+        "all_saturated": false,
+        "worst_headroom_mv": 24.662699999999983,
+        "tail_delivered_pct": 93.98399825729668,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.687802,
+            "vdsat": 0.1149738,
+            "vgs": 0.7879471,
+            "vth": 0.6654204,
+            "id": 0.0003347127,
+            "headroom_mv": 572.8282,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.687802,
+            "vdsat": 0.1149738,
+            "vgs": 0.7879471,
+            "vth": 0.6654204,
+            "id": 0.0003347127,
+            "headroom_mv": 572.8282,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577743,
+            "vdsat": 0.2673902,
+            "vgs": 0.8577743,
+            "vth": 0.5417009,
+            "id": 0.0003561375,
+            "headroom_mv": 590.3841,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.2920529,
+            "vdsat": 0.2673902,
+            "vgs": 0.8577743,
+            "vth": 0.5417009,
+            "id": 0.0003347121,
+            "headroom_mv": 24.662699999999983,
+            "saturated": false
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.2920529,
+            "vdsat": 0.2673902,
+            "vgs": 0.8577743,
+            "vth": 0.5417009,
+            "id": 0.0003347121,
+            "headroom_mv": 24.662699999999983,
+            "saturated": false
+          }
+        ]
+      },
+      "rejection": "T2.5_mosfet_not_in_saturation",
+      "reason": "2 device(s) not in saturation \u2014 XMtp: Vds=0.2921V Vdsat=0.2674V headroom=+24.7mV (need >= 50mV); XMtn: Vds=0.2921V Vdsat=0.2674V headroom=+24.7mV (need >= 50mV)"
+    },
+    {
+      "sample": "delivered",
+      "design": {
+        "w_in": 5.5784369934553225e-05,
+        "l_in": 3.9211895465850825e-07,
+        "i_tail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "r_load": 2450.2967834472656,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.64,
+      "requested_cm_v": 1.1520000000000001,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041110_000002_b5a67141",
+      "simulator_parameters": {
+        "w": 55.784369934553226,
+        "l": 0.39211895465850827,
+        "itail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "rl": 2450.2967834472656,
+        "wb": 56.98197245597839,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 56.98197245597839,
+        "mt": 1,
+        "wq": 10.25675504207611,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.64
+      },
+      "health": {
+        "measured_cm_v": 1.152,
+        "nodes_v": {
+          "outp": 0.961634,
+          "outn": 0.961634,
+          "sp": 0.3508745,
+          "sn": 0.3508745,
+          "nbias": 0.8577743,
+          "cm": 1.152
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 83.48429999999996,
+        "tail_delivered_pct": 96.07201302533437,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.6107595,
+            "vdsat": 0.1166569,
+            "vgs": 0.8011255,
+            "vth": 0.6771272,
+            "id": 0.0003421518,
+            "headroom_mv": 494.1026,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.6107595,
+            "vdsat": 0.1166569,
+            "vgs": 0.8011255,
+            "vth": 0.6771272,
+            "id": 0.0003421518,
+            "headroom_mv": 494.1026,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577743,
+            "vdsat": 0.2673902,
+            "vgs": 0.8577743,
+            "vth": 0.5417009,
+            "id": 0.0003561375,
+            "headroom_mv": 590.3841,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.3508745,
+            "vdsat": 0.2673902,
+            "vgs": 0.8577743,
+            "vth": 0.5417009,
+            "id": 0.0003421483,
+            "headroom_mv": 83.48429999999996,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.3508745,
+            "vdsat": 0.2673902,
+            "vgs": 0.8577743,
+            "vth": 0.5417009,
+            "id": 0.0003421483,
+            "headroom_mv": 83.48429999999996,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 1.9481645424967977,
+        "peak_gain_db": 11.105005733344367,
+        "boost_db": 9.156841190847569,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -56.10920431802461,
+        "noise_vrms": 0.0005137048161106089,
+        "power_w": 0.001872781434,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.625,
+        "eye_v_mv": 917.7577053656837,
+        "ok": true
+      },
+      "spec_passed": true,
+      "checks": {
+        "boost_range": true,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "delivered",
+      "design": {
+        "w_in": 5.5784369934553225e-05,
+        "l_in": 3.9211895465850825e-07,
+        "i_tail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "r_load": 2450.2967834472656,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.68,
+      "requested_cm_v": 1.2240000000000002,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041110_000003_4e79701f",
+      "simulator_parameters": {
+        "w": 55.784369934553226,
+        "l": 0.39211895465850827,
+        "itail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "rl": 2450.2967834472656,
+        "wb": 56.98197245597839,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 56.98197245597839,
+        "mt": 1,
+        "wq": 10.25675504207611,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.68
+      },
+      "health": {
+        "measured_cm_v": 1.224,
+        "nodes_v": {
+          "outp": 0.9529798,
+          "outn": 0.9529798,
+          "sp": 0.4104058,
+          "sn": 0.4104058,
+          "nbias": 0.8577679,
+          "cm": 1.224
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 143.0221,
+        "tail_delivered_pct": 97.13393484713069,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.542574,
+            "vdsat": 0.1180149,
+            "vgs": 0.8135942,
+            "vth": 0.6885891,
+            "id": 0.0003470932,
+            "headroom_mv": 424.55909999999994,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.542574,
+            "vdsat": 0.1180149,
+            "vgs": 0.8135942,
+            "vth": 0.6885891,
+            "id": 0.0003470932,
+            "headroom_mv": 424.55909999999994,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577679,
+            "vdsat": 0.2673851,
+            "vgs": 0.8577679,
+            "vth": 0.5417015,
+            "id": 0.0003561224,
+            "headroom_mv": 590.3828,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.4104058,
+            "vdsat": 0.2673837,
+            "vgs": 0.8577679,
+            "vth": 0.5417039,
+            "id": 0.0003459302,
+            "headroom_mv": 143.0221,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.4104058,
+            "vdsat": 0.2673837,
+            "vgs": 0.8577679,
+            "vth": 0.5417039,
+            "id": 0.0003459302,
+            "headroom_mv": 143.0221,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 1.5503201148258765,
+        "peak_gain_db": 10.779014332023053,
+        "boost_db": 9.228694217197177,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -60.93145131015123,
+        "noise_vrms": 0.000580259019,
+        "power_w": 0.00188549622,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.625,
+        "eye_v_mv": 887.0088606468566,
+        "ok": true
+      },
+      "spec_passed": true,
+      "checks": {
+        "boost_range": true,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "delivered",
+      "design": {
+        "w_in": 5.5784369934553225e-05,
+        "l_in": 3.9211895465850825e-07,
+        "i_tail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "r_load": 2450.2967834472656,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.72,
+      "requested_cm_v": 1.296,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041111_000004_1580c5ec",
+      "simulator_parameters": {
+        "w": 55.784369934553226,
+        "l": 0.39211895465850827,
+        "itail": 0.0007122746556997299,
+        "rs": 3287.4510782957077,
+        "cs": 1.8162099438699198e-13,
+        "rl": 2450.2967834472656,
+        "wb": 56.98197245597839,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 56.98197245597839,
+        "mt": 1,
+        "wq": 10.25675504207611,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.72
+      },
+      "health": {
+        "measured_cm_v": 1.296,
+        "nodes_v": {
+          "outp": 0.9451985,
+          "outn": 0.9451985,
+          "sp": 0.4709923,
+          "sn": 0.4709923,
+          "nbias": 0.8577884,
+          "cm": 1.296
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 203.5863,
+        "tail_delivered_pct": 97.83843836411604,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.4742062,
+            "vdsat": 0.1187432,
+            "vgs": 0.8250077,
+            "vth": 0.6999938,
+            "id": 0.0003463597,
+            "headroom_mv": 355.463,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.4742062,
+            "vdsat": 0.1187432,
+            "vgs": 0.8250077,
+            "vth": 0.6999938,
+            "id": 0.0003463597,
+            "headroom_mv": 355.463,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577884,
+            "vdsat": 0.2674093,
+            "vgs": 0.8577884,
+            "vth": 0.5416854,
+            "id": 0.0003561979,
+            "headroom_mv": 590.3791,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.4709923,
+            "vdsat": 0.267406,
+            "vgs": 0.8577884,
+            "vth": 0.5416913,
+            "id": 0.0003484392,
+            "headroom_mv": 203.5863,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.4709923,
+            "vdsat": 0.267406,
+            "vgs": 0.8577884,
+            "vth": 0.5416913,
+            "id": 0.0003484392,
+            "headroom_mv": 203.5863,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 1.361947982710072,
+        "peak_gain_db": 10.527698291780768,
+        "boost_db": 9.165750309070695,
+        "peak_freq_ghz": 1.59886447,
+        "hd3_db": -61.76289664030013,
+        "noise_vrms": 0.000593986436,
+        "power_w": 0.001896928596,
+        "area_mm2": 0.001002038189095627,
+        "eye_h_ui": 0.625,
+        "eye_v_mv": 868.0401339369764,
+        "ok": true
+      },
+      "spec_passed": true,
+      "checks": {
+        "boost_range": true,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "historical_label_0.68",
+      "design": {
+        "w_in": 6.668144851765858e-05,
+        "l_in": 3.054199180284673e-07,
+        "i_tail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "r_load": 2036.0811201788692,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.6,
+      "requested_cm_v": 1.08,
+      "guard_valid": false,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041111_000005_40254f8c",
+      "simulator_parameters": {
+        "w": 66.68144851765858,
+        "l": 0.3054199180284673,
+        "itail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "rl": 2036.0811201788692,
+        "wb": 59.81160961424929,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 59.81160961424929,
+        "mt": 1,
+        "wq": 10.766089730564872,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.6
+      },
+      "health": {
+        "measured_cm_v": 1.08,
+        "nodes_v": {
+          "outp": 1.081335,
+          "outn": 1.081335,
+          "sp": 0.3009018,
+          "sn": 0.3009018,
+          "nbias": 0.8577275,
+          "cm": 1.08
+        },
+        "all_saturated": false,
+        "worst_headroom_mv": 33.53,
+        "tail_delivered_pct": 94.42049188147202,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.7804329,
+            "vdsat": 0.09495372,
+            "vgs": 0.7790982,
+            "vth": 0.6816984,
+            "id": 0.0003529654,
+            "headroom_mv": 685.4791799999999,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.7804329,
+            "vdsat": 0.09495372,
+            "vgs": 0.7790982,
+            "vth": 0.6816984,
+            "id": 0.0003529654,
+            "headroom_mv": 685.4791799999999,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577275,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003738225,
+            "headroom_mv": 590.3557,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.3009018,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003529651,
+            "headroom_mv": 33.53,
+            "saturated": false
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.3009018,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003529651,
+            "headroom_mv": 33.53,
+            "saturated": false
+          }
+        ]
+      },
+      "rejection": "T2.5_mosfet_not_in_saturation",
+      "reason": "2 device(s) not in saturation \u2014 XMtp: Vds=0.3009V Vdsat=0.2674V headroom=+33.5mV (need >= 50mV); XMtn: Vds=0.3009V Vdsat=0.2674V headroom=+33.5mV (need >= 50mV)"
+    },
+    {
+      "sample": "historical_label_0.68",
+      "design": {
+        "w_in": 6.668144851765858e-05,
+        "l_in": 3.054199180284673e-07,
+        "i_tail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "r_load": 2036.0811201788692,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.64,
+      "requested_cm_v": 1.1520000000000001,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041112_000006_0ae0bdc6",
+      "simulator_parameters": {
+        "w": 66.68144851765858,
+        "l": 0.3054199180284673,
+        "itail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "rl": 2036.0811201788692,
+        "wb": 59.81160961424929,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 59.81160961424929,
+        "mt": 1,
+        "wq": 10.766089730564872,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.64
+      },
+      "health": {
+        "measured_cm_v": 1.152,
+        "nodes_v": {
+          "outp": 1.067104,
+          "outn": 1.067104,
+          "sp": 0.3604335,
+          "sn": 0.3604335,
+          "nbias": 0.8577275,
+          "cm": 1.152
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 93.06170000000003,
+        "tail_delivered_pct": 96.29012222115377,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.7066709,
+            "vdsat": 0.09622626,
+            "vgs": 0.7915665,
+            "vth": 0.6930388,
+            "id": 0.0003599542,
+            "headroom_mv": 610.4446399999999,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.7066709,
+            "vdsat": 0.09622626,
+            "vgs": 0.7915665,
+            "vth": 0.6930388,
+            "id": 0.0003599542,
+            "headroom_mv": 610.4446399999999,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577275,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003738225,
+            "headroom_mv": 590.3557,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.3604335,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003599542,
+            "headroom_mv": 93.06170000000003,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.3604335,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003599542,
+            "headroom_mv": 93.06170000000003,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 1.2258536036158878,
+        "peak_gain_db": 15.011579805697366,
+        "boost_db": 13.785726202081477,
+        "peak_freq_ghz": 1.26967491,
+        "hd3_db": -56.96834062936958,
+        "noise_vrms": 0.000382414085,
+        "power_w": 0.001968715692,
+        "area_mm2": 0.0011564264954408944,
+        "eye_h_ui": 0.4375,
+        "eye_v_mv": 781.186128929483,
+        "ok": true
+      },
+      "spec_passed": false,
+      "checks": {
+        "boost_range": false,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "historical_label_0.68",
+      "design": {
+        "w_in": 6.668144851765858e-05,
+        "l_in": 3.054199180284673e-07,
+        "i_tail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "r_load": 2036.0811201788692,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.68,
+      "requested_cm_v": 1.2240000000000002,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041112_000007_00d9ce72",
+      "simulator_parameters": {
+        "w": 66.68144851765858,
+        "l": 0.3054199180284673,
+        "itail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "rl": 2036.0811201788692,
+        "wb": 59.81160961424929,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 59.81160961424929,
+        "mt": 1,
+        "wq": 10.766089730564872,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.68
+      },
+      "health": {
+        "measured_cm_v": 1.224,
+        "nodes_v": {
+          "outp": 1.05959,
+          "outn": 1.05959,
+          "sp": 0.420693,
+          "sn": 0.420693,
+          "nbias": 0.8577275,
+          "cm": 1.224
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 153.3212,
+        "tail_delivered_pct": 97.27738205884808,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.638897,
+            "vdsat": 0.09719042,
+            "vgs": 0.803307,
+            "vth": 0.7041674,
+            "id": 0.0003636449,
+            "headroom_mv": 541.70658,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.638897,
+            "vdsat": 0.09719042,
+            "vgs": 0.803307,
+            "vth": 0.7041674,
+            "id": 0.0003636449,
+            "headroom_mv": 541.70658,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577275,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003738225,
+            "headroom_mv": 590.3557,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.420693,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003636448,
+            "headroom_mv": 153.3212,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.420693,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003636448,
+            "headroom_mv": 153.3212,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 0.9041643401611733,
+        "peak_gain_db": 14.925158483791405,
+        "boost_db": 14.020994143630231,
+        "peak_freq_ghz": 1.26967491,
+        "hd3_db": -60.665062707833656,
+        "noise_vrms": 0.000391395977,
+        "power_w": 0.001982001924,
+        "area_mm2": 0.0011564264954408944,
+        "eye_h_ui": 0.4375,
+        "eye_v_mv": 764.3158395415675,
+        "ok": true
+      },
+      "spec_passed": false,
+      "checks": {
+        "boost_range": false,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "historical_label_0.68",
+      "design": {
+        "w_in": 6.668144851765858e-05,
+        "l_in": 3.054199180284673e-07,
+        "i_tail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "r_load": 2036.0811201788692,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.72,
+      "requested_cm_v": 1.296,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041112_000008_bec3a5e6",
+      "simulator_parameters": {
+        "w": 66.68144851765858,
+        "l": 0.3054199180284673,
+        "itail": 0.0007476451201781162,
+        "rs": 2970.0509435821996,
+        "cs": 4.69636472950042e-13,
+        "rl": 2036.0811201788692,
+        "wb": 59.81160961424929,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 59.81160961424929,
+        "mt": 1,
+        "wq": 10.766089730564872,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.72
+      },
+      "health": {
+        "measured_cm_v": 1.296,
+        "nodes_v": {
+          "outp": 1.05468,
+          "outn": 1.05468,
+          "sp": 0.4813262,
+          "sn": 0.4813262,
+          "nbias": 0.8577275,
+          "cm": 1.296
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 213.9544,
+        "tail_delivered_pct": 97.92252771282504,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.5733535,
+            "vdsat": 0.0980542,
+            "vgs": 0.8146738,
+            "vth": 0.7150425,
+            "id": 0.0003660578,
+            "headroom_mv": 475.29929999999996,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.5733535,
+            "vdsat": 0.0980542,
+            "vgs": 0.8146738,
+            "vth": 0.7150425,
+            "id": 0.0003660578,
+            "headroom_mv": 475.29929999999996,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8577275,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003738225,
+            "headroom_mv": 590.3557,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.4813262,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003660565,
+            "headroom_mv": 213.9544,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.4813262,
+            "vdsat": 0.2673718,
+            "vgs": 0.8577275,
+            "vth": 0.5416526,
+            "id": 0.0003660565,
+            "headroom_mv": 213.9544,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 0.7641506682078885,
+        "peak_gain_db": 14.846884499952406,
+        "boost_db": 14.082733831744518,
+        "peak_freq_ghz": 1.26967491,
+        "hd3_db": -61.03727869997768,
+        "noise_vrms": 0.000395754999,
+        "power_w": 0.001990683954,
+        "area_mm2": 0.0011564264954408944,
+        "eye_h_ui": 0.4375,
+        "eye_v_mv": 755.9521014796165,
+        "ok": true
+      },
+      "spec_passed": false,
+      "checks": {
+        "boost_range": false,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "historical_label_0.72",
+      "design": {
+        "w_in": 3.04103615091e-05,
+        "l_in": 2.0217235127048618e-07,
+        "i_tail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "r_load": 2682.803811417792,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.6,
+      "requested_cm_v": 1.08,
+      "guard_valid": false,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041113_000009_5190c38d",
+      "simulator_parameters": {
+        "w": 30.4103615091,
+        "l": 0.2021723512704862,
+        "itail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "rl": 2682.803811417792,
+        "wb": 51.94962626821157,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 51.94962626821157,
+        "mt": 1,
+        "wq": 9.350932728278082,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.6
+      },
+      "health": {
+        "measured_cm_v": 1.08,
+        "nodes_v": {
+          "outp": 0.9983081,
+          "outn": 0.9983081,
+          "sp": 0.2626682,
+          "sn": 0.2626682,
+          "nbias": 0.8578702,
+          "cm": 1.08
+        },
+        "all_saturated": false,
+        "worst_headroom_mv": -4.759699999999977,
+        "tail_delivered_pct": 92.03577279487904,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.7356399,
+            "vdsat": 0.09105454,
+            "vgs": 0.8173318,
+            "vth": 0.7100122,
+            "id": 0.0002988265,
+            "headroom_mv": 644.58536,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.7356399,
+            "vdsat": 0.09105454,
+            "vgs": 0.8173318,
+            "vth": 0.7100122,
+            "id": 0.0002988265,
+            "headroom_mv": 644.58536,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8578702,
+            "vdsat": 0.2674279,
+            "vgs": 0.8578702,
+            "vth": 0.5417997,
+            "id": 0.000324685,
+            "headroom_mv": 590.4423,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.2626682,
+            "vdsat": 0.2674279,
+            "vgs": 0.8578702,
+            "vth": 0.5417997,
+            "id": 0.0002988265,
+            "headroom_mv": -4.759699999999977,
+            "saturated": false
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.2626682,
+            "vdsat": 0.2674279,
+            "vgs": 0.8578702,
+            "vth": 0.5417997,
+            "id": 0.0002988265,
+            "headroom_mv": -4.759699999999977,
+            "saturated": false
+          }
+        ]
+      },
+      "rejection": "T2.5_mosfet_not_in_saturation",
+      "reason": "2 device(s) not in saturation \u2014 XMtp: Vds=0.2627V Vdsat=0.2674V headroom=-4.8mV (need >= 50mV); XMtn: Vds=0.2627V Vdsat=0.2674V headroom=-4.8mV (need >= 50mV)"
+    },
+    {
+      "sample": "historical_label_0.72",
+      "design": {
+        "w_in": 3.04103615091e-05,
+        "l_in": 2.0217235127048618e-07,
+        "i_tail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "r_load": 2682.803811417792,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.64,
+      "requested_cm_v": 1.1520000000000001,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041113_000010_f90ecb4b",
+      "simulator_parameters": {
+        "w": 30.4103615091,
+        "l": 0.2021723512704862,
+        "itail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "rl": 2682.803811417792,
+        "wb": 51.94962626821157,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 51.94962626821157,
+        "mt": 1,
+        "wq": 9.350932728278082,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.64
+      },
+      "health": {
+        "measured_cm_v": 1.152,
+        "nodes_v": {
+          "outp": 0.9710671,
+          "outn": 0.9710671,
+          "sp": 0.3206455,
+          "sn": 0.3206455,
+          "nbias": 0.8578623,
+          "cm": 1.152
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 53.22170000000004,
+        "tail_delivered_pct": 95.19584942666135,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.6504216,
+            "vdsat": 0.09316117,
+            "vgs": 0.8313545,
+            "vth": 0.7209414,
+            "id": 0.0003098147,
+            "headroom_mv": 557.26043,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.6504216,
+            "vdsat": 0.09316117,
+            "vgs": 0.8313545,
+            "vth": 0.7209414,
+            "id": 0.0003098147,
+            "headroom_mv": 557.26043,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8578623,
+            "vdsat": 0.2674225,
+            "vgs": 0.8578623,
+            "vth": 0.5417991,
+            "id": 0.0003246705,
+            "headroom_mv": 590.4398,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.3206455,
+            "vdsat": 0.2674238,
+            "vgs": 0.8578623,
+            "vth": 0.5417967,
+            "id": 0.0003090868,
+            "headroom_mv": 53.22170000000004,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.3206455,
+            "vdsat": 0.2674238,
+            "vgs": 0.8578623,
+            "vth": 0.5417967,
+            "id": 0.0003090868,
+            "headroom_mv": 53.22170000000004,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 2.3743283666613375,
+        "peak_gain_db": 14.61701429256763,
+        "boost_db": 12.242685925906292,
+        "peak_freq_ghz": 1.3450001,
+        "hd3_db": -54.349477355570386,
+        "noise_vrms": 0.000408878747,
+        "power_w": 0.0016967628162,
+        "area_mm2": 0.0010251835708988653,
+        "eye_h_ui": 0.5,
+        "eye_v_mv": 894.8078120129095,
+        "ok": true
+      },
+      "spec_passed": false,
+      "checks": {
+        "boost_range": false,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "historical_label_0.72",
+      "design": {
+        "w_in": 3.04103615091e-05,
+        "l_in": 2.0217235127048618e-07,
+        "i_tail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "r_load": 2682.803811417792,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.68,
+      "requested_cm_v": 1.2240000000000002,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041114_000011_136f8758",
+      "simulator_parameters": {
+        "w": 30.4103615091,
+        "l": 0.2021723512704862,
+        "itail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "rl": 2682.803811417792,
+        "wb": 51.94962626821157,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 51.94962626821157,
+        "mt": 1,
+        "wq": 9.350932728278082,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.68
+      },
+      "health": {
+        "measured_cm_v": 1.224,
+        "nodes_v": {
+          "outp": 0.9569911,
+          "outn": 0.9569911,
+          "sp": 0.3809417,
+          "sn": 0.3809417,
+          "nbias": 0.8579066,
+          "cm": 1.224
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 113.46109999999999,
+        "tail_delivered_pct": 96.72326753724273,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.5760494,
+            "vdsat": 0.09420076,
+            "vgs": 0.8430583,
+            "vth": 0.7318382,
+            "id": 0.0003103898,
+            "headroom_mv": 481.84864000000005,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.5760494,
+            "vdsat": 0.09420076,
+            "vgs": 0.8430583,
+            "vth": 0.7318382,
+            "id": 0.0003103898,
+            "headroom_mv": 481.84864000000005,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8579066,
+            "vdsat": 0.2674597,
+            "vgs": 0.8579066,
+            "vth": 0.5417909,
+            "id": 0.0003247725,
+            "headroom_mv": 590.4468999999999,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.3809417,
+            "vdsat": 0.2674806,
+            "vgs": 0.8579066,
+            "vth": 0.5417544,
+            "id": 0.0003140461,
+            "headroom_mv": 113.46109999999999,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.3809417,
+            "vdsat": 0.2674806,
+            "vgs": 0.8579066,
+            "vth": 0.5417544,
+            "id": 0.0003140461,
+            "headroom_mv": 113.46109999999999,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 1.7315559922704258,
+        "peak_gain_db": 14.408265802416322,
+        "boost_db": 12.676709810145896,
+        "peak_freq_ghz": 1.3450001,
+        "hd3_db": -58.96371152740012,
+        "noise_vrms": 0.000429376711,
+        "power_w": 0.0017156510946,
+        "area_mm2": 0.0010251835708988653,
+        "eye_h_ui": 0.5,
+        "eye_v_mv": 844.6594993979526,
+        "ok": true
+      },
+      "spec_passed": false,
+      "checks": {
+        "boost_range": false,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    },
+    {
+      "sample": "historical_label_0.72",
+      "design": {
+        "w_in": 3.04103615091e-05,
+        "l_in": 2.0217235127048618e-07,
+        "i_tail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "r_load": 2682.803811417792,
+        "w_dfe": 0.0,
+        "tail": {
+          "kind": "simple",
+          "width_scale": 1.0,
+          "bias_width_ratio": 0.18
+        }
+      },
+      "vcm_ratio": 0.72,
+      "requested_cm_v": 1.296,
+      "guard_valid": true,
+      "artifact_dir": "C:\\Users\\talk2.000\\Desktop\\Claude\\nebula-analog-rl\\results\\tail_mirror_pilot_20260910_v2\\raw\\simple\\20260910T041114_000012_99b8352b",
+      "simulator_parameters": {
+        "w": 30.4103615091,
+        "l": 0.2021723512704862,
+        "itail": 0.0006493703283526446,
+        "rs": 3531.626994367512,
+        "cs": 3.4677137306455154e-13,
+        "rl": 2682.803811417792,
+        "wb": 51.94962626821157,
+        "lb": 2.0,
+        "mb": 1,
+        "wt": 51.94962626821157,
+        "mt": 1,
+        "wq": 9.350932728278082,
+        "mq": 1,
+        "vddp": 1.8,
+        "tempc": 27.0,
+        "vcm_ratio": 0.72
+      },
+      "health": {
+        "measured_cm_v": 1.296,
+        "nodes_v": {
+          "outp": 0.9514251,
+          "outn": 0.9514251,
+          "sp": 0.4401545,
+          "sn": 0.4401545,
+          "nbias": 0.8578629,
+          "cm": 1.296
+        },
+        "all_saturated": true,
+        "worst_headroom_mv": 172.72369999999998,
+        "tail_delivered_pct": 97.50633380590024,
+        "devices": [
+          {
+            "name": "XM1",
+            "vds": 0.5112706,
+            "vdsat": 0.09596419,
+            "vgs": 0.8558455,
+            "vth": 0.7421208,
+            "id": 0.0003190087,
+            "headroom_mv": 415.30641,
+            "saturated": true
+          },
+          {
+            "name": "XM2",
+            "vds": 0.5112706,
+            "vdsat": 0.09596419,
+            "vgs": 0.8558455,
+            "vth": 0.7421208,
+            "id": 0.0003190087,
+            "headroom_mv": 415.30641,
+            "saturated": true
+          },
+          {
+            "name": "XMref",
+            "vds": 0.8578629,
+            "vdsat": 0.2674251,
+            "vgs": 0.8578629,
+            "vth": 0.5417953,
+            "id": 0.0003246785,
+            "headroom_mv": 590.4377999999999,
+            "saturated": true
+          },
+          {
+            "name": "XMtp",
+            "vds": 0.4401545,
+            "vdsat": 0.2674308,
+            "vgs": 0.8578629,
+            "vth": 0.5417853,
+            "id": 0.0003165886,
+            "headroom_mv": 172.72369999999998,
+            "saturated": true
+          },
+          {
+            "name": "XMtn",
+            "vds": 0.4401545,
+            "vdsat": 0.2674308,
+            "vgs": 0.8578629,
+            "vth": 0.5417853,
+            "id": 0.0003165886,
+            "headroom_mv": 172.72369999999998,
+            "saturated": true
+          }
+        ]
+      },
+      "measures": {
+        "dc_gain_db": 1.4811025494562338,
+        "peak_gain_db": 14.299893403566804,
+        "boost_db": 12.81879085411057,
+        "peak_freq_ghz": 1.3450001,
+        "hd3_db": -60.75712415612577,
+        "noise_vrms": 0.000437941189,
+        "power_w": 0.0017231201046000002,
+        "area_mm2": 0.0010251835708988653,
+        "eye_h_ui": 0.5,
+        "eye_v_mv": 829.5331386792571,
+        "ok": true
+      },
+      "spec_passed": false,
+      "checks": {
+        "boost_range": false,
+        "peak_in_band": true,
+        "hd3": true,
+        "noise": true,
+        "power": true,
+        "area": true,
+        "eye_h": true,
+        "eye_v": true,
+        "dc_gain": true
+      },
+      "in_band": true
+    }
+  ],
+  "seconds": 10.015999999999622
+}

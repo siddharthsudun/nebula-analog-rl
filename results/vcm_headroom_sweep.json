@@ -1,0 +1,532 @@
+{
+ "question": "does lowering the input common-mode buy in-band boost, and does the winner remain a physically valid circuit?",
+ "method": "CMA-ES maximising boost_db with the peak pinned in 1.25-2.5 GHz; every candidate through the full guard layer at fast=False (real HD3 and noise)",
+ "evals_per_point": 150,
+ "vdd": 1.8,
+ "band_ghz": [
+  1.25,
+  2.5
+ ],
+ "shipped_vcm_ratio": 0.72,
+ "saturation_headroom_threshold_mv": 50.0,
+ "caveat": "VCM is rebound in-process for this sweep only; no repo file is modified and these rows are NOT the shipped 0.72 configuration",
+ "rows": [
+  {
+   "vcm_ratio": 0.6,
+   "vcm_v": 1.08,
+   "evals": 153,
+   "valid": 109,
+   "in_band": 60,
+   "valid_pct": 71.2,
+   "rejections_by_check": {
+    "T2.5_mosfet_not_in_saturation": 29,
+    "T4.10_dc_gain_implausible": 12,
+    "T4.15_eye_zero_or_above_theoretical_max": 3
+   },
+   "best": {
+    "boost_db": 8.725993588867276,
+    "peak_ghz": 1.42479405,
+    "dc_gain_db": 0.24944702170477726,
+    "x": [
+     0.7141911432469722,
+     0.5083140828973285,
+     0.565273302630839,
+     0.682013890189236,
+     0.5337715486701368,
+     0.4737133868321594
+    ],
+    "design": {
+     "w_in": 2.6815276934490693e-05,
+     "l_in": 5.820669704627292e-07,
+     "i_tail": 0.000587009637499297,
+     "rs": 3441.8680619272563,
+     "cs": 1.691314391495837e-13,
+     "r_load": 2421.1955954775813
+    }
+   },
+   "health": {
+    "devices": [
+     {
+      "name": "XM1",
+      "vds_v": 0.6953,
+      "vdsat_v": 0.1806,
+      "headroom_mv": 514.7,
+      "saturated": true
+     },
+     {
+      "name": "XM2",
+      "vds_v": 0.6953,
+      "vdsat_v": 0.1806,
+      "headroom_mv": 514.7,
+      "saturated": true
+     },
+     {
+      "name": "XMref",
+      "vds_v": 0.858,
+      "vdsat_v": 0.2675,
+      "headroom_mv": 590.5,
+      "saturated": true
+     },
+     {
+      "name": "XMtp",
+      "vds_v": 0.4141,
+      "vdsat_v": 0.2675,
+      "headroom_mv": 146.6,
+      "saturated": true
+     },
+     {
+      "name": "XMtn",
+      "vds_v": 0.4141,
+      "vdsat_v": 0.2675,
+      "headroom_mv": 146.6,
+      "saturated": true
+     }
+    ],
+    "all_saturated": true,
+    "worst_headroom_mv": 146.6,
+    "node_voltages_v": {
+     "outp": 1.1094,
+     "outn": 1.1094,
+     "sp": 0.4141,
+     "sn": 0.4141,
+     "nbias": 0.858
+    },
+    "tail_requested_a": 0.000587009637499297,
+    "tail_delivered_a": 0.0005704474,
+    "tail_delivered_pct": 97.2,
+    "load_drop_v": 0.7106
+   }
+  },
+  {
+   "vcm_ratio": 0.64,
+   "vcm_v": 1.152,
+   "evals": 153,
+   "valid": 109,
+   "in_band": 56,
+   "valid_pct": 71.2,
+   "rejections_by_check": {
+    "T4.10_dc_gain_implausible": 20,
+    "T2.5_mosfet_not_in_saturation": 19,
+    "T4.15_eye_zero_or_above_theoretical_max": 5
+   },
+   "best": {
+    "boost_db": 8.011363883790555,
+    "peak_ghz": 1.3450001,
+    "dc_gain_db": 1.2229943431211003,
+    "x": [
+     0.5972774579852453,
+     0.300279948081711,
+     0.4296363381189538,
+     0.6970013724507127,
+     0.5272471474751563,
+     0.5731524745620156
+    ],
+    "design": {
+     "w_in": 1.5651462174093284e-05,
+     "l_in": 4.052379558694543e-07,
+     "i_tail": 0.00045815452121300614,
+     "rs": 3515.3067250084923,
+     "cs": 1.6338474380894176e-13,
+     "r_load": 2908.4471253538763
+    }
+   },
+   "health": {
+    "devices": [
+     {
+      "name": "XM1",
+      "vds_v": 0.7471,
+      "vdsat_v": 0.166,
+      "headroom_mv": 581.1,
+      "saturated": true
+     },
+     {
+      "name": "XM2",
+      "vds_v": 0.7471,
+      "vdsat_v": 0.166,
+      "headroom_mv": 581.1,
+      "saturated": true
+     },
+     {
+      "name": "XMref",
+      "vds_v": 0.8583,
+      "vdsat_v": 0.2676,
+      "headroom_mv": 590.7,
+      "saturated": true
+     },
+     {
+      "name": "XMtp",
+      "vds_v": 0.4064,
+      "vdsat_v": 0.2676,
+      "headroom_mv": 138.8,
+      "saturated": true
+     },
+     {
+      "name": "XMtn",
+      "vds_v": 0.4064,
+      "vdsat_v": 0.2676,
+      "headroom_mv": 138.8,
+      "saturated": true
+     }
+    ],
+    "all_saturated": true,
+    "worst_headroom_mv": 138.8,
+    "node_voltages_v": {
+     "outp": 1.1535,
+     "outn": 1.1535,
+     "sp": 0.4064,
+     "sn": 0.4064,
+     "nbias": 0.8583
+    },
+    "tail_requested_a": 0.00045815452121300614,
+    "tail_delivered_a": 0.0004446714,
+    "tail_delivered_pct": 97.1,
+    "load_drop_v": 0.6663
+   }
+  },
+  {
+   "vcm_ratio": 0.68,
+   "vcm_v": 1.224,
+   "evals": 153,
+   "valid": 107,
+   "in_band": 57,
+   "valid_pct": 69.9,
+   "rejections_by_check": {
+    "T4.10_dc_gain_implausible": 31,
+    "T2.5_mosfet_not_in_saturation": 14,
+    "T4.15_eye_zero_or_above_theoretical_max": 1
+   },
+   "best": {
+    "boost_db": 14.082733831744518,
+    "peak_ghz": 1.26967491,
+    "dc_gain_db": 0.7641506682078885,
+    "x": [
+     0.9120025127075072,
+     0.1828469623864321,
+     0.734363284398017,
+     0.5857246823637142,
+     0.7265276076003863,
+     0.39511859595487125
+    ],
+    "design": {
+     "w_in": 6.668144851765858e-05,
+     "l_in": 3.054199180284673e-07,
+     "i_tail": 0.0007476451201781162,
+     "rs": 2970.0509435821996,
+     "cs": 4.69636472950042e-13,
+     "r_load": 2036.0811201788692
+    }
+   },
+   "health": {
+    "devices": [
+     {
+      "name": "XM1",
+      "vds_v": 0.5734,
+      "vdsat_v": 0.0981,
+      "headroom_mv": 475.3,
+      "saturated": true
+     },
+     {
+      "name": "XM2",
+      "vds_v": 0.5734,
+      "vdsat_v": 0.0981,
+      "headroom_mv": 475.3,
+      "saturated": true
+     },
+     {
+      "name": "XMref",
+      "vds_v": 0.8577,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 590.4,
+      "saturated": true
+     },
+     {
+      "name": "XMtp",
+      "vds_v": 0.4813,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 214.0,
+      "saturated": true
+     },
+     {
+      "name": "XMtn",
+      "vds_v": 0.4813,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 214.0,
+      "saturated": true
+     }
+    ],
+    "all_saturated": true,
+    "worst_headroom_mv": 214.0,
+    "node_voltages_v": {
+     "outp": 1.0547,
+     "outn": 1.0547,
+     "sp": 0.4813,
+     "sn": 0.4813,
+     "nbias": 0.8577
+    },
+    "tail_requested_a": 0.0007476451201781162,
+    "tail_delivered_a": 0.000732113,
+    "tail_delivered_pct": 97.9,
+    "load_drop_v": 0.7611
+   }
+  },
+  {
+   "vcm_ratio": 0.72,
+   "vcm_v": 1.296,
+   "evals": 153,
+   "valid": 113,
+   "in_band": 64,
+   "valid_pct": 73.9,
+   "rejections_by_check": {
+    "T4.10_dc_gain_implausible": 19,
+    "T2.5_mosfet_not_in_saturation": 17,
+    "T4.15_eye_zero_or_above_theoretical_max": 4
+   },
+   "best": {
+    "boost_db": 12.81879085411057,
+    "peak_ghz": 1.3450001,
+    "dc_gain_db": 1.4811025494562338,
+    "x": [
+     0.7415107914675625,
+     0.06137923678880727,
+     0.6309161351080469,
+     0.7003320396668392,
+     0.669284294848803,
+     0.5271028186566923
+    ],
+    "design": {
+     "w_in": 3.04103615091e-05,
+     "l_in": 2.0217235127048618e-07,
+     "i_tail": 0.0006493703283526446,
+     "rs": 3531.626994367512,
+     "cs": 3.4677137306455154e-13,
+     "r_load": 2682.803811417792
+    }
+   },
+   "health": {
+    "devices": [
+     {
+      "name": "XM1",
+      "vds_v": 0.5113,
+      "vdsat_v": 0.096,
+      "headroom_mv": 415.3,
+      "saturated": true
+     },
+     {
+      "name": "XM2",
+      "vds_v": 0.5113,
+      "vdsat_v": 0.096,
+      "headroom_mv": 415.3,
+      "saturated": true
+     },
+     {
+      "name": "XMref",
+      "vds_v": 0.8579,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 590.4,
+      "saturated": true
+     },
+     {
+      "name": "XMtp",
+      "vds_v": 0.4402,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 172.7,
+      "saturated": true
+     },
+     {
+      "name": "XMtn",
+      "vds_v": 0.4402,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 172.7,
+      "saturated": true
+     }
+    ],
+    "all_saturated": true,
+    "worst_headroom_mv": 172.7,
+    "node_voltages_v": {
+     "outp": 0.9514,
+     "outn": 0.9514,
+     "sp": 0.4402,
+     "sn": 0.4402,
+     "nbias": 0.8579
+    },
+    "tail_requested_a": 0.0006493703283526446,
+    "tail_delivered_a": 0.0006331772,
+    "tail_delivered_pct": 97.5,
+    "load_drop_v": 0.8711
+   }
+  },
+  {
+   "vcm_ratio": 0.76,
+   "vcm_v": 1.368,
+   "evals": 153,
+   "valid": 70,
+   "in_band": 7,
+   "valid_pct": 45.8,
+   "rejections_by_check": {
+    "T2.5_mosfet_not_in_saturation": 48,
+    "T4.10_dc_gain_implausible": 21,
+    "T4.15_eye_zero_or_above_theoretical_max": 14
+   },
+   "best": {
+    "boost_db": 11.78602160079009,
+    "peak_ghz": 1.26967491,
+    "dc_gain_db": 0.9086224378059913,
+    "x": [
+     0.5536597811233764,
+     0.030556308568709598,
+     0.48822948851798076,
+     0.8236227825037977,
+     0.6247037295095936,
+     0.591615025039885
+    ],
+    "design": {
+     "w_in": 1.2803230440019149e-05,
+     "l_in": 1.7597286228340315e-07,
+     "i_tail": 0.0005138180140920818,
+     "rs": 4135.7516342686085,
+     "cs": 2.7381801639936677e-13,
+     "r_load": 2998.913622695436
+    }
+   },
+   "health": {
+    "devices": [
+     {
+      "name": "XM1",
+      "vds_v": 0.6521,
+      "vdsat_v": 0.1122,
+      "headroom_mv": 539.8,
+      "saturated": true
+     },
+     {
+      "name": "XM2",
+      "vds_v": 0.6521,
+      "vdsat_v": 0.1122,
+      "headroom_mv": 539.8,
+      "saturated": true
+     },
+     {
+      "name": "XMref",
+      "vds_v": 0.8582,
+      "vdsat_v": 0.2675,
+      "headroom_mv": 590.6,
+      "saturated": true
+     },
+     {
+      "name": "XMtp",
+      "vds_v": 0.4002,
+      "vdsat_v": 0.2675,
+      "headroom_mv": 132.7,
+      "saturated": true
+     },
+     {
+      "name": "XMtn",
+      "vds_v": 0.4002,
+      "vdsat_v": 0.2675,
+      "headroom_mv": 132.7,
+      "saturated": true
+     }
+    ],
+    "all_saturated": true,
+    "worst_headroom_mv": 132.7,
+    "node_voltages_v": {
+     "outp": 1.0523,
+     "outn": 1.0523,
+     "sp": 0.4002,
+     "sn": 0.4002,
+     "nbias": 0.8582
+    },
+    "tail_requested_a": 0.0005138180140920818,
+    "tail_delivered_a": 0.0004982868,
+    "tail_delivered_pct": 97.0,
+    "load_drop_v": 0.7704
+   }
+  },
+  {
+   "vcm_ratio": 0.8,
+   "vcm_v": 1.44,
+   "evals": 153,
+   "valid": 93,
+   "in_band": 37,
+   "valid_pct": 60.8,
+   "rejections_by_check": {
+    "T4.10_dc_gain_implausible": 41,
+    "T2.5_mosfet_not_in_saturation": 16,
+    "T4.15_eye_zero_or_above_theoretical_max": 3
+   },
+   "best": {
+    "boost_db": 9.189544628199991,
+    "peak_ghz": 1.3450001,
+    "dc_gain_db": 2.417727926937205,
+    "x": [
+     0.8975555395012736,
+     0.4140057058911397,
+     0.6088801995484165,
+     0.4988557222555594,
+     0.6262215944716798,
+     0.44126525544337314
+    ],
+    "design": {
+     "w_in": 6.23894387830761e-05,
+     "l_in": 5.019048500074687e-07,
+     "i_tail": 0.0006284361895709957,
+     "rs": 2544.393039052241,
+     "cs": 2.7602897505513767e-13,
+     "r_load": 2262.1997516725282
+    }
+   },
+   "health": {
+    "devices": [
+     {
+      "name": "XM1",
+      "vds_v": 0.6232,
+      "vdsat_v": 0.1233,
+      "headroom_mv": 499.9,
+      "saturated": true
+     },
+     {
+      "name": "XM2",
+      "vds_v": 0.6232,
+      "vdsat_v": 0.1233,
+      "headroom_mv": 499.9,
+      "saturated": true
+     },
+     {
+      "name": "XMref",
+      "vds_v": 0.8579,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 590.5,
+      "saturated": true
+     },
+     {
+      "name": "XMtp",
+      "vds_v": 0.4808,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 213.4,
+      "saturated": true
+     },
+     {
+      "name": "XMtn",
+      "vds_v": 0.4808,
+      "vdsat_v": 0.2674,
+      "headroom_mv": 213.4,
+      "saturated": true
+     }
+    ],
+    "all_saturated": true,
+    "worst_headroom_mv": 213.4,
+    "node_voltages_v": {
+     "outp": 1.104,
+     "outn": 1.104,
+     "sp": 0.4808,
+     "sn": 0.4808,
+     "nbias": 0.8579
+    },
+    "tail_requested_a": 0.0006284361895709957,
+    "tail_delivered_a": 0.0006153022,
+    "tail_delivered_pct": 97.9,
+    "load_drop_v": 0.7108
+   }
+  }
+ ],
+ "seconds": 2076.2
+}
