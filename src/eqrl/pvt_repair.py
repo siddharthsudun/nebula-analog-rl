@@ -247,12 +247,19 @@ def main():
 def apply_pvt_stage(result, spec, *, output=None, seed=20260910, wall_seconds=WALL_SECONDS, notify=None, repair_result=None):
     """Third design stage: its verified sizing becomes the actual returned circuit."""
     from copy import deepcopy
-    result['architecture'] += ' -> PVT sizing repair + independent 45-corner verification'
     if not result.get('design'):
+        result['architecture'] += ' -> PVT sizing repair + independent 45-corner verification'
         result['pvt'] = dict(accepted=False, status='no_candidate', evaluations=0, cost_complete=True)
         return result
     result['pre_pvt'] = {k:deepcopy(result.get(k)) for k in ('design','verification','status','solver','guidance')}
     repair = repair_result if repair_result is not None else run_repair(result['design'], spec, output=output, seed=seed, wall_seconds=wall_seconds, notify=notify)
+    # Fastest certifies the three stress corners (tt/ss/ff) so it can still answer inside a
+    # five-second budget; everything else certifies all 45. Every sentence this function
+    # writes into the result is read by an engineer deciding whether the circuit is signed
+    # off, so the count comes from the grid that actually ran -- never a constant. A
+    # `run_repair` result predates the label and is always the full grid.
+    label = repair.get('grid_label', 'full 45-corner')
+    result['architecture'] += f' -> PVT sizing repair + independent {label} verification'
     result['pvt'] = repair
     cost = result.setdefault('cost', {})
     cost['pvt_corner_evaluations'] = repair['evaluations']
@@ -274,7 +281,7 @@ def apply_pvt_stage(result, spec, *, output=None, seed=20260910, wall_seconds=WA
     tt = next(r for r in verified['rows'] if r['corner'][0]=='tt' and r['corner'][2]==27 and abs(r['corner'][1]-spec.vdd_nominal)<1e-6)
     result['verification'] = dict(guard_valid=True, guard_check=None, passed=True, checks=tt['checks'],
         failing=[], measures=tt['measures'], abs_err_db=tt['target_error_db'],
-        scope='TT row from the independent 45-corner verification of the final circuit')
+        scope=f'TT row from the independent {label} verification of the final circuit')
     from eqrl.pipeline import requirements_diff, competition_spec
     if requirements_diff(spec):
         from eqrl.sim.measures import Measures
@@ -288,8 +295,14 @@ def apply_pvt_stage(result, spec, *, output=None, seed=20260910, wall_seconds=WA
     result['provenance']['pvt_sizing_changed'] = winner['design'] != result['pre_pvt']['design']
     result['provenance']['fixed_anchor_reused'] = winner['id']=='anchor'
     if winner['id']=='anchor': result['provenance']['is_ai_generated'] = False
-    result['guidance'] = dict(headline='Final circuit independently passes all 45 PVT corners.',
-        detail='Schematic-level acceptance at this specification. Fixed-anchor reuse is identified in provenance.')
+    corners = repair.get('corners_checked', 45)
+    result['guidance'] = dict(
+        headline=f'Final circuit independently passes all {corners} checked PVT corners.'
+                 if corners != 45 else 'Final circuit independently passes all 45 PVT corners.',
+        detail='Schematic-level acceptance at this specification. Fixed-anchor reuse is identified in provenance.'
+               if corners == 45 else
+               f'Checked at {label}, not full sign-off: use Check PVT for the complete 45-corner grid. '
+               'Fixed-anchor reuse is identified in provenance.')
     return result
 
 

@@ -1035,9 +1035,18 @@ function absorbPareto(p) {
 }
 
 //: Keeps polling purely for alternatives once the run itself is inactive.
+//
+//: `pareto_start` is emitted by a worker thread AFTER /api/pipeline/run has already
+//: answered, so there is a window -- measured at roughly 0.2 s -- in which the feed
+//: reports the run inactive AND the comparison not yet active. Stopping on that window
+//: is how the alternatives silently never arrive, and whether it happens comes down to
+//: how long `presentResult` spends drawing the schematic before this starts. So stop
+//: only once alternatives have actually been seen, or after a grace period in which
+//: they never started at all.
 function pollPareto() {
   clearInterval(paretoTimer);
   const generation = paretoState.generation;
+  let started = false, ticks = 0;
   const timer = setInterval(async () => {
     try {
       const p = await api(`/api/pipeline/progress?since=${paretoCursor}`);
@@ -1045,7 +1054,8 @@ function pollPareto() {
       paretoCursor = p.next;
       if (p.events.length) appendLog(p.events);
       absorbPareto(p);
-      if (!p.pareto_active) clearInterval(timer);
+      if (p.pareto_active || p.pareto) started = true;
+      if (started ? !p.pareto_active : ++ticks > 16) clearInterval(timer);
     } catch { clearInterval(timer); }
   }, 600);
   paretoTimer = timer;
@@ -1181,12 +1191,31 @@ function checksHtml(checks, measures, title) {
 // be read later as a delivered one. Stamp the verdict into the file itself as SPICE
 // comments. Verification is corner="tt" only (pipeline.py:306) -- the header says so
 // rather than letting "verified" imply a PVT sign-off it never ran.
+// How many corners a result was actually certified against.
+//
+// Fastest certifies the three stress corners (tt/ss/ff) so it can answer inside five
+// seconds; every other mode certifies all 45; Check PVT is always the full grid whatever
+// produced the circuit. The certify result carries the count that ran, so nothing below
+// may hardcode 45 -- a three-corner pass displayed as "45 / 45" is the single failure
+// mode a short grid introduces, and it is the one that would matter. The `|| 45` fallback
+// is for results recorded before the field existed, all of which were full sweeps.
+const pvtCount = (pvt) => (pvt && pvt.corners_checked) || 45;
+const pvtGridLabel = (pvt) => (pvt && pvt.grid_label) || "full 45-corner";
+//: "45 / 45 corners", or "3 / 3 corners (tt/ss/ff)" when the short grid ran.
+function pvtCornersLabel(pvt) {
+  const n = pvtCount(pvt), named = /\(([^)]+)\)/.exec(pvtGridLabel(pvt));
+  return `${n} / ${n} corners${named ? ` (${named[1]})` : ""}`;
+}
+//: True when the full grid has NOT been run on this circuit, whether because it failed,
+//: because the budget ran out, or because Fastest only ever checked three corners.
+const pvtNeedsFullCheck = (pvt) => !pvt || !pvt.accepted || pvtCount(pvt) < 45;
+
 function netlistWithVerdict(r) {
   if (!r || !r.netlist) return "";
   const st = defaults.statuses, v = r.verification;
   const L = ["*", "* ---------------- SILQ provenance ----------------"];
   if (r.pvt) {
-    L.push("* PVT: " + (r.pvt.accepted ? "independent 45/45 corner acceptance" : "NOT VERIFIED; " + r.pvt.status),
+    L.push("* PVT: " + (r.pvt.accepted ? `independent ${pvtCornersLabel(r.pvt)} acceptance` : "NOT VERIFIED; " + r.pvt.status),
       "* Schematic-level only; no mismatch yield or extracted-layout sign-off.");
     if (r.provenance.fixed_anchor_reused) L.push("* FINAL SOURCE: fixed delivered sizing, reverified for this target.");
   }
@@ -1234,8 +1263,15 @@ function verdictHtml(r) {
     cls = "bad"; icon = "alertTriangle"; title = "Fixed fallback design, not an AI result";
     sub = "The architecture found nothing guard-valid for this spec. What is shown is a fixed, hand-verified design that ignores your requested target. It is not an output of the search and must not be read as one.";
   } else if (r.pvt?.accepted) {
-    cls = "ok"; icon = "checkCircle"; title = "Independently verified across all 45 PVT corners";
+    // The headline verdict is the one line most readers take away, so it names the grid
+    // that ran. A Fastest pass is a real pass of tt/ss/ff and is worth saying so; it is
+    // not a 45-corner sign-off, and the sub-line points at the button that gives one.
+    const short = pvtCount(r.pvt) < 45;
+    cls = "ok"; icon = "checkCircle";
+    title = short ? `Independently verified at ${pvtCount(r.pvt)} PVT corners (tt/ss/ff)`
+                  : "Independently verified across all 45 PVT corners";
     sub = "The final sizing passes every hard check across process, supply and temperature. Schematic-level results; mismatch yield and extracted layout remain untested.";
+    if (short) sub = `The final sizing passes every hard check at the typical corner and at both stress corners — slow/low-supply/hot and fast/high-supply/cold. The remaining 42 corners of the full grid have not been measured; Check PVT runs them on this exact circuit. Schematic-level results; mismatch yield and extracted layout remain untested.`;
     if (r.provenance.fixed_anchor_reused) sub += " Final source: fixed delivered sizing, reverified for this specification.";
   } else if (r.status === st.solved) {
     cls = "ok"; icon = "checkCircle"; title = "Verified at the typical corner";
@@ -1388,10 +1424,10 @@ function circuitPvtHtml(item) {
   if (live && live.state === "error") return `<span class="c-pvt bad">PVT check failed: ${escapeHtml(live.message || "")}</span>`;
   if (live && live.state === "done") {
     return live.accepted
-      ? `<span class="c-pvt ok">${ICONS.check} PVT verified, 45 / 45 corners</span>`
+      ? `<span class="c-pvt ok">${ICONS.check} PVT verified, ${pvtCornersLabel(live.result)}</span>`
       : `<span class="c-pvt bad">PVT not accepted (${escapeHtml(live.status || "unresolved")})</span>`;
   }
-  if (item.pvt && item.pvt.accepted) return `<span class="c-pvt ok">${ICONS.check} PVT verified, 45 / 45 corners</span>`;
+  if (item.pvt && item.pvt.accepted) return `<span class="c-pvt ok">${ICONS.check} PVT verified, ${pvtCornersLabel(item.pvt)}</span>`;
   return `<span class="c-pvt warn">Nominal (tt) only — PVT not run for this circuit</span>`;
 }
 
@@ -1538,14 +1574,19 @@ async function presentResult(r, elapsedS, ctx) {
   let html = verdictHtml(r);
   html += noiseResultHtml(r);
   if (r.pvt) {
-    // Fastest never runs PVT on its own, and any mode can run out of budget before
-    // signoff finishes. Both cases end here: say plainly what was NOT verified, and offer
-    // the check rather than leaving the engineer to re-run the whole design to get it.
-    const offer = r.design && !r.pvt.accepted;
-    html += `<div class="panel"><div class="panel-head"><span class="panel-title">PVT acceptance</span><span class="panel-meta">${r.pvt.accepted ? '45 / 45 independently verified' : escapeHtml(r.pvt.status)}</span></div>`
+    // Three cases end here: a failed sweep, a budget that ran out before sign-off, and
+    // a Fastest run that certified three corners and passed. The third is the one worth
+    // being careful about -- it reads as a pass, and it IS a pass, but only of tt/ss/ff.
+    // Say which grid ran, and offer the full check in every case where 45 corners have
+    // not actually been measured, rather than leaving the engineer to re-run the design.
+    const offer = r.design && pvtNeedsFullCheck(r.pvt);
+    const shortGrid = r.pvt.accepted && pvtCount(r.pvt) < 45;
+    html += `<div class="panel"><div class="panel-head"><span class="panel-title">PVT acceptance</span><span class="panel-meta">${r.pvt.accepted ? escapeHtml(pvtCornersLabel(r.pvt)) + ' independently verified' : escapeHtml(r.pvt.status)}</span></div>`
       + `<p>${escapeHtml(r.pvt.scope || '')}</p>`
       + `<p>${r.pvt.evaluations} recorded corner evaluations${r.pvt.cost_complete ? '' : '; count incomplete after interruption'}. ${r.provenance.fixed_anchor_reused ? 'Fixed delivered sizing reused and independently checked for this specification.' : 'Final sizing and measurements are shown in the circuit above.'}</p>`
-      + (offer ? `<div class="pvt-offer"><span class="c-pvt warn">Not verified across PVT corners: this circuit was checked at the typical corner only.</span><button class="btn sm" id="result-pvt-btn" type="button">Check PVT</button><span id="result-pvt-state"></span></div>` : "")
+      + (offer ? `<div class="pvt-offer"><span class="c-pvt warn">${shortGrid
+          ? `Checked at ${escapeHtml(pvtGridLabel(r.pvt))} only — the full 45-corner grid has not been measured on this circuit.`
+          : "Not verified across PVT corners: this circuit was checked at the typical corner only."}</span><button class="btn sm" id="result-pvt-btn" type="button">Check PVT</button><span id="result-pvt-state"></span></div>` : "")
       + `</div>`;
   }
   if (!r.design) html += banner("warning", "alertTriangle", "No design: the architecture produced nothing guard-valid for this spec, and the fixed fallback was not allowed.");
@@ -1599,13 +1640,13 @@ async function presentResult(r, elapsedS, ctx) {
   if (r.design) {
     setParams(r.design);
     const m = v && v.measures;
-    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${r.pvt ? (r.pvt.accepted ? "verified (45 PVT corners)" : "PVT not verified") : v.passed ? "verified (tt corner)" : "not verified"}`);
+    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${r.pvt ? (r.pvt.accepted ? `verified (${pvtCount(r.pvt)} PVT corners)` : "PVT not verified") : v.passed ? "verified (tt corner)" : "not verified"}`);
     else setReadout("Boost", "n/a", v ? "guard rejected the final design on re-simulation" : "verification did not run");
     const title = isFallback ? "Fixed fallback design (not AI-generated)" : "Delivered design";
     const sub = `target ${fmt(r.spec.target_boost_db, 1)} dB boost over a ${fmt(r.spec.channel_loss_db, 1)} dB channel`;
     setStageTitle(title, `${sub}${r.mode ? `, ${r.mode} mode` : ""}`);
     setStateChip(r.status === st.solved ? "ok" : isFallback ? "bad" : "warn",
-      r.status === st.solved ? (r.pvt?.accepted ? "verified (45 PVT)" : "verified (tt)") : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
+      r.status === st.solved ? (r.pvt?.accepted ? `verified (${pvtCount(r.pvt)} PVT)` : "verified (tt)") : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
     if (r.noise_evaluation) setStateChip(r.overall_passed && !r.overall_conditional ? "ok" : "warn",
       r.overall_passed ? (r.overall_conditional ? "conditional pass" : "sampled pass") : "noise not verified");
     if (r.pvt && !r.pvt.accepted) setStateChip("warn", "PVT not verified");
@@ -1640,7 +1681,7 @@ function selectedCircuitExport() {
 
 function initExports() {
   $("#export-svg").addEventListener("click", () => { if (currentSvg) downloadText("silq_schematic.svg", currentSvg, "image/svg+xml"); });
-  $("#export-netlist").addEventListener("click", () => { const chosen = selectedCircuitExport(); if (chosen?.netlist) downloadText("silq_ctle.cir", `* ${chosen.pvt?.accepted ? "45-corner PVT verified" : "Nominal circuit; PVT NOT VERIFIED"}\n${chosen.netlist}`); });
+  $("#export-netlist").addEventListener("click", () => { const chosen = selectedCircuitExport(); if (chosen?.netlist) downloadText("silq_ctle.cir", `* ${chosen.pvt?.accepted ? `${pvtGridLabel(chosen.pvt)} PVT verified` : "Nominal circuit; PVT NOT VERIFIED"}\n${chosen.netlist}`); });
   $("#export-json").addEventListener("click", () => { if (currentResult) downloadText("silq_result.json", JSON.stringify(selectedCircuitExport(), null, 2), "application/json"); });
 }
 
@@ -1661,7 +1702,7 @@ function renderHistory() {
   const st = defaults ? defaults.statuses : {};
   list.innerHTML = items.map((it, i) => {
     const cls = it.status === st.solved ? "ok" : it.status === st.fallback ? "bad" : "warn";
-    const label = it.status === st.solved ? (it.result?.pvt?.accepted ? "verified (45 PVT)" : "verified (tt)") : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
+    const label = it.status === st.solved ? (it.result?.pvt?.accepted ? `verified (${pvtCount(it.result.pvt)} PVT)` : "verified (tt)") : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
     const when = new Date(it.ts).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
     return `<button type="button" class="hist" data-i="${i}"><div class="hist-top"><span class="state-chip ${cls}"><span class="dot"></span>${label}</span><span class="hist-meta">${escapeHtml(when)}</span></div><div class="hist-text">${escapeHtml(it.text || `${fmt(it.target, 1)} dB over ${fmt(it.channel, 1)} dB`)}</div><div class="hist-meta"><span>target ${fmt(it.target, 1)} dB</span><span>got ${it.boost === null || it.boost === undefined ? "n/a" : fmt(it.boost, 2) + " dB"}</span><span>${escapeHtml(it.mode || "")}</span><span>${fmt(it.elapsed, 0)} s</span></div></button>`;
   }).join("");
@@ -2022,7 +2063,7 @@ function renderModelPerformance(d) {
         <div><dt>${F.max_abs_err_db.toFixed(4)} dB</dt><dd>worst target error of any case, against a &plusmn;${F.tol_db} dB tolerance &mdash; ${Math.round(F.margin_factor)}&times; more room than it needed</dd></div>
         <div><dt>${F.median_evals}</dt><dd>median optimizer evaluations; only ${F.refined_cases} of ${F.cases} cases needed more than one</dd></div>
       </div>
-      <p style="font-size:var(--fs-sm);">So the honest reading is: <strong>the corpus already covers this spec sample.</strong> The benchmark asks for a valid circuit within ${F.tol_db} dB of target, and retrieval alone clears that on every case with two orders of magnitude to spare. A 100% here says the lookup table is well matched to the questions being asked &mdash; not that the policy is perfect, and not that an unseen specification outside the corpus would land the same way. That is also why Fastest is the one mode that runs no PVT sweep of its own.</p>
+      <p style="font-size:var(--fs-sm);">So the honest reading is: <strong>the corpus already covers this spec sample.</strong> The benchmark asks for a valid circuit within ${F.tol_db} dB of target, and retrieval alone clears that on every case with two orders of magnitude to spare. A 100% here says the lookup table is well matched to the questions being asked &mdash; not that the policy is perfect, and not that an unseen specification outside the corpus would land the same way. That is also why Fastest certifies only three corners (tt/ss/ff) rather than all 45: the sweep is there to catch a bad retrieval, not to sign a circuit off. Check PVT runs the full grid on demand.</p>
       <p class="help-hint">${escapeHtml(F.note)}</p></div>`;
   }
 

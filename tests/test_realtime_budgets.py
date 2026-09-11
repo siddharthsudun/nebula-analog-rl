@@ -7,8 +7,13 @@ and neither of which any existing test could see:
    pre-warmed on the in-process path, and `pipeline.design` builds it inside the request
    before the first evaluation. That is longer than Fastest's entire search window, so a
    cold server failed its first Fastest request on evaluation zero.
-2. Fastest reserved 72% of its 5 s budget for a PVT certification stage it never runs,
+2. Fastest reserved 72% of its 5 s budget for a PVT certification stage it never ran,
    leaving 1.4 s for a search that needs roughly four guarded SPICE evaluations.
+
+Fastest now DOES certify, against the three stress corners rather than all 45 (see
+`realtime.GRID_MODE`), so defect 2 is live again in a new form: the reserve must cover a
+real sweep without falling back below the 4 s the search needs. Both ends are asserted
+below, and the 3-corner sweep was measured at 0.50 s warm against 3.12 s for 45.
 
 Both are static/arithmetic properties, so these tests need no simulator.
 """
@@ -64,12 +69,33 @@ class TestStartupPrewarm:
 
 
 class TestSearchReserve:
-    def test_fastest_reserve_is_small_because_it_never_certifies(self):
+    def test_fastest_reserve_covers_a_three_corner_sweep_without_starving_the_search(self):
+        """Both ends matter, and they pull against each other inside one 5 s budget."""
         budget = realtime.LIMITS["fastest"]
         reserve = realtime.search_reserve("fastest", budget)
-        assert reserve <= 0.5, "Fastest runs no PVT; reserving for it starves the search"
+        assert reserve >= 1.0, (
+            "Fastest certifies tt/ss/ff now; a sweep measured at 0.50 s warm plus the one "
+            "in-flight evaluation the search may overrun by does not fit in less")
         assert budget - reserve >= 4.0, (
             "Fastest needs room for one surrogate seed plus FASTEST_BUDGET refinements")
+        assert reserve < realtime.FULL_RESERVE, (
+            "3 corners cost a fraction of 45; reserving the certifying modes' share would "
+            "spend Fastest's budget on time it cannot use")
+
+    def test_fastest_certifies_the_reduced_grid_and_nothing_else_does(self):
+        """The mode->grid map is the single place this decision is made."""
+        assert realtime.GRID_MODE.get("fastest") == "reduced"
+        for mode in ("auto", "thinking", "default", "retarget", "g32_acceptance"):
+            assert realtime.GRID_MODE.get(mode, "full") == "full", (
+                f"{mode} must still certify all 45 corners")
+
+    def test_the_reduced_grid_is_exactly_tt_ss_ff(self):
+        """What "reduced" means is defined in envs.pvt, not restated here."""
+        from eqrl.envs.pvt import corner_grid
+        from eqrl import pipeline as pl
+        spec = pl.spec_for(9.0, 12.0, 1.5, None)
+        assert [p for p, _, _ in corner_grid(spec, "reduced")] == ["tt", "ss", "ff"]
+        assert len(corner_grid(spec, "full")) == 45
 
     @pytest.mark.parametrize("mode", ["auto", "thinking", "default", "retarget"])
     def test_certifying_modes_keep_a_real_reserve(self, mode):

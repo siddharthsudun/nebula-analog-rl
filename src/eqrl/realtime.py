@@ -1,4 +1,8 @@
-"""Live pipeline: primary circuit first, bounded search and full PVT certification."""
+"""Live pipeline: primary circuit first, bounded search, then PVT certification.
+
+Fastest certifies the three stress corners; every other mode certifies all 45. See
+`GRID_MODE`.
+"""
 from copy import deepcopy
 from dataclasses import asdict
 import time, uuid
@@ -8,20 +12,32 @@ from eqrl.pvt_repair import ROOT
 
 LIMITS={"fastest":5.0,"auto":15.0,"thinking":40.0,"default":15.0,"retarget":15.0,"g32_acceptance":40.0}
 
+#: Which corner grid each mode certifies against. Fastest checks the three stress
+#: corners -- tt nominal, ss/low-V/hot, ff/high-V/cold -- because that is where this
+#: topology actually fails, and because 45 corners cannot finish inside a fast answer.
+#: Every other mode certifies the full 45-corner cross-product. Check PVT is always
+#: full whatever mode produced the circuit, so the short grid costs no coverage the
+#: engineer cannot get back on demand.
+GRID_MODE={"fastest":"reduced"}
+
 #: Seconds held back from the search so certification can finish inside the same budget.
 FULL_RESERVE=4.0
-#: Fastest never certifies, so it holds back only enough to absorb one in-flight
-#: evaluation: the budget is checked BEFORE each evaluation and never interrupts one.
-FASTEST_RESERVE=0.4
+#: Fastest certifies 3 corners instead of 45, so it needs a fraction of FULL_RESERVE --
+#: but no longer zero, now that it certifies at all. Measured warm on this machine
+#: (2026-09-11, delivered sizing + anchor, both banks): 3 corners 0.50 s, 45 corners
+#: 3.12 s. One second buys the 0.50 s sweep plus room for the one in-flight evaluation
+#: the search is allowed to overrun by, and still leaves the 4.0 s of search the
+#: surrogate seed and FASTEST_BUDGET refinements need.
+FASTEST_RESERVE=1.0
 
 
 def search_reserve(mode, wall_seconds):
     """How much of the budget is withheld from the search for certification.
 
-    Fastest returns before `certify` is ever called -- that is precisely why the UI offers
-    a Check PVT button -- so reserving the full share for it starved the search of the
-    time it actually needs. At a 5 s budget the old rule left 1.4 s, which does not cover
-    the one surrogate seed plus FASTEST_BUDGET refinements Fastest really evaluates.
+    Fastest reserves less because it certifies less: 3 corners x 2 candidates in each of
+    2 banks, against 45 x 2 x 2 for every other mode. It is still a real reserve -- the
+    budget is checked BEFORE each evaluation and never interrupts one, so the search can
+    overrun its share by one evaluation and the certification has to survive that.
     """
     if mode == "fastest":
         return FASTEST_RESERVE
@@ -29,7 +45,9 @@ def search_reserve(mode, wall_seconds):
 
 
 def empty_result(target, channel, mode, spec_index=0, tol=1.5):
-    return dict(mode=mode,architecture="PPO/G3.2 with bounded full-grid PVT",status="budget_exhausted",overall_passed=False,
+    return dict(mode=mode,architecture="PPO/G3.2 with bounded %s PVT"%(
+                    "three-corner (tt/ss/ff)" if GRID_MODE.get(mode)=="reduced" else "full-grid"),
+                status="budget_exhausted",overall_passed=False,
         design=None,netlist=None,verification=None,
         spec=dict(target_boost_db=target,channel_loss_db=channel,boost_tol_db=tol,spec_index=spec_index,requirements=[]),
         provenance=dict(is_ai_generated=True,policy="results/seq_clean40k.zip",g32_reached_target=False,fallback_invoked=False),
@@ -41,8 +59,9 @@ def checkpoint_result(result):
     r=deepcopy(result);r.pop('_pareto_trace',None)
     if not r.get('pvt',{}).get('accepted'):
         r.update(status='pvt_not_verified',overall_passed=False)
+        grid='three-corner (tt/ss/ff)' if GRID_MODE.get(r.get('mode'))=='reduced' else 'full-grid'
         r['pvt']=dict(accepted=False,status='pending',evaluations=0,cost_complete=False,
-            scope='Nominal circuit available for review; independent full-grid PVT is still pending.')
+            scope=f'Nominal circuit available for review; independent {grid} PVT is still pending.')
     return r
 
 
@@ -86,18 +105,13 @@ def design_realtime(target, channel, *, mode, requirements, model, spec_index, t
     result['timing']=dict(limit_seconds=wall_seconds,nominal_seconds=time.monotonic()-started)
     from eqrl.pareto import seed_primary
     seed_primary(result,spec)
-    if mode == 'fastest':
-        result['pvt'] = dict(accepted=False, requested=False, status='not_requested', evaluations=0, cost_complete=True,
-            scope='Nominal verification only. Use Check PVT to check this exact circuit.')
-        result['timing']['elapsed_seconds']=time.monotonic()-started
-        result['pareto_pending']=bool(result.get('design'))
-        return pl._plain(result)
     if result.get('design') and checkpoint:
         checkpoint(checkpoint_result(result))
     if result.get('design') and time.monotonic() < deadline:
         output=ROOT/'results/pipeline_pvt'/result['request_id']
         try:
-            repair=certify(result['design'],spec,pool,output,deadline,pl._note)
+            repair=certify(result['design'],spec,pool,output,deadline,pl._note,
+                           grid_mode=GRID_MODE.get(mode,'full'))
             apply_pvt_stage(result,spec,repair_result=repair)
         except Exception as exc:
             # Running out of time during certification is an expected outcome of a bounded

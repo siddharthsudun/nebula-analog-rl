@@ -1249,8 +1249,8 @@ def describe(r: dict[str, Any]) -> str:
             "fastest returned %s; escalated to thinking" % auto["first_status"]))
     if r.get("pvt"):
         pvt = r["pvt"]
-        out.append("  PVT           %s; %d corner evaluations; independent 45-corner acceptance: %s" %
-                   (pvt["status"], pvt["evaluations"], pvt["accepted"]))
+        out.append("  PVT           %s; %d corner evaluations; independent %s acceptance: %s" %
+                   (pvt["status"], pvt["evaluations"], pvt.get("grid_label", "full 45-corner"), pvt["accepted"]))
         if r["provenance"].get("fixed_anchor_reused"):
             out.append("  final source  fixed delivered sizing, reverified for this specification")
     out.append("  status        %s" % r["status"])

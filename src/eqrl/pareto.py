@@ -156,8 +156,17 @@ def finalize(result, spec):
         same=key==design_key(result.get("design"))
         item["is_primary"]=same
         item["on_frontier"]=key in front_keys
-        item["pvt"]=dict(accepted=bool(same and (result.get("pvt") or {}).get("accepted")),
-            status="verified" if same and (result.get("pvt") or {}).get("accepted") else "not_run_for_this_circuit")
+        # The primary inherits the run's own PVT verdict, so it has to inherit the GRID
+        # that verdict came from too. Fastest certifies 3 corners; every other mode
+        # certifies 45. Without these two fields the card falls back to its 45 default
+        # and shows a three-corner pass as "45 / 45 corners" -- the one way a short grid
+        # can do real damage. An alternative circuit has had no sweep of its own at all.
+        run_pvt=result.get("pvt") or {}
+        accepted=bool(same and run_pvt.get("accepted"))
+        item["pvt"]=dict(accepted=accepted,
+            status="verified" if accepted else "not_run_for_this_circuit",
+            **(dict(corners_checked=run_pvt.get("corners_checked"),grid_label=run_pvt.get("grid_label"))
+               if accepted and run_pvt.get("grid_label") else {}))
         item["objectives"]=dict(zip(OBJECTIVES,objectives(item,spec.target_boost_db)))
         from eqrl.circuits.ctle import DesignVars
         from eqrl.pvt_refinement import recorded_netlist

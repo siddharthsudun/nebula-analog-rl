@@ -1278,9 +1278,10 @@ class PipelineRunRequest(BaseModel):
 class PvtCheckRequest(BaseModel):
     """Full-grid PVT signoff of one specific circuit, on explicit request.
 
-    Fastest mode and the Pareto alternatives are nominally verified only. This is how a
-    scientist promotes a circuit they like to full 45-corner signoff -- it measures the
-    sizing it is handed and never substitutes a different one.
+    Fastest certifies three corners (tt/ss/ff) and the Pareto alternatives are nominally
+    verified only. This is how a scientist promotes either to full 45-corner signoff -- it
+    measures the sizing it is handed and never substitutes a different one, and it always
+    runs the full grid whatever mode produced the circuit.
     """
     design: dict[str, float]
     target_boost_db: float
@@ -1332,7 +1333,10 @@ MODE_COPY = {
                           "them, so a result shown here passed a fresh check, not the "
                           "lookup. When the corpus seed is a poor match the solver has "
                           "only three steps to recover, so a bad seed is more likely "
-                          "to end in no answer than in a wrong one."},
+                          "to end in no answer than in a wrong one. PVT is checked at "
+                          "three corners -- tt nominal, slow/low-V/hot and "
+                          "fast/high-V/cold -- not all 45. Use Check PVT for the full "
+                          "grid on a circuit you want to keep."},
     "thinking": {"label": "Thinking", "tagline": "Up to eight restarts, budget 25",
                  "detail": "Up to eight independent PPO rollouts, each closed by G3.2 "
                            "with a larger budget and a 0.01 dB stop, then corpus-proposed "

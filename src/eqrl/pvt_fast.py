@@ -14,16 +14,29 @@ from eqrl.envs.pvt import corner_grid
 from eqrl.circuits.ctle import DesignVars
 
 
-def certify(design, spec, pool, output, deadline, notify=None, include_anchor=True):
+def grid_label(grid, mode):
+    """How many corners were actually checked, said plainly.
+
+    The reduced grid is a real check of three corners, not a cheap version of the
+    45-corner one, and every string the engineer reads has to say which of the two it
+    was. Naming the processes for the short grid is what makes that difference legible
+    at a glance -- "3-corner (tt/ss/ff)" cannot be mistaken for sign-off.
+    """
+    if mode == "full":
+        return f"full {len(grid)}-corner"
+    return f"{len(grid)}-corner ({'/'.join(p for p, _, _ in grid)})"
+
+
+def certify(design, spec, pool, output, deadline, notify=None, include_anchor=True, grid_mode="full"):
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     started=time.monotonic()
     anchor=json.loads((ROOT/'results/delivered_circuit.json').read_text())["design"]
     candidates=[dict(id="input",origin="pipeline PPO/G3.2 output",design=design)]
     if include_anchor and anchor != design:
         candidates.append(dict(id="anchor",origin="fixed delivered sizing, freshly remeasured",design=anchor))
-    grid=corner_grid(spec,"full")
-    write(output/'config.json',dict(spec=asdict(spec),initial=candidates))
-    if notify:notify("pvt","Full 45-corner checks in two independent worker banks.")
+    grid=corner_grid(spec,grid_mode);label=grid_label(grid,grid_mode)
+    write(output/'config.json',dict(spec=asdict(spec),initial=candidates,grid_mode=grid_mode))
+    if notify:notify("pvt",f"{label.capitalize()} checks in two independent worker banks.")
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures={phase:executor.submit(pool.evaluate,phase,candidates,grid,spec,output/phase,deadline) for phase in ("search","verify")}
         results={phase:f.result() for phase,f in futures.items()}
@@ -43,7 +56,8 @@ def certify(design, spec, pool, output, deadline, notify=None, include_anchor=Tr
         write(output/'verified_candidate.json',check)
         (output/'verified_candidate.cir').write_text(recorded_netlist(DesignVars(**winner['design']),vdd=spec.vdd_nominal,temp_c=27,corner='tt'))
     result=dict(accepted=accepted,status='verified' if accepted else 'unresolved_within_budget',artifact_dir=str(output.resolve()),
-        scope='Schematic-level 45-corner PVT; no mismatch, extracted parasitics or SNR certification',
+        scope=f'Schematic-level {label} PVT; no mismatch, extracted parasitics or SNR certification',
+        grid_mode=grid_mode,corners_checked=len(grid),grid_label=label,
         cost_complete=True,verification=check,selection=selection,independent_worker_processes=independent,
         backend='resident_speculative',measurement_cache=False,elapsed_seconds=time.monotonic()-started,
         **{k:counts[k]+vcounts[k] for k in counts})
