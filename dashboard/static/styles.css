@@ -433,6 +433,24 @@ input[type="range"]::-moz-range-track { height: 4px; border-radius: 3px; backgro
 input[type="range"]::-moz-range-progress { height: 4px; border-radius: 3px; background: var(--accent); }
 input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2.5px solid var(--accent); cursor: pointer; }
 
+/* Two knobs on one rail. Both inputs are stacked on the same 20px strip with their own
+   tracks made transparent, so the single painted rail underneath is what the eye reads as
+   the band; the fill between the knobs is positioned from JS. pointer-events is off on the
+   input and back on for the thumb, or the upper input would swallow every click meant for
+   the lower one. Keyboard focus is unaffected -- both are still tab-reachable. */
+.dual-range { position: relative; height: 20px; }
+.dual-rail { position: absolute; top: 8px; left: 0; right: 0; height: 4px; border-radius: 3px; background: var(--border-strong); }
+.dual-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
+.dual-range input[type="range"] { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
+.dual-range input[type="range"]::-webkit-slider-runnable-track { background: transparent; }
+.dual-range input[type="range"]::-webkit-slider-thumb { pointer-events: auto; }
+.dual-range input[type="range"]::-moz-range-track { background: transparent; }
+.dual-range input[type="range"]::-moz-range-progress { background: transparent; }
+.dual-range input[type="range"]::-moz-range-thumb { pointer-events: auto; }
+/* A narrowed band is a constraint the run is scored against; say so where the number is,
+   the same way the acceptance-limit rows tag a changed value. */
+.slider-value.narrowed { color: var(--accent); }
+
 .req-list { display: flex; flex-direction: column; }
 .req-row {
   display: grid; grid-template-columns: 1fr 96px 44px; gap: 8px; align-items: center;

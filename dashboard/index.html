@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
-<link rel="stylesheet" href="/static/styles.css?v=40" />
+<link rel="stylesheet" href="/static/styles.css?v=43" />
 <link rel="stylesheet" href="/static/silicon.css?v=42" />
 <link rel="icon" href="/static/media/silq-favicon.svg" type="image/svg+xml" />
 <script>
@@ -200,6 +200,20 @@
               <div class="slider-field">
                 <div class="slider-head"><span class="field-label">Channel loss at Nyquist</span><span class="slider-value"><span id="channel-val">12.0</span><span class="u">dB</span></span></div>
                 <input type="range" id="channel" min="6" max="20" step="0.1" value="12.0" />
+              </div>
+              <!-- The one acceptance limit with two coupled edges, so it is a two-knob range
+                   rather than two number boxes: the pair only means anything as an interval.
+                   The rail spans the full 1.25-2.50 GHz the problem statement allows, and the
+                   knobs start at both ends, which IS the competition default -- an untouched
+                   slider therefore sends no requirement at all. -->
+              <div class="slider-field">
+                <div class="slider-head"><span class="field-label">Peak frequency band</span><span class="slider-value"><span id="fband-val">1.25&#8211;2.50</span><span class="u">GHz</span></span></div>
+                <div class="dual-range" id="fband">
+                  <div class="dual-rail"><div class="dual-fill" id="fband-fill"></div></div>
+                  <input type="range" id="fband-lo" min="1.25" max="2.5" step="0.05" value="1.25" aria-label="Peak frequency band, low edge" />
+                  <input type="range" id="fband-hi" min="1.25" max="2.5" step="0.05" value="2.5" aria-label="Peak frequency band, high edge" />
+                </div>
+                <div class="help-hint" id="fband-hint">Full range from the problem statement. Narrowing it both steers the policy and is scored at verification.</div>
               </div>
               <div class="panel-run">
                 <button class="btn btn-primary run-btn" id="run-btn-spec" type="button">
@@ -426,7 +440,7 @@
 <script src="/static/vendor/gsap.min.js"></script>
 <script src="/static/charts.js?v=40"></script>
 <script src="/static/snr-input.js?v=2"></script>
-<script src="/static/app.js?v=42"></script>
+<script src="/static/app.js?v=43"></script>
 <script src="/static/evidence.js?v=40"></script>
 </body>
 </html>

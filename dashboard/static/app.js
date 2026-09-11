@@ -361,6 +361,15 @@ let selectedMode = "auto";
 let updateTarget, updateChannel;
 const reqInputs = {};     // field -> input element
 
+// The peak band's two edges are the one acceptance limit that only means anything as a
+// pair, so they live on a two-knob slider next to target boost and channel loss instead
+// of as two number boxes in the limits list. They are still ordinary requirement fields
+// on the wire -- nothing downstream knows the difference.
+const BAND_FIELDS = ["peak_freq_lo_ghz", "peak_freq_hi_ghz"];
+let updateBand = () => {};
+let readBand = () => ({});
+let resetBand = () => {};
+
 const PARAM_UNITS = {
   w_in: { scale: 1e6, unit: "µm", dp: 2 }, l_in: { scale: 1e6, unit: "µm", dp: 3 },
   i_tail: { scale: 1e6, unit: "µA", dp: 1 }, rs: { scale: 1e-3, unit: "kΩ", dp: 2 },
@@ -391,6 +400,7 @@ function renderRequirements() {
   const list = $("#req-list");
   list.innerHTML = "";
   for (const r of defaults.requirements) {
+    if (BAND_FIELDS.includes(r.field)) continue;   // shown as the band slider
     const row = el("div", { class: "req-row" });
     row.innerHTML = `<div><div class="req-name">${escapeHtml(r.label)}</div><div class="req-default">${r.kind === "max" ? "at most" : "at least"} ${escapeHtml(prettyDisp(r.default_disp, r.unit))}</div></div>
       <input type="number" step="any" data-field="${r.field}" placeholder="${escapeHtml(compactNum(r.default_disp))}" aria-label="${escapeHtml(r.label)}" />
@@ -400,7 +410,7 @@ function renderRequirements() {
     input.addEventListener("input", () => refreshRequirementTags());
     list.appendChild(row);
   }
-  $("#req-reset").addEventListener("click", () => { Object.values(reqInputs).forEach((i) => { i.value = ""; }); refreshRequirementTags(); });
+  $("#req-reset").addEventListener("click", () => { Object.values(reqInputs).forEach((i) => { i.value = ""; }); resetBand(); refreshRequirementTags(); });
 }
 
 function requirementDirection(r, valueDisp) {
@@ -412,6 +422,7 @@ function requirementDirection(r, valueDisp) {
 function refreshRequirementTags() {
   let changed = 0;
   for (const r of defaults.requirements) {
+    if (BAND_FIELDS.includes(r.field)) continue;
     const input = reqInputs[r.field];
     const tag = $(`[data-tag="${r.field}"]`);
     const v = input.value.trim() === "" ? null : Number(input.value);
@@ -420,27 +431,108 @@ function refreshRequirementTags() {
     if (differs) { changed += 1; const d = requirementDirection(r, v); tag.textContent = d; tag.className = `req-tag ${d}`; }
     else { tag.textContent = ""; tag.className = "req-tag"; }
   }
+  changed += Object.keys(readBand()).length;
   $("#req-summary").textContent = changed ? `${changed} limit${changed === 1 ? "" : "s"} changed from the competition spec. The result is scored against both.` : "All at the competition defaults.";
 }
 
 function readRequirements() {
   const out = {};
   for (const r of defaults.requirements) {
+    if (BAND_FIELDS.includes(r.field)) continue;
     const raw = reqInputs[r.field].value.trim();
     if (raw === "") continue;
     const v = Number(raw);
     if (!Number.isFinite(v) || Math.abs(v - r.default_disp) < 1e-9) continue;
     out[r.field] = v / r.scale;
   }
+  Object.assign(out, readBand());
   return Object.keys(out).length ? out : null;
 }
 
 function setRequirementSI(field, si) {
   const r = defaults.requirements.find((q) => q.field === field);
+  if (BAND_FIELDS.includes(field)) return setBandEdge(field, si);
   if (!r || !reqInputs[field]) return false;
   const disp = si * r.scale;
   reqInputs[field].value = String(Math.round(disp * 1e6) / 1e6);
   return true;
+}
+
+/** One edge of the band, from the language reader or from a Claude-vs-keyword override.
+ *  Clamped into the rail and kept a step clear of the other knob, because a band the
+ *  reader states backwards ("peak between 2.5 and 1.5 GHz") must still land as a band. */
+function setBandEdge(field, si) {
+  const lo = $("#fband-lo"), hi = $("#fband-hi");
+  if (!lo || !hi) return false;
+  const step = Number(lo.step) || 0.05, min = Number(lo.min), max = Number(lo.max);
+  const v = Math.min(Math.max(si, min), max);
+  const snap = (x) => Number((Math.round(x / step) * step).toFixed(6));
+  if (field === "peak_freq_lo_ghz") lo.value = snap(Math.max(min, Math.min(v, Number(hi.value) - step)));
+  else hi.value = snap(Math.min(max, Math.max(v, Number(lo.value) + step)));
+  updateBand();
+  return true;
+}
+
+/** The two-knob band, wired once /api/pipeline/defaults has said what the competition
+ *  band is. The rail IS that band: the problem statement makes 1.25-2.50 GHz the tunable
+ *  range, so the engineer picks an interval inside it and cannot invent one outside it.
+ *  Both knobs start at the ends, which is the competition default, and an untouched
+ *  slider reports nothing -- a default run is byte-identical to one that never saw this
+ *  control, which is what keeps the frozen benchmark comparable. */
+function initBand() {
+  const lo = $("#fband-lo"), hi = $("#fband-hi");
+  const meta = Object.fromEntries(BAND_FIELDS.map((f) =>
+    [f, (defaults.requirements || []).find((r) => r.field === f)]));
+  const loDef = meta.peak_freq_lo_ghz ? meta.peak_freq_lo_ghz.default_disp : 1.25;
+  const hiDef = meta.peak_freq_hi_ghz ? meta.peak_freq_hi_ghz.default_disp : 2.5;
+  const step = Number(lo.step) || 0.05;
+  // A knob pushed by the other one is positioned by arithmetic, not by the browser, so it
+  // has to be put back on the step grid: 2.5 - 0.05 is 2.4499999999999997 in binary
+  // floating point, and that is what would otherwise reach the API as a band edge.
+  const snap = (v) => Number((Math.round(v / step) * step).toFixed(6));
+  for (const k of [lo, hi]) { k.min = loDef; k.max = hiDef; }
+  lo.value = loDef; hi.value = hiDef;
+
+  updateBand = () => {
+    const a = Number(lo.value), b = Number(hi.value);
+    const pct = (v) => (hiDef > loDef ? ((v - loDef) / (hiDef - loDef)) * 100 : 0);
+    const fill = $("#fband-fill");
+    fill.style.left = `${pct(a)}%`;
+    fill.style.width = `${Math.max(0, pct(b) - pct(a))}%`;
+    $("#fband-val").textContent = `${fmt(a, 2)}–${fmt(b, 2)}`;
+    $("#fband-val").parentElement.classList.toggle("narrowed", a > loDef + 1e-9 || b < hiDef - 1e-9);
+    // Once the low knob sits under the high one at the top of the rail it becomes
+    // ungrabbable, so whichever knob is nearer the far end is lifted above the other.
+    const loOnTop = a > (loDef + hiDef) / 2;
+    lo.style.zIndex = loOnTop ? 4 : 3;
+    hi.style.zIndex = loOnTop ? 3 : 4;
+  };
+
+  readBand = () => {
+    const a = Number(lo.value), b = Number(hi.value), out = {};
+    const si = (f, disp) => disp / ((meta[f] && meta[f].scale) || 1);
+    if (a > loDef + 1e-9) out.peak_freq_lo_ghz = si("peak_freq_lo_ghz", a);
+    if (b < hiDef - 1e-9) out.peak_freq_hi_ghz = si("peak_freq_hi_ghz", b);
+    return out;
+  };
+
+  resetBand = () => { lo.value = loDef; hi.value = hiDef; updateBand(); };
+
+  // The knobs never cross: the one being dragged pushes the other ahead of it rather
+  // than passing through, so the pair is always a band at least one step wide.
+  const settle = (mover) => {
+    let a = Number(lo.value), b = Number(hi.value);
+    if (a > b - step) {
+      if (mover === lo) { a = snap(Math.min(a, hiDef - step)); b = snap(a + step); }
+      else { b = snap(Math.max(b, loDef + step)); a = snap(b - step); }
+      lo.value = a; hi.value = b;
+    }
+    updateBand();
+    refreshRequirementTags();
+  };
+  lo.addEventListener("input", () => settle(lo));
+  hi.addEventListener("input", () => settle(hi));
+  updateBand();
 }
 
 function selectMode(mode) {
@@ -469,6 +561,7 @@ async function initSpec() {
   updateChannel = () => { $("#channel-val").textContent = fmt(channel.value, 1); fillC(); };
   target.addEventListener("input", updateTarget); channel.addEventListener("input", updateChannel);
   updateTarget(); updateChannel();
+  initBand();
   renderRequirements();
   refreshRequirementTags();
   renderModes();
