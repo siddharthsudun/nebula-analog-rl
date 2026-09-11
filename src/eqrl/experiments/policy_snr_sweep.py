@@ -703,6 +703,15 @@ def _plot(payload: dict, path: Path) -> None:
     curve = payload["curve"]
     x = [c["snr_db"] for c in curve]
     fig, ax = plt.subplots(2, 2, figsize=(11, 8))
+    ceiling = payload["reachability"]["best_case_closure_snr_db"]
+
+    def mark_ceiling(a, label: bool) -> None:
+        """Left of this line the eye_v check is unsatisfiable by any design at all."""
+        if ceiling is None:
+            return
+        a.axvspan(min(x) - 1, ceiling, color="0.85", zorder=0,
+                  label="no design can pass here" if label else None)
+        a.axvline(ceiling, color="0.45", lw=1)
 
     a = ax[0][0]
     a.errorbar(x, [c["strict_pass_rate"] for c in curve],
@@ -717,6 +726,8 @@ def _plot(payload: dict, path: Path) -> None:
     a.axhline(payload["snr_invariant"]["strict_pass_v1"], color="grey", ls="-.",
               label=f"frozen v1 rate {payload['snr_invariant']['strict_pass_v1']:.2f} "
                     f"(different contract)")
+    mark_ceiling(a, True)
+    a.set_xlim(min(x) - 1, max(x) + 1)
     a.set_ylim(-0.05, 1.05)
     a.set_ylabel("pass rate")
     a.set_title("Pass rate vs SNR (eye re-measured under noise)")
@@ -725,10 +736,29 @@ def _plot(payload: dict, path: Path) -> None:
     a = ax[0][1]
     emp = [c["ber_empirical"]["mean"] for c in curve]
     sem = [c["ber_semi_analytic"]["mean"] for c in curve]
-    a.semilogy(x, [max(v, 1e-12) if v is not None else np.nan for v in emp],
-               marker="o", label="empirical (floors at 0)")
+    # A measured zero is plotted as a gap, not as a small number: substituting a floor
+    # (this used to draw 1e-12) puts a point on the axis at a value the run never
+    # measured, and on a log scale that reads as a real BER.
+    a.semilogy(x, [v if v else np.nan for v in emp], marker="o",
+               label="empirical (arrow = zero errors)")
     a.semilogy(x, [max(v, 1e-30) if v is not None else np.nan for v in sem],
                marker="^", ls="--", label="semi-analytic")
+    zeros = [xi for xi, v in zip(x, emp) if v == 0]
+    if zeros:
+        # A gutter below every drawn point, so an arrow cannot be mistaken for a marker
+        # sitting on another series' value. Position carries no measurement: it says
+        # "zero errors, below the axis", which is all the run supports.
+        drawn = [max(v, 1e-30) for v in sem if v] + [v for v in emp if v]
+        floor = min(drawn, default=1e-30)
+        a.set_ylim(bottom=floor / 12)
+        a.scatter(zeros, [floor / 4] * len(zeros), marker="v", s=55, color="tab:blue",
+                  zorder=5)
+    # No band on this panel, deliberately: the ceiling gates the EYE check, not BER, which
+    # stays a real measurement across the whole axis. Marked as a bare line so the absence
+    # of the band reads as a statement rather than as an oversight.
+    if ceiling is not None:
+        a.axvline(ceiling, color="0.45", lw=1, ls="--",
+                  label=f"{ceiling:.1f} dB eye-check ceiling\n(BER is not gated by it)")
     a.set_ylabel("mean BER")
     a.set_title("BER vs SNR")
     a.legend(fontsize=8)
@@ -740,6 +770,15 @@ def _plot(payload: dict, path: Path) -> None:
                marker="o", capsize=3, label="eye height (mV)")
     a.axhline(DEFAULT_SPEC.eye_v_mv_min, color="crimson", ls=":",
               label=f"spec min {DEFAULT_SPEC.eye_v_mv_min:g} mV")
+    mark_ceiling(a, True)
+    # The polyline is straight-line interpolation between samples, so it appears to cross
+    # the spec line well below the real closure. Readers take crossings off charts, so the
+    # measured value is drawn explicitly rather than left to be misread.
+    closure = payload["reachability"]["policy_closure_snr_db"]["mean"]
+    if closure is not None:
+        a.axvline(closure, color="darkorange", lw=1.4, ls="--",
+                  label=f"measured closure {closure:.1f} dB\n(not the curve's crossing)")
+    a.set_xlim(min(x) - 1, max(x) + 1)
     a.set_xlabel("requested SNR (dB)")
     a.set_ylabel("eye height (mV)")
     a.set_title("Eye height vs SNR")

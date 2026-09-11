@@ -1,0 +1,99 @@
+import numpy as np
+import pytest
+
+from eqrl.llm.snr_parser import parse_noise_intent, resolve_snr_request
+from eqrl.llm.spec_parser import parse_spec_verbose
+
+
+def test_noise_is_strictly_opt_in():
+    assert not parse_noise_intent('9 dB boost', {'mode': 'unknown'})['enabled']
+    assert not parse_noise_intent('SNR 20 dB but ignore SNR')['enabled']
+    parsed = parse_spec_verbose('9 dB boost, external noise 5 mV RMS', backend='off')
+    assert 'noise_vrms_max' not in parsed.recognised
+    assert parsed.noise['request']['value_vrms'] == .005
+    intrinsic = parse_spec_verbose('noise under 1 mV', backend='off')
+    assert intrinsic.recognised['noise_vrms_max'] == .001
+
+
+def test_direct_snr_uses_explicit_reference_and_band():
+    parsed = parse_noise_intent('input SNR 20 dB, input signal 200 mV RMS, band 10 MHz to 5 GHz')
+    request = resolve_snr_request(parsed['request'], 12.)
+    assert request.low_vrms == pytest.approx(.02)
+    assert request.signal_reference == 'ctle_input_vrms'
+    assert request.bandwidth_hz == (1e7, 5e9)
+    with pytest.raises(ValueError):
+        resolve_snr_request(parse_noise_intent('SNR 20 dB')['request'], 12.)
+
+
+def test_unsupported_output_target_cannot_execute_as_measured_input():
+    parsed = parse_noise_intent('output SNR 20 dB, 1 Vpp, band 10 MHz to 5 GHz')
+    assert parsed['warnings']
+    with pytest.raises(ValueError):
+        resolve_snr_request(parsed['request'], 12.)
+
+
+def test_llm_wrapper_retains_nested_snr_without_polluting_nominal_fields(monkeypatch):
+    import eqrl.llm.spec_parser as parser
+    monkeypatch.setattr(parser, '_pick_backend', lambda *a: 'api')
+    monkeypatch.setattr(parser, '_llm_fields', lambda *a, **k: ({'_noise_request': {
+        'mode': 'measured', 'input_snr_db': 23., 'signal_reference': 'tx_vpp',
+        'signal_value_v': .8, 'bandwidth_hz': [1e7, 5e9]}}, {}))
+    parsed = parser.parse_spec_verbose('consider SNR', backend='auto')
+    assert parsed.noise['request']['input_snr_db'] == 23.
+    assert '_noise_request' not in parsed.recognised
+
+
+def test_full_budget_and_qualification_are_distinct():
+    from eqrl.agents.train_noise_pilot import _build_parser, _validated_config
+    from eqrl.experiments.noise_holdout import qualification_cases, cases
+    config = _validated_config(_build_parser().parse_args(['--run-dir','unused',
+        '--profile','full','--timesteps','40960','--wall-seconds','64785','--warm-start-frozen']))
+    assert config['timesteps_effective'] == 40960
+    assert config['rollouts_effective'] == 40
+    assert config['warm_start_frozen'] and not config['fresh_policy']
+    holdout = qualification_cases()
+    assert len(holdout) == 24
+    assert {r['seed'] for r in holdout}.isdisjoint({r['seed'] for r in cases()})
+    assert qualification_cases() == holdout
+
+
+def test_nominal_transfer_preserves_predictions_with_new_columns_zero():
+    import gymnasium as gym
+    import torch
+    from stable_baselines3 import PPO
+    from eqrl.agents.train_noise_pilot import transfer_nominal_policy
+    class Dummy(gym.Env):
+        def __init__(self, width):
+            self.observation_space = gym.spaces.Box(-np.inf, np.inf, (width,), dtype=np.float32)
+            self.action_space = gym.spaces.Box(-1., 1., (6,), dtype=np.float32)
+    source = PPO('MlpPolicy', Dummy(18), n_steps=8, batch_size=8, seed=1)
+    target = PPO('MlpPolicy', Dummy(26), n_steps=8, batch_size=8, seed=2)
+    before = {k:v.clone() for k,v in source.policy.state_dict().items()}
+    transfer_nominal_policy(source, target)
+    obs = np.random.default_rng(77).normal(size=(5, 26)).astype(np.float32)
+    np.testing.assert_allclose(source.predict(obs[:,:18], deterministic=True)[0],
+                               target.predict(obs, deterministic=True)[0], atol=1e-7)
+    assert all(torch.equal(v, source.policy.state_dict()[k]) for k,v in before.items())
+    for name, value in target.policy.state_dict().items():
+        if value.ndim == 2 and value.shape[1] == 26:
+            assert torch.count_nonzero(value[:,18:]) == 0
+
+
+def test_nominal_api_never_invokes_snr_when_omitted(monkeypatch):
+    import server
+    import eqrl.llm.snr_parser as noise_parser
+    import eqrl.snr_pipeline as noise_pipeline
+    from contextlib import nullcontext
+    monkeypatch.setattr(noise_parser, 'resolve_snr_request', lambda *a: pytest.fail('SNR parsing while off'))
+    monkeypatch.setattr(noise_pipeline, 'attach_noise_result', lambda *a, **k: pytest.fail('SNR scoring while off'))
+    monkeypatch.setattr(server, '_narrating', nullcontext)
+    calls = []
+    def design(*a, **k):
+        calls.append((a,k))
+        return {'status':'solved', 'verification':{'passed':True}}
+    monkeypatch.setattr(server, 'design', design)
+    monkeypatch.setattr(server, 'describe', lambda r: 'Nominal result')
+    result = server.pipeline_run(server.PipelineRunRequest(target_boost_db=9.))
+    assert result['status'] == 'solved'
+    assert 'noise_evaluation' not in result
+    assert len(calls) == 1
