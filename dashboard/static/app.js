@@ -159,47 +159,98 @@ let heroPlayed = false;
 function playHeroEntrance() {
   if (heroPlayed) return;
   heroPlayed = true;
-  const v = $("#hero-video");
-  if (v && !reducedMotion) v.play().catch(() => {});
-  animateIn(".hero-inner > *", { y: 18, opacity: 0, stagger: 0.07, duration: 0.75, ease: "power3.out" });
-  animateIn(".spec-panel .panel, .stage-card", { y: 14, opacity: 0, stagger: 0.06, duration: 0.6, delay: 0.25, ease: "power2.out" }, 250);
+  animateIn(".hero-copy", { y: 8, opacity: 0, duration: 0.4, ease: "power2.out" });
 }
 
 function runIntro(force = false) {
   const intro = $("#intro"), video = $("#intro-video"), lockup = $("#intro-lockup"), bar = $("#intro-bar");
   let seen = false;
-  try { seen = sessionStorage.getItem("silq_intro") === "1"; } catch { /* storage blocked */ }
-  if ((seen && !force) || (reducedMotion && !force) || (urlFlags.has("nointro") && !force)) { intro.hidden = true; playHeroEntrance(); return; }
-
+  try { seen = sessionStorage.getItem("silq_intro_converge_v3") === "1"; } catch { /* storage blocked */ }
+  if ((seen && !force) || reducedMotion || (urlFlags.has("nointro") && !force)) {
+    intro.hidden = true; playHeroEntrance(); return;
+  }
+  const previousFocus = document.activeElement;
+  const app = $("#app");
+  const previousOverflow = document.body.style.overflow;
+  const skip = $("#intro-skip");
   intro.hidden = false;
-  intro.classList.remove("leaving", "masked");
-  lockup.style.opacity = "0";
-  bar.style.transition = "none"; bar.style.width = "0%";
+  intro.classList.remove("leaving", "title-reveal", "film-fallback");
+  app.inert = true;
+  document.body.style.overflow = "hidden";
+  lockup.style.opacity = "";
+  const credit = intro.querySelector(".intro-for");
+  credit.tabIndex = -1;
+  bar.style.transition = "none";
+  bar.style.width = "0%";
   let finished = false;
-  const timers = [];
+  let fallback;
+  let stalled;
+  let playbackStarted = false;
+  const reveal = () => {
+    if (finished) return;
+    intro.classList.add("title-reveal");
+    credit.tabIndex = 0;
+  };
   const finish = () => {
     if (finished) return;
     finished = true;
-    timers.forEach(clearTimeout);
-    try { sessionStorage.setItem("silq_intro", "1"); } catch { /* storage blocked */ }
-    intro.classList.add("leaving");
-    setTimeout(() => { intro.hidden = true; video.pause(); intro.classList.remove("masked"); }, 720);
+    clearTimeout(fallback);
+    clearTimeout(stalled);
+    video.pause();
+    video.onended = null;
+    video.ontimeupdate = null;
+    video.onplaying = null;
+    video.onerror = null;
+    document.removeEventListener("keydown", handleKey);
+    intro.hidden = true;
+    app.inert = false;
+    document.body.style.overflow = previousOverflow;
+    try { sessionStorage.setItem("silq_intro_converge_v3", "1"); } catch { /* storage blocked */ }
+    if (previousFocus && previousFocus !== document.body) previousFocus.focus({ preventScroll: true });
+    else $("#brand-link").focus({ preventScroll: true });
     playHeroEntrance();
   };
-  // Timeline: the clip runs clean for ~2.3 s (signal traces, the curve forming), then the
-  // mask rises and the HTML lockup carries "silQ, built for Astera Labs" to the end.
-  const DURATION = 5200, MASK_AT = 2300, LOCKUP_AT = 2600;
-  requestAnimationFrame(() => { bar.style.transition = `width ${DURATION}ms linear`; bar.style.width = "100%"; });
-  timers.push(setTimeout(() => intro.classList.add("masked"), MASK_AT));
-  if (hasGsap) {
-    gsap.fromTo(lockup, { opacity: 0, y: 16, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 1.0, delay: LOCKUP_AT / 1000, ease: "power3.out" });
-  }
-  timers.push(setTimeout(() => { lockup.style.transition = "opacity 0.9s ease"; lockup.style.opacity = "1"; }, LOCKUP_AT + (hasGsap ? 1200 : 0)));
+  const handleKey = (event) => {
+    if (event.key === "Escape") { event.preventDefault(); finish(); }
+    if (event.key === "Tab") {
+      const first = credit.tabIndex === 0 ? credit : skip, last = skip;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener("keydown", handleKey);
+  skip.onclick = finish;
+  skip.focus({ preventScroll: true });
+  if (!video.getAttribute("src")) video.src = video.dataset.src;
   video.currentTime = 0;
-  video.play().catch(() => { /* autoplay blocked: the lockup still carries the intro */ });
   video.onended = finish;
-  setTimeout(finish, DURATION + 300);
-  $("#intro-skip").onclick = finish;
+  const staticFallback = () => {
+    if (finished) return;
+    intro.classList.add("film-fallback");
+    reveal();
+  };
+  video.onerror = staticFallback;
+  video.ontimeupdate = () => {
+    if (finished) return;
+    bar.style.width = `${Math.min(100, video.currentTime / 5 * 100)}%`;
+    if (video.currentTime >= 3.75) reveal();
+  };
+  video.onplaying = () => {
+    if (finished || playbackStarted) return;
+    playbackStarted = true;
+    if (video.currentTime < 3.75) {
+      intro.classList.remove("title-reveal", "film-fallback");
+      if (document.activeElement === credit) skip.focus({ preventScroll: true });
+      credit.tabIndex = -1;
+    }
+    clearTimeout(fallback);
+    clearTimeout(stalled);
+    // Five seconds of film, rather than five seconds including the network wait.
+    fallback = setTimeout(finish, 5400);
+  };
+  video.play().catch(staticFallback);
+  stalled = setTimeout(() => { if (!playbackStarted) staticFallback(); }, 1400);
+  fallback = setTimeout(finish, 5200);
 }
 
 // -- Theme, views, health -------------------------------------------------------------
@@ -213,17 +264,54 @@ function initTheme() {
   });
 }
 
+//: The resident simulator accumulates internal state across every run for as long as
+//: this dashboard process is up, and gets slower call by call as it does -- see
+//: eqrl.sim.server.NgspiceServer.destroy_all_plots. This button is the user-facing
+//: escape hatch: clear it without paying for a full process restart (~15s model
+//: reparse).
+function initSimRefresh() {
+  const btn = $("#sim-refresh-btn");
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.classList.add("spin");
+    try {
+      const res = await fetch("/api/sim/refresh", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) toast("Simulator refreshed", true);
+      else toast(data.detail || "Refresh failed", false);
+    } catch {
+      toast("Refresh failed -- network error", false);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("spin");
+    }
+  });
+}
+
 function showView(name) {
   $$(".view").forEach((v) => { v.hidden = v.id !== `view-${name}`; });
-  $$(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
+  $$(".nav-tab").forEach((b) => {
+    const active = b.dataset.view === name;
+    b.classList.toggle("active", active);
+    if (active) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  // Charts that size their viewBox to their container have to be drawn while that
+  // container is actually laid out; a hidden view measures 0.
+  if (name === "lab") relayoutSnrCharts();
   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
 }
 
 function initViews() {
+  $$("[data-open-view]").forEach((b) => b.addEventListener("click", () => showView(b.dataset.openView)));
   $$(".nav-tab").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(relayoutSnrCharts, 180);
+  });
   $("#brand-link").addEventListener("click", (e) => { e.preventDefault(); showView("design"); });
   $("#replay-intro").addEventListener("click", () => { heroPlayed = true; runIntro(true); });
-  if (urlFlags.get("view") === "lab") showView("lab");
+  if (["lab", "evidence"].includes(urlFlags.get("view"))) showView(urlFlags.get("view"));
 }
 
 function setHealthPill(state, text) {
@@ -231,11 +319,18 @@ function setHealthPill(state, text) {
   $("#health-label").textContent = text;
 }
 let serverWarming = true;
+//: Both entry points -- the composer's button and the slider panel's -- drive the same
+//: single-flight `runDesign`, so they must enable and disable together. Addressing them by
+//: class rather than by id means a third entry point is wired by adding `run-btn` to its
+//: markup; addressing them by id was how one of them would end up clickable while a run
+//: was already in flight.
+const runButtons = () => $$(".run-btn");
 function setRunButtonWarming(warming) {
   serverWarming = warming;
-  const btn = $("#run-btn");
-  btn.disabled = warming || running;
-  btn.title = warming ? "Waiting for the server to finish loading device models" : "";
+  runButtons().forEach((btn) => {
+    btn.disabled = warming || running;
+    btn.title = warming ? "Waiting for the server to finish loading device models" : "";
+  });
   const galleryBtn = $("#gallery-run");
   if (galleryBtn) galleryBtn.disabled = warming || galleryRunning;
 }
@@ -401,6 +496,7 @@ function setReaderBadge(state, label) {
 }
 
 function applyParse(spec) {
+  applyParsedNoise(spec.noise);
   const target = $("#target"), channel = $("#channel");
   for (const row of spec.fields || []) {
     if (row.field === "target_boost_db") { target.value = Math.min(Math.max(row.asked, Number(target.min)), Number(target.max)); updateTarget(); }
@@ -424,6 +520,8 @@ function renderChips(spec) {
     return `<span class="${cls}" title="${escapeHtml(ROLE_HINT[r.role] || "")}"><span class="chip-k">${escapeHtml(r.label)}</span><span class="chip-v">${escapeHtml(prettyDisp(r.asked_disp, r.unit))}</span>${dir}<span class="src ${src}">${srcLabel}</span>${llmAlt}</span>`;
   });
   const notes = [];
+  if (spec.noise?.enabled) notes.push(`<div class="note info">SNR request recognized. Review the optional settings in Advanced; the SNR switch controls whether it is applied.</div>`);
+  else if (spec.noise?.source === 'explicit_opt_out') notes.push(`<div class="note info">SNR is off, as requested.</div>`);
   for (const r of rows) {
     if (r.assumption) notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(r.label)}</strong> was read from an ambiguous word: ${escapeHtml(r.assumption)}</div></div>`);
     if (r.conflict && r.conflict_note) notes.push(`<div class="note info">${ICONS.info}<div>${escapeHtml(r.conflict_note)}</div></div>`);
@@ -497,6 +595,9 @@ function initComposer() {
   }));
   $("#read-btn").addEventListener("click", () => readWithClaude());
   $("#run-btn").addEventListener("click", () => runDesign());
+  // The slider button exists for the case where the reader is not wanted at all, so it
+  // must not quietly call it: `useComposer: false` skips the read AND the typed text.
+  $("#run-btn-spec").addEventListener("click", () => runDesign({ useComposer: false }));
 }
 
 async function readWithClaude() {
@@ -755,15 +856,22 @@ async function initCandidateGallery() {
 // -- Run ----------------------------------------------------------------------------------
 
 let running = false;
-const STAGE_LABEL = { load: "Loading the frozen policy", search: "Stage 1, PPO search", refine: "Stage 2, G3.2 refinement", verify: "Stage 3, independent verification" };
-const STAGE_ORDER = ["search", "refine", "verify"];
+const STAGE_LABEL = { load: "Loading the frozen policy", search: "Stage 1, PPO search", refine: "Stage 2, G3.2 refinement", verify: "Nominal verification", pvt_prepare: "Stage 3, preparing PVT workers", pvt: "Stage 3, PVT repair and independent verification", pareto: "Comparing alternative circuits" };
+const STAGE_ORDER = ["search", "refine", "verify", "pvt"];
+//: Waiting on the PVT worker pool is PVT's own cost, not the nominal check's. Before this
+//: mapping existed `pvt_prepare` fell through `markStepsLive` and left the UI sitting on
+//: "Nominal check" for however long the pool took to rebuild -- 43 s in one measured run,
+//: against a nominal check that had finished in 0.4 s.
+//: "pareto" is deliberately absent: alternatives are measured after the run's own stages
+//: have finished, so mapping it onto a step would re-light a stage that is already done.
+const STAGE_STEP = { load: "search", pvt_prepare: "pvt" };
 
 function setStep(stage, state) {
   const s = $(`.step[data-stage="${stage}"]`);
   if (s) s.className = `step${state ? " " + state : ""}`;
 }
 function markStepsLive(stage) {
-  const key = stage === "load" ? "search" : stage;
+  const key = STAGE_STEP[stage] || stage;
   const at = STAGE_ORDER.indexOf(key);
   if (at < 0) return;
   STAGE_ORDER.forEach((s, i) => setStep(s, i < at ? "done" : i === at ? "active" : ""));
@@ -816,26 +924,71 @@ function pollRunProgress(state) {
       state.cursor = p.next;
       if (p.events.length) { appendLog(p.events); handleRunEvents(state, p.events); }
       if (p.stage) markStepsLive(p.stage);
+      absorbPareto(p);
       $("#trace-elapsed").textContent = `${fmt(p.elapsed_s, 1)} s`;
     } catch { /* a dropped poll is not a failed run */ }
   }, 300);
 }
 
-async function runDesign() {
+//: Alternatives are measured after `/api/pipeline/run` has already responded, so the
+//: progress feed outlives the request. `generation` guards against a late batch from the
+//: previous run painting itself over the current one.
+function absorbPareto(p) {
+  if (!p || typeof p.generation !== "number") return;
+  if (paretoState.generation !== null && p.generation !== paretoState.generation) return;
+  paretoState.busy = !!p.pareto_active;
+  if (p.pareto) { paretoState.data = p.pareto; renderCircuits(); }
+  else if (paretoState.data) renderCircuits();
+}
+
+//: Keeps polling purely for alternatives once the run itself is inactive.
+function pollPareto() {
+  clearInterval(paretoTimer);
+  const generation = paretoState.generation;
+  const timer = setInterval(async () => {
+    try {
+      const p = await api(`/api/pipeline/progress?since=${paretoCursor}`);
+      if (generation !== paretoState.generation || p.generation !== generation) { clearInterval(timer); return; }
+      paretoCursor = p.next;
+      if (p.events.length) appendLog(p.events);
+      absorbPareto(p);
+      if (!p.pareto_active) clearInterval(timer);
+    } catch { clearInterval(timer); }
+  }, 600);
+  paretoTimer = timer;
+  return timer;
+}
+let paretoCursor = 0;
+let paretoTimer = null;
+let circuitDrawVersion = 0;
+
+async function runDesign({ useComposer = true } = {}) {
   if (running || serverWarming || !defaults) return;
-  const text = $("#spec-text").value.trim();
+  // A slider-driven run records no spec text: the request below is built from the panel
+  // alone, so carrying the untouched textarea into the history would claim the run
+  // honoured words it never read.
+  const text = useComposer ? $("#spec-text").value.trim() : "";
   if (text && llmReadText !== text) {
     // The run is about to spend real simulator budget on this request, so give the
     // stronger reader a chance first. A refusal stops the run: nothing was understood.
     const spec = await readWithClaude();
     if (!spec && !lastParse) return;
   }
+  let noiseRequest;
+  try { noiseRequest = readNoiseRequest(); }
+  catch (err) { $("#result").innerHTML = errorBannerHtml(err, "Check signal and noise inputs"); return; }
   running = true;
-  const btn = $("#run-btn");
-  btn.disabled = true; btn.classList.add("running");
+  const btns = runButtons();
+  btns.forEach((b) => { b.disabled = true; b.classList.add("running"); });
   $$(".mode-btn").forEach((b) => { b.disabled = true; });
   currentResult = null;
   $("#result").innerHTML = "";
+  clearInterval(paretoTimer);
+  circuitDrawVersion++;
+  paretoState.seenIds = new Set();
+  paretoState.data = null; paretoState.selectedId = null; paretoState.pvt = {};
+  paretoState.busy = false; paretoState.generation = null;
+  $("#circuits-card").hidden = true;
   ["export-netlist", "export-json"].forEach((id) => { $(`#${id}`).disabled = true; });
   const trace = $("#trace-card");
   trace.hidden = false;
@@ -853,9 +1006,9 @@ async function runDesign() {
   const timer = pollRunProgress(state);
   const request = {
     target_boost_db: target, channel_loss_db: channel,
-    spec_index: Number($("#spec-index").value) || 0,
     allow_fallback: $("#allow-fallback").checked,
     mode: selectedMode, requirements: readRequirements(),
+    ...(noiseRequest === undefined ? {} : {noise_request: noiseRequest}),
   };
   try {
     const result = await postJSON("/api/pipeline/run", request);
@@ -864,6 +1017,9 @@ async function runDesign() {
     try {
       const p = await api(`/api/pipeline/progress?since=${state.cursor}`);
       if (p.events.length) { appendLog(p.events); handleRunEvents(state, p.events); }
+      paretoState.generation = typeof p.generation === "number" ? p.generation : null;
+      paretoCursor = p.next;
+      absorbPareto(p);
     } catch { /* cosmetic */ }
     finishSteps(result);
     if (result.design && result.verification && typeof result.verification.abs_err_db === "number") {
@@ -872,6 +1028,7 @@ async function runDesign() {
       renderTraceChart($("#trace-chart"), state.points, { target, tol: state.tol });
     }
     await presentResult(result, elapsedS, { text, target, channel });
+    if (result.pareto_pending && result.design) pollPareto();
     if (result.design) {
       state.galleryCandidates.push(liveGalleryCandidate(result.design, state, "Pipeline final candidate"));
       if (state.galleryCandidates.length > 6) state.galleryCandidates.shift();
@@ -887,14 +1044,14 @@ async function runDesign() {
     $("#result").innerHTML = errorBannerHtml(err, "Run failed");
   } finally {
     running = false;
-    btn.classList.remove("running");
-    btn.disabled = serverWarming;
+    btns.forEach((b) => { b.classList.remove("running"); b.disabled = serverWarming; });
     $$(".mode-btn").forEach((b) => { b.disabled = false; });
     pumpLiveGallery();
   }
 }
 
 function finishSteps(r) {
+  if (r.pvt) setStep("pvt", r.pvt.accepted ? "done" : "warn");
   const st = defaults.statuses;
   if (r.status === st.fallback) { setStep("search", "warn"); setStep("refine", "warn"); setStep("verify", r.verification ? "done" : ""); return; }
   if (!r.design) { setStep("search", "done"); setStep("refine", "warn"); setStep("verify", ""); return; }
@@ -935,7 +1092,19 @@ function netlistWithVerdict(r) {
   if (!r || !r.netlist) return "";
   const st = defaults.statuses, v = r.verification;
   const L = ["*", "* ---------------- SILQ provenance ----------------"];
-  if (r.status === st.solved) {
+  if (r.pvt) {
+    L.push("* PVT: " + (r.pvt.accepted ? "independent 45/45 corner acceptance" : "NOT VERIFIED; " + r.pvt.status),
+      "* Schematic-level only; no mismatch yield or extracted-layout sign-off.");
+    if (r.provenance.fixed_anchor_reused) L.push("* FINAL SOURCE: fixed delivered sizing, reverified for this target.");
+  }
+  if (r.noise_evaluation) {
+    L.push("* NOISE ASSESSMENT: " + r.status,
+      "* " + (r.overall_conditional ? "Conditional on stated assumptions." : "Sampled noise values only."),
+      "* " + r.noise_evaluation.search_note,
+      "* Nominal status: " + r.nominal_status);
+  } else if (r.pvt) {
+    L.push("* Final acceptance: " + r.status);
+  } else if (r.status === st.solved) {
     L.push("* VERIFIED at the TYPICAL CORNER ONLY (tt, 27 C, nominal Vdd), by an",
            "* independent re-simulation against every hard spec.",
            "* This is NOT a PVT sign-off: no corner sweep was run on this design.");
@@ -960,9 +1129,21 @@ function verdictHtml(r) {
   const v = r.verification;
   const reqs = (r.spec && r.spec.requirements) || [];
   let cls, icon, title, sub;
-  if (r.status === st.fallback) {
+  if (r.pvt && !r.pvt.accepted) {
+    cls = "warn"; icon = "alertTriangle"; title = "PVT acceptance not established";
+    sub = "The candidate did not receive independent full-grid acceptance within the repair budget. This does not prove the target is physically infeasible.";
+  } else if (r.noise_evaluation && r.status !== st.fallback) {
+    cls = r.overall_passed && !r.overall_conditional ? "ok" : "warn";
+    icon = r.overall_passed ? "checkCircle" : "alertTriangle";
+    title = r.overall_passed ? (r.overall_conditional ? "Pass under stated assumptions" : "Pass at sampled noise values") : "Noise request not verified";
+    sub = "The nominal circuit check and the sampled noise assessment are shown separately. " + (r.noise_evaluation.search_note || "");
+  } else if (r.status === st.fallback) {
     cls = "bad"; icon = "alertTriangle"; title = "Fixed fallback design, not an AI result";
     sub = "The architecture found nothing guard-valid for this spec. What is shown is a fixed, hand-verified design that ignores your requested target. It is not an output of the search and must not be read as one.";
+  } else if (r.pvt?.accepted) {
+    cls = "ok"; icon = "checkCircle"; title = "Independently verified across all 45 PVT corners";
+    sub = "The final sizing passes every hard check across process, supply and temperature. Schematic-level results; mismatch yield and extracted layout remain untested.";
+    if (r.provenance.fixed_anchor_reused) sub += " Final source: fixed delivered sizing, reverified for this specification.";
   } else if (r.status === st.solved) {
     cls = "ok"; icon = "checkCircle"; title = "Verified at the typical corner";
     sub = `An independent re-simulation at the typical corner (tt, 27 C, nominal Vdd) passes every hard check, boost included. This is not a PVT sign-off — no corner sweep was run on this design.${v && typeof v.abs_err_db === "number" ? ` The delivered boost is ${fmt(v.abs_err_db, 2)} dB from the number you asked for, inside the ±${fmt(r.spec.boost_tol_db, 2)} dB tolerance.` : ""}`;
@@ -1069,15 +1250,211 @@ function modeDetailHtml(r) {
 function costStripHtml(r, elapsedS) {
   const c = r.cost || {};
   const prior = c.measure_all_prior_attempts ? `<span><strong>${c.measure_all_prior_attempts}</strong> of those in the fast attempt</span>` : "";
-  return `<div class="cost-strip"><span><strong>${c.optimizer_evals ?? "n/a"}</strong> optimizer evals</span><span><strong>${c.measure_all_total ?? "n/a"}</strong> measure_all calls</span>${prior}<span><strong>${c.spice_analyses_total ?? "n/a"}</strong> SPICE analyses</span>${typeof elapsedS === "number" ? `<span><strong>${fmt(elapsedS, 1)}</strong> s wall clock</span>` : ""}</div>`;
+  return `<div class="cost-strip"><span><strong>${c.optimizer_evals ?? "n/a"}</strong> nominal optimizer evals</span><span><strong>${c.measure_all_total ?? "n/a"}</strong> measure_all calls</span>${prior}<span><strong>${c.spice_analyses_total ?? "n/a"}</strong> SPICE analyses</span>${typeof elapsedS === "number" ? `<span><strong>${fmt(elapsedS, 1)}</strong> s wall clock</span>` : ""}</div>`;
+}
+
+// -- Alternative circuits (Pareto) ---------------------------------------------------------
+
+//: How each Pareto objective is written for a human. `dp`/`scale` match CHECK_META so the
+//: same quantity never appears in two different units on one screen.
+const OBJ_META = {
+  power_w: { label: "Power", unit: "mW", dp: 2, scale: 1e3 },
+  noise_vrms: { label: "Input noise", unit: "µV", dp: 0, scale: 1e6 },
+  area_mm2: { label: "Area", unit: "mm²", dp: 4, scale: 1 },
+  target_error_db: { label: "Off target by", unit: "dB", dp: 2, scale: 1 },
+};
+
+//: Selection is deliberately keyed on the circuit's id, not its index: batches keep
+//: arriving after the user has clicked, and re-sorting must never move the panel out from
+//: under them.
+const paretoState = { data: null, selectedId: null, pvt: {}, busy: false, generation: null, seenIds: new Set() };
+
+function objValue(item, key) {
+  const meta = OBJ_META[key], raw = item.objectives ? item.objectives[key] : null;
+  if (typeof raw !== "number" || !meta) return "n/a";
+  return `${fmt(raw * meta.scale, meta.dp)} ${meta.unit}`;
+}
+
+function paretoDeltaHtml(item, base) {
+  if (!base || base.id === item.id) return `<span class="c-delta base">reference circuit</span>`;
+  const parts = [];
+  for (const key of ["power_w", "noise_vrms", "area_mm2", "target_error_db"]) {
+    const a = item.objectives?.[key], b = base.objectives?.[key];
+    if (typeof a !== "number" || typeof b !== "number" || b === 0) continue;
+    const pct = ((a - b) / Math.abs(b)) * 100;
+    if (Math.abs(pct) < 0.5) continue;
+    // Every objective here is minimized, so a negative delta is always the better one.
+    parts.push(`<span class="c-delta ${pct < 0 ? "better" : "worse"}">${escapeHtml(OBJ_META[key].label)} ${pct < 0 ? "" : "+"}${fmt(pct, 1)}%</span>`);
+  }
+  return parts.length ? parts.join("") : `<span class="c-delta">no material difference</span>`;
+}
+
+function circuitPvtHtml(item) {
+  const live = paretoState.pvt[item.id];
+  if (live && live.state === "running") return `<span class="c-pvt running">checking 45 corners…</span>`;
+  if (live && live.state === "error") return `<span class="c-pvt bad">PVT check failed: ${escapeHtml(live.message || "")}</span>`;
+  if (live && live.state === "done") {
+    return live.accepted
+      ? `<span class="c-pvt ok">${ICONS.check} PVT verified, 45 / 45 corners</span>`
+      : `<span class="c-pvt bad">PVT not accepted (${escapeHtml(live.status || "unresolved")})</span>`;
+  }
+  if (item.pvt && item.pvt.accepted) return `<span class="c-pvt ok">${ICONS.check} PVT verified, 45 / 45 corners</span>`;
+  return `<span class="c-pvt warn">Nominal (tt) only — PVT not run for this circuit</span>`;
+}
+
+function renderCircuits() {
+  const box = $("#circuits-card"), p = paretoState.data;
+  if (!p || !p.items || !p.items.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const focusId = document.activeElement?.dataset?.cid;
+  const netlistOpen = !!box.querySelector("details[open]");
+  const items = p.items;
+  if (!items.some((i) => i.id === paretoState.selectedId)) paretoState.selectedId = items[0].id;
+  const sel = items.find((i) => i.id === paretoState.selectedId) || items[0];
+  const base = items[0];
+
+  const tabs = items.map((item, i) => {
+    const on = item.id === paretoState.selectedId;
+    return `<button class="c-tab${on ? " on" : ""}${paretoState.seenIds.has(item.id) ? "" : " arriving"}" role="tab" aria-selected="${on}" tabindex="${on ? 0 : -1}" aria-controls="c-circuit-panel" data-cid="${escapeHtml(item.id)}" type="button">
+      <span class="c-tab-n">Circuit ${i + 1}</span>
+      <span class="c-tab-l">${escapeHtml(item.label || "")}</span>
+      <span class="c-tab-v">${escapeHtml(objValue(item, item.optimized_quantity))}</span>
+    </button>`;
+  }).join("");
+
+  const pending = p.complete === false
+    ? `<span class="c-pending">${escapeHtml(p.note || "")}</span>` : "";
+  const measuring = paretoState.busy ? `<span class="c-pending">still measuring alternatives…</span>` : "";
+
+  const metrics = ["power_w", "noise_vrms", "area_mm2", "target_error_db"].map((key) => {
+    const best = key === sel.optimized_quantity;
+    return `<div class="c-metric${best ? " best" : ""}"><span class="c-mk">${escapeHtml(OBJ_META[key].label)}</span><span class="c-mv">${escapeHtml(objValue(sel, key))}</span></div>`;
+  }).join("");
+
+  const alreadyVerified = (paretoState.pvt[sel.id] && paretoState.pvt[sel.id].state === "done" && paretoState.pvt[sel.id].accepted) || (sel.pvt && sel.pvt.accepted);
+  const checking = paretoState.pvt[sel.id] && paretoState.pvt[sel.id].state === "running";
+
+  box.innerHTML = `
+    <div class="c-head">
+      <div>
+        <div class="eyebrow">Alternative circuits</div>
+        <h3 class="c-title">Your circuits. Measured tradeoffs, one selection at a time.</h3>
+      </div>
+      <div class="c-meta">${escapeHtml(p.evaluated || 0)} sizings measured${measuring}${pending}</div>
+    </div>
+    <div class="c-tabs" role="tablist" aria-label="Measured circuit choices">${tabs}</div>
+    <div class="c-body" id="c-circuit-panel" role="tabpanel">
+      <div class="c-opt">Optimizes <strong>${escapeHtml(OBJ_META[sel.optimized_quantity]?.label || sel.optimized_quantity || "")}</strong> (${escapeHtml(sel.direction || "minimize")}) — ${escapeHtml(sel.label || "")}</div>
+      <div class="c-metrics">${metrics}</div>
+      <div class="c-deltas"><span class="c-dlabel">vs Circuit 1:</span>${paretoDeltaHtml(sel, base)}</div>
+      <div class="c-foot">
+        ${circuitPvtHtml(sel)}
+        <button class="btn sm" id="c-pvt-btn" type="button" ${alreadyVerified || checking ? "disabled" : ""}>${checking ? "Checking…" : "Check PVT"}</button>
+      </div>
+      <p class="c-scope">${escapeHtml(p.scope || "")}${sel.on_frontier === false ? " This earlier circuit is retained for review; a newer measured circuit dominates it on the selected objectives." : " Nondominated among measured candidates; not a global optimum claim."} Optional SNR has not been certified for alternatives.</p>
+      ${sel.verification?.checks ? checksHtml(sel.verification.checks, sel.verification.measures, "Selected circuit: nominal checks") : ""}
+      <details class="explainer"><summary>This circuit's netlist</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(sel.netlist || "")}</pre></div></details>
+    </div>`;
+
+  box.querySelectorAll(".c-tab").forEach((b) => b.addEventListener("click", () => {
+    paretoState.selectedId = b.dataset.cid;
+    renderCircuits();
+    // Only on an explicit click. Re-rendering happens every time a measured batch lands,
+    // and redrawing there would spam /api/schematic and fight the drawing the engineer is
+    // currently looking at.
+    drawSelectedCircuit();
+  }));
+  box.querySelectorAll(".c-tab").forEach((button, index, buttons) => {
+    button.addEventListener("keydown", (event) => {
+      let next;
+      if (event.key === "ArrowRight") next = (index + 1) % buttons.length;
+      else if (event.key === "ArrowLeft") next = (index - 1 + buttons.length) % buttons.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = buttons.length - 1;
+      else return;
+      event.preventDefault();
+      const id = buttons[next].dataset.cid;
+      buttons[next].click();
+      box.querySelector(`[data-cid="${id}"]`)?.focus();
+    });
+  });
+  if (focusId) box.querySelector(`[data-cid="${focusId}"]`)?.focus({preventScroll: true});
+  if (netlistOpen && box.querySelector("details")) box.querySelector("details").open = true;
+  for (const item of items) paretoState.seenIds.add(item.id);
+  const btn = $("#c-pvt-btn");
+  if (btn) btn.addEventListener("click", () => checkCircuitPvt(sel));
+}
+
+//: Choosing a circuit has to change what is ON THE STAGE, not just the numbers beside it.
+//: Without this the tabs swapped metrics while the schematic kept showing Circuit 1, so a
+//: scientist comparing three circuits was reading one circuit's drawing against another's
+//: measurements.
+async function drawSelectedCircuit() {
+  const p = paretoState.data;
+  if (!p || !p.items) return;
+  const at = p.items.findIndex((i) => i.id === paretoState.selectedId);
+  if (at < 0) return;
+  const item = p.items[at];
+  const version = ++circuitDrawVersion;
+  const generation = paretoState.generation;
+  setParams(item.design);
+  const title = `Circuit ${at + 1}: ${item.label || ""}`.trim();
+  const sub = `optimizes ${OBJ_META[item.optimized_quantity]?.label || item.optimized_quantity} — ${objValue(item, item.optimized_quantity)}`;
+  setStageTitle(title, sub);
+  const m = item.verification.measures;
+  setReadout("Selected boost", `${fmt(m.boost_db, 3)}<span class="u">dB</span>`, `${item.label}: ${objValue(item,item.optimized_quantity)}`);
+  const accepted = paretoState.pvt[item.id]?.accepted || item.pvt?.accepted;
+  setStateChip(accepted ? "ok" : "warn", accepted ? "45-corner PVT verified" : "Nominal verified; PVT optional");
+  try {
+    const svg = await fetchSchematic(designToHumanFields(item.design), title, sub);
+    if (version === circuitDrawVersion && generation === paretoState.generation && item.id === paretoState.selectedId) placeSvg(svg);
+  }
+  catch (err) { $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not render this circuit"); }
+}
+
+async function checkCircuitPvt(item) {
+  if (!currentResult) return;
+  const generation = paretoState.generation;
+  const requestResult = currentResult;
+  paretoState.pvt[item.id] = { state: "running" };
+  renderCircuits();
+  try {
+    const res = await postJSON("/api/pipeline/pvt", {
+      design: item.design,
+      target_boost_db: currentResult.spec.target_boost_db,
+      channel_loss_db: currentResult.spec.channel_loss_db,
+      tol: currentResult.spec.boost_tol_db,
+      requirements: requirementsForResult(requestResult),
+    });
+    if (generation !== paretoState.generation || requestResult !== currentResult) return;
+    paretoState.pvt[item.id] = { state: "done", accepted: !!res.accepted, status: res.status, result: res };
+  } catch (err) {
+    if (generation !== paretoState.generation || requestResult !== currentResult) return;
+    paretoState.pvt[item.id] = { state: "error", message: err.title || err.message || String(err) };
+  }
+  renderCircuits();
 }
 
 async function presentResult(r, elapsedS, ctx) {
   currentResult = r;
+  if (r.generation !== undefined) paretoState.generation = r.generation;
+  if (r.pareto) { paretoState.data = r.pareto; paretoState.busy = !!r.pareto_pending; renderCircuits(); }
   const st = defaults.statuses;
   const v = r.verification;
   const box = $("#result");
   let html = verdictHtml(r);
+  html += noiseResultHtml(r);
+  if (r.pvt) {
+    // Fastest never runs PVT on its own, and any mode can run out of budget before
+    // signoff finishes. Both cases end here: say plainly what was NOT verified, and offer
+    // the check rather than leaving the engineer to re-run the whole design to get it.
+    const offer = r.design && !r.pvt.accepted;
+    html += `<div class="panel"><div class="panel-head"><span class="panel-title">PVT acceptance</span><span class="panel-meta">${r.pvt.accepted ? '45 / 45 independently verified' : escapeHtml(r.pvt.status)}</span></div>`
+      + `<p>${escapeHtml(r.pvt.scope || '')}</p>`
+      + `<p>${r.pvt.evaluations} recorded corner evaluations${r.pvt.cost_complete ? '' : '; count incomplete after interruption'}. ${r.provenance.fixed_anchor_reused ? 'Fixed delivered sizing reused and independently checked for this specification.' : 'Final sizing and measurements are shown in the circuit above.'}</p>`
+      + (offer ? `<div class="pvt-offer"><span class="c-pvt warn">Not verified across PVT corners: this circuit was checked at the typical corner only.</span><button class="btn sm" id="result-pvt-btn" type="button">Check PVT</button><span id="result-pvt-state"></span></div>` : "")
+      + `</div>`;
+  }
   if (!r.design) html += banner("warning", "alertTriangle", "No design: the architecture produced nothing guard-valid for this spec, and the fixed fallback was not allowed.");
   html += measuresHtml(r);
   if (v && v.checks) html += checksHtml(v.checks, v.measures, (r.spec.requirements || []).length ? "Checks against your limits" : "The ten hard checks");
@@ -1090,6 +1467,36 @@ async function presentResult(r, elapsedS, ctx) {
   if (r.netlist) html += `<details class="explainer"><summary>SPICE netlist</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(netlistWithVerdict(r))}</pre></div></details>`;
   html += `<details class="explainer"><summary>Raw result JSON</summary><div class="explainer-body"><pre class="code-block">${escapeHtml(JSON.stringify(r, null, 2))}</pre></div></details>`;
   box.innerHTML = html;
+  const pvtBtn = box.querySelector("#result-pvt-btn");
+  if (pvtBtn) pvtBtn.addEventListener("click", async () => {
+    const label = box.querySelector("#result-pvt-state");
+    pvtBtn.disabled = true; pvtBtn.textContent = "Checking…";
+    if (label) label.innerHTML = `<span class="c-pvt running">measuring all 45 corners…</span>`;
+    try {
+      const res = await postJSON("/api/pipeline/pvt", {
+        design: r.design,
+        target_boost_db: r.spec.target_boost_db,
+        channel_loss_db: r.spec.channel_loss_db,
+        tol: r.spec.boost_tol_db,
+        requirements: requirementsForResult(r),
+      });
+      if (label) label.innerHTML = res.accepted
+        ? `<span class="c-pvt ok">${ICONS.check} PVT verified, 45 / 45 corners</span>`
+        : `<span class="c-pvt bad">PVT not accepted (${escapeHtml(res.status || "unresolved")})</span>`;
+      pvtBtn.textContent = "Check PVT";
+      pvtBtn.disabled = !!res.accepted;
+      const primary = paretoState.data?.items?.find((item) => item.is_primary);
+      if (currentResult === r && primary) {
+        paretoState.pvt[primary.id] = {state: "done", accepted: !!res.accepted, status: res.status, result: res};
+        renderCircuits();
+      }
+      // The checked sizing is the one on screen, so the result belongs on this result.
+      if (currentResult === r) currentResult.pvt_on_demand = res;
+    } catch (err) {
+      if (label) label.innerHTML = `<span class="c-pvt bad">${escapeHtml(err.title || err.message || "PVT check failed")}</span>`;
+      pvtBtn.disabled = false; pvtBtn.textContent = "Check PVT";
+    }
+  });
   const suggestBtn = box.querySelector(".mode-suggest");
   if (suggestBtn) suggestBtn.addEventListener("click", () => { selectMode(suggestBtn.dataset.mode); $("#mode-seg").scrollIntoView({ behavior: "smooth", block: "center" }); });
   animateIn([...box.children], { y: 12, opacity: 0, stagger: 0.05, duration: 0.5, ease: "power2.out" });
@@ -1099,13 +1506,16 @@ async function presentResult(r, elapsedS, ctx) {
   if (r.design) {
     setParams(r.design);
     const m = v && v.measures;
-    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${v.passed ? "verified (tt corner)" : "not verified"}`);
+    if (m) setReadout("Delivered boost", `${fmt(m.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(r.spec.target_boost_db, 2)} dB, ${fmt(m.power_w * 1e3, 2)} mW, ${r.pvt ? (r.pvt.accepted ? "verified (45 PVT corners)" : "PVT not verified") : v.passed ? "verified (tt corner)" : "not verified"}`);
     else setReadout("Boost", "n/a", v ? "guard rejected the final design on re-simulation" : "verification did not run");
     const title = isFallback ? "Fixed fallback design (not AI-generated)" : "Delivered design";
     const sub = `target ${fmt(r.spec.target_boost_db, 1)} dB boost over a ${fmt(r.spec.channel_loss_db, 1)} dB channel`;
     setStageTitle(title, `${sub}${r.mode ? `, ${r.mode} mode` : ""}`);
     setStateChip(r.status === st.solved ? "ok" : isFallback ? "bad" : "warn",
-      r.status === st.solved ? "verified (tt)" : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
+      r.status === st.solved ? (r.pvt?.accepted ? "verified (45 PVT)" : "verified (tt)") : isFallback ? "fallback" : r.status === st.closed_not_verified ? "not verified" : "unsolved");
+    if (r.noise_evaluation) setStateChip(r.overall_passed && !r.overall_conditional ? "ok" : "warn",
+      r.overall_passed ? (r.overall_conditional ? "conditional pass" : "sampled pass") : "noise not verified");
+    if (r.pvt && !r.pvt.accepted) setStateChip("warn", "PVT not verified");
     schematicQueue.pending = null;
     try { placeSvg(await fetchSchematic(designToHumanFields(r.design), title, sub)); }
     catch (err) { $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not render the schematic"); }
@@ -1118,10 +1528,27 @@ async function presentResult(r, elapsedS, ctx) {
   $("#export-json").disabled = false;
 }
 
+function requirementsForResult(result) {
+  return result.request_requirements || Object.fromEntries((result.spec?.requirements || []).map((r) => [r.field, r.value]));
+}
+
+function selectedCircuitExport() {
+  const item = paretoState.data?.items?.find((r) => r.id === paretoState.selectedId);
+  if (!item || !currentResult) return currentResult;
+  const pvt = paretoState.pvt[item.id]?.result || item.pvt;
+  return {schema: "silq.circuit.choice.v1", design: item.design, netlist: item.netlist,
+    spec: currentResult.spec, request_requirements: requirementsForResult(currentResult),
+    verification: item.verification, pvt, optimized_quantity: item.optimized_quantity,
+    direction: item.direction, origin: item.origin,
+    status: pvt?.accepted ? "solved" : "nominal_verified",
+    provenance: {source_request: currentResult.request_id, selected_circuit: item.id},
+    scope: "Selected sizing only. PVT and optional SNR results do not transfer between different circuits."};
+}
+
 function initExports() {
   $("#export-svg").addEventListener("click", () => { if (currentSvg) downloadText("silq_schematic.svg", currentSvg, "image/svg+xml"); });
-  $("#export-netlist").addEventListener("click", () => { if (currentResult && currentResult.netlist) downloadText("silq_ctle.cir", netlistWithVerdict(currentResult)); });
-  $("#export-json").addEventListener("click", () => { if (currentResult) downloadText("silq_result.json", JSON.stringify(currentResult, null, 2), "application/json"); });
+  $("#export-netlist").addEventListener("click", () => { const chosen = selectedCircuitExport(); if (chosen?.netlist) downloadText("silq_ctle.cir", `* ${chosen.pvt?.accepted ? "45-corner PVT verified" : "Nominal circuit; PVT NOT VERIFIED"}\n${chosen.netlist}`); });
+  $("#export-json").addEventListener("click", () => { if (currentResult) downloadText("silq_result.json", JSON.stringify(selectedCircuitExport(), null, 2), "application/json"); });
 }
 
 // -- History ------------------------------------------------------------------------------
@@ -1141,7 +1568,7 @@ function renderHistory() {
   const st = defaults ? defaults.statuses : {};
   list.innerHTML = items.map((it, i) => {
     const cls = it.status === st.solved ? "ok" : it.status === st.fallback ? "bad" : "warn";
-    const label = it.status === st.solved ? "verified (tt)" : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
+    const label = it.status === st.solved ? (it.result?.pvt?.accepted ? "verified (45 PVT)" : "verified (tt)") : it.status === st.fallback ? "fallback" : it.status === st.closed_not_verified ? "not verified" : "unsolved";
     const when = new Date(it.ts).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
     return `<button type="button" class="hist" data-i="${i}"><div class="hist-top"><span class="state-chip ${cls}"><span class="dot"></span>${label}</span><span class="hist-meta">${escapeHtml(when)}</span></div><div class="hist-text">${escapeHtml(it.text || `${fmt(it.target, 1)} dB over ${fmt(it.channel, 1)} dB`)}</div><div class="hist-meta"><span>target ${fmt(it.target, 1)} dB</span><span>got ${it.boost === null || it.boost === undefined ? "n/a" : fmt(it.boost, 2) + " dB"}</span><span>${escapeHtml(it.mode || "")}</span><span>${fmt(it.elapsed, 0)} s</span></div></button>`;
   }).join("");
@@ -1443,10 +1870,292 @@ async function initDesignTime() {
   renderDesignTime(await res.json());
 }
 
+// -- Evidence: what the learned models actually score -----------------------------------------
+
+/** The delivered-circuit checks readout is NOT a model score -- `verify()` sets
+ *  `passed = all(checks)` and only passed circuits are ever rendered as verified, so it is
+ *  structurally pinned at "N of N" and can never take another value. This panel carries the
+ *  numbers that can. It also keeps the two models apart on purpose: the surrogate is
+ *  supervised and has a real accuracy, the policy is RL and has a solve rate, and a solve
+ *  rate is only meaningful beside the chance line it was preregistered against. */
+function renderModelPerformance(d) {
+  const P = d.protocol, S = d.surrogate;
+  const boost = S.metrics.find((m) => m.key === "boost_db");
+  const policy = d.arms.find((a) => a.name === "PPO-restart");
+  const random = d.arms.find((a) => a.name === "RANDOM");
+
+  let html = `<div class="stat-row">
+    ${statTile(boost.mae.toFixed(2), " dB", "surrogate boost error", `mean absolute, ${S.n_test.toLocaleString()} held-out circuits`)}
+    ${statTile(`${policy.strict} / ${policy.n_specs}`, "", "policy strict solve rate", `chance-matched line: ${policy.chance_expected.toFixed(1)} / ${policy.n_specs}`)}
+    ${statTile(String(policy.evals_to_strict_median), " evals", "median cost of a strict solve", `random search over the same space: ${random.evals_to_strict_median}`)}
+  </div>`;
+
+  html += `<div class="section-label">The surrogate: supervised, so this one is an accuracy</div>`;
+  html += `<div class="card"><p style="font-size:var(--fs-sm);">A fitted predictor standing in for ngspice during the search, trained on a corpus of ${S.corpus_records.toLocaleString()} simulated records. Because every training example has a simulated ground truth, error means what it normally means: predicted dB minus measured dB, on ${S.n_test.toLocaleString()} circuits held out of the fit.</p>
+    <div style="overflow-x:auto;"><table class="dt-table"><thead><tr><th>Predicted quantity</th><th class="num">Mean abs. error</th><th class="num">Median abs. error</th><th class="num">r&sup2;</th><th class="num">Spread of truth<br/><span class="th-sub">sd, for scale</span></th></tr></thead><tbody>`;
+  for (const m of S.metrics) {
+    html += `<tr${m.key === "boost_db" ? ` class="dt-silq"` : ""}><td><strong>${escapeHtml(m.label)}</strong></td><td class="num">${m.mae.toFixed(3)} ${escapeHtml(m.unit)}</td><td class="num">${m.median_abs_err.toFixed(3)} ${escapeHtml(m.unit)}</td><td class="num">${m.r2.toFixed(3)}</td><td class="num">${m.sd_of_truth.toFixed(2)} ${escapeHtml(m.unit)}</td></tr>`;
+  }
+  html += `</tbody></table></div>
+    <p class="help-hint" style="margin-top:12px;">Boost is the quantity the specification is written in, so it is the row that matters. Peak frequency carries the lowest r&sup2; of the three: its median error is small but its tail is not, which is the usual signature of a few badly extrapolated circuits rather than a uniformly weak fit.</p></div>`;
+
+  html += `<div class="card mp-coverage"><div class="section-label" style="margin-top:0;">Accuracy is not uniform, and the gradient is the honest part</div>
+    <p style="font-size:var(--fs-sm);">Held-out circuits split into ten bands by distance from the training corpus. Fraction whose predicted boost lands within the ${P.tol_db} dB tolerance:</p>
+    <div class="mp-bars">
+      <div class="mp-bar"><div class="mp-bar-fill" style="width:${(S.coverage.nearest * 100).toFixed(1)}%;"></div><span class="mp-bar-k">closest to training data</span><span class="mp-bar-v">${(S.coverage.nearest * 100).toFixed(1)}%</span></div>
+      <div class="mp-bar"><div class="mp-bar-fill warn" style="width:${(S.coverage.farthest * 100).toFixed(1)}%;"></div><span class="mp-bar-k">farthest from training data</span><span class="mp-bar-v">${(S.coverage.farthest * 100).toFixed(1)}%</span></div>
+    </div>
+    <p class="help-hint">${escapeHtml(S.coverage.note)} Every circuit this tool delivers is confirmed in ngspice afterwards, so a surrogate miss costs search time, not correctness.</p></div>`;
+
+  html += `<div class="section-label">The policy: reinforcement learning, so there is no accuracy to report</div>`;
+  html += `<div class="card"><p style="font-size:var(--fs-sm);">Nothing here is a classification. The policy is not asked to be near a correct answer; it is asked to meet a specification inside a budget. The analogous figure is <strong>solve rate</strong>: of ${P.n_specs} held-out specifications, how many yielded an electrically valid circuit within ${P.tol_db} dB of the requested boost, in at most ${P.budget} simulator evaluations. A solve rate on its own is not interpretable, so each is printed against the chance-matched control that was registered before the run.</p>
+    <div style="overflow-x:auto;"><table class="dt-table"><thead><tr><th>Method</th><th class="num">Strict solves</th><th class="num">Chance line<br/><span class="th-sub">preregistered</span></th><th class="num">p<br/><span class="th-sub">one-sided</span></th><th class="num">Median evals<br/><span class="th-sub">to strict solve</span></th><th class="num">Median error<br/><span class="th-sub">|achieved &minus; asked|</span></th></tr></thead><tbody>`;
+  for (const a of d.arms) {
+    html += `<tr class="${a.is_policy ? "dt-silq" : ""}"><td><strong>${escapeHtml(a.name)}</strong>${a.is_policy ? ` <span class="dt-tag">silQ</span>` : ""}</td><td class="num ${a.beats_chance ? "" : "dt-dim"}">${a.strict} / ${a.n_specs}</td><td class="num">${a.chance_expected === null || a.chance_expected === undefined ? "n/a" : a.chance_expected.toFixed(1)}</td><td class="num">${pFmt(a.chance_p)}</td><td class="num">${a.evals_to_strict_median}</td><td class="num">${a.median_abs_err_db === null || a.median_abs_err_db === undefined ? "n/a" : `${a.median_abs_err_db.toFixed(2)} dB`}</td></tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  if (policy && policy.chance_p !== null && policy.chance_p !== undefined && !policy.beats_chance) {
+    html += banner("warning", "alertTriangle", `Preregistered negative, reported rather than dropped: the strict solve <em>count</em> is greyed above because it does not clear its chance line. silQ scores ${policy.strict} against an expectation of ${policy.chance_expected.toFixed(1)} (p = ${policy.chance_p}), and the bar fixed before the run was roughly 21 of ${policy.n_specs}. What the measurement does support is the column beside it: a strict solve costs a median of ${policy.evals_to_strict_median} evaluations against ${random.evals_to_strict_median} for random search.`);
+  }
+
+  if (d.fastest) {
+    const F = d.fastest;
+    html += `<div class="section-label">Why Fastest reads 100%</div>`;
+    html += `<div class="card mp-hundred"><p style="font-size:var(--fs-sm);">The mode comparison below this panel shows Fastest solving <strong>${(F.solve_rate * 100).toFixed(1)}%</strong> of its benchmark. That figure is real and it is not a model accuracy, so here is what produced it. Fastest does not search: stage 1 retrieves the closest circuit already measured in the frozen corpus, and the solver only refines from there.</p>
+      <div class="mp-why">
+        <div><dt>${F.solved} / ${F.cases}</dt><dd>specifications returned a verified nominal circuit</dd></div>
+        <div><dt>${F.seed_already_on_target} / ${F.cases}</dt><dd>recorded as <em>&ldquo;start already on target&rdquo;</em> &mdash; the retrieved circuit was inside tolerance before the solver touched it</dd></div>
+        <div><dt>${F.max_abs_err_db.toFixed(4)} dB</dt><dd>worst target error of any case, against a &plusmn;${F.tol_db} dB tolerance &mdash; ${Math.round(F.margin_factor)}&times; more room than it needed</dd></div>
+        <div><dt>${F.median_evals}</dt><dd>median optimizer evaluations; only ${F.refined_cases} of ${F.cases} cases needed more than one</dd></div>
+      </div>
+      <p style="font-size:var(--fs-sm);">So the honest reading is: <strong>the corpus already covers this spec sample.</strong> The benchmark asks for a valid circuit within ${F.tol_db} dB of target, and retrieval alone clears that on every case with two orders of magnitude to spare. A 100% here says the lookup table is well matched to the questions being asked &mdash; not that the policy is perfect, and not that an unseen specification outside the corpus would land the same way. That is also why Fastest is the one mode that runs no PVT sweep of its own.</p>
+      <p class="help-hint">${escapeHtml(F.note)}</p></div>`;
+  }
+
+  html += `<div class="section-label">What each metric means</div><div class="card"><dl class="mp-defs">`;
+  for (const m of d.metrics_explained) {
+    html += `<dt>${escapeHtml(m.name)}</dt><dd>${escapeHtml(m.body)}</dd>`;
+  }
+  html += `</dl></div>`;
+
+  html += `<div class="section-label">What these numbers do not say</div><div class="card"><ul class="dt-caveats">`;
+  for (const c of d.caveats) html += `<li>${escapeHtml(c)}</li>`;
+  html += `</ul></div>`;
+
+  $("#model-performance").innerHTML = html;
+}
+async function initModelPerformance() {
+  const res = await fetch("/api/model-performance");
+  if (!res.ok) throw new Error(`server returned ${res.status}`);
+  renderModelPerformance(await res.json());
+}
+
+// -- Lab: SNR stress test (extension, not the brief) -----------------------------------------
+
+/** BER is read across ten decades, so it is never fixed-point. A measured zero is the
+ *  absence of an error in a finite bit stream, not a measured value, so it is labelled
+ *  "0 errors" rather than dressed up as an upper bound: the true bound depends on how many
+ *  symbols survived startup exclusion, which is fewer than the bits transmitted. */
+function berFmt(v) {
+  if (v === null || v === undefined || !Number.isFinite(v)) return "n/a";
+  if (v === 0) return '<span class="dt-dim">0 errors</span>';
+  return v.toExponential(2);
+}
+
+/** Last payload from /api/snr-robustness, kept only so the charts can be redrawn at a
+ *  different container width without refetching. */
+let snrPayload = null;
+
+function renderSnrRobustness(d) {
+  const c = d.curve;
+  const top = c[c.length - 1];
+  const dead = d.unreachable_below_db;
+  const snrErr = Math.max(...c.map((p) => Math.abs(p.measured_snr_db - p.snr_db)));
+  // One error in the transmitted bit stream. This is a LOWER bound on the empirical
+  // column's resolution, not the resolution itself -- startup exclusion scores fewer
+  // symbols than are sent -- so it is quoted as an order, never as a BER bound.
+  const berFloor = (1 / d.n_bits).toExponential(1);
+  // Lowest swept SNR at which the empirical count reached zero -- the point above which
+  // only the semi-analytic column carries information. Read off the data rather than
+  // written into the caption, because the SNR grid is a CLI argument.
+  const berZeroFrom = c.find((p) => p.ber_empirical === 0);
+  // Where a reader would mistakenly read the closure off the eye polyline: the linear
+  // crossing of the spec floor between the two samples that straddle it. Naming this
+  // number beside the measured closure is the whole point of marking the closure.
+  const cross = (() => {
+    for (let i = 1; i < c.length; i += 1) {
+      const a = c[i - 1], b = c[i];
+      if (a.eye_v_mv < d.eye_v_mv_min && b.eye_v_mv >= d.eye_v_mv_min) {
+        return a.snr_db + ((d.eye_v_mv_min - a.eye_v_mv) / (b.eye_v_mv - a.eye_v_mv)) * (b.snr_db - a.snr_db);
+      }
+    }
+    return null;
+  })();
+
+  let html = banner("warning", "alertTriangle",
+    `<strong>Read the shaded band before the curve.</strong> The eye opening this project scores is a
+     <em>worst-case</em> statistic &mdash; smallest positive sample minus largest negative sample, over every
+     scored symbol &mdash; so additive noise costs it roughly 7&sigma;. Below <strong>${dead.toFixed(1)} dB</strong>
+     the <code>eye_v &ge; ${d.eye_v_mv_min} mV</code> check has <em>no feasible point in any design space</em>:
+     not this policy's, not an exhaustive sweep's, not a human's. The zeros to the left of the band are a
+     property of the metric, not a score for the policy.`);
+
+  html += `<div class="stat-row">
+    ${statTile(dead.toFixed(1), " dB", "below this, no design can pass", `the ${d.eye_v_mv_min} mV eye check is unsatisfiable at any sizing`)}
+    ${statTile(top.strict.toFixed(3), "", `strict pass at ${top.snr_db} dB`, `same scorer at zero noise: ${d.strict_pass_v2_noiseless.toFixed(3)} — no degradation left at this SNR`)}
+    ${statTile(snrErr.toFixed(3), " dB", "worst requested-vs-measured SNR error", `noise recovered from the scorer's own samples at all ${c.length} points`)}
+  </div>`;
+
+  html += `<div class="section-label">The curve, and the region where it means nothing</div>`;
+  html += `<div class="snr-charts">
+    <div class="card chart-card"><div class="card-title">Strict pass rate vs link SNR</div>
+      <div class="chart-container" id="snr-chart-pass"></div>
+      <p class="chart-caption">Error bars are 95% Wilson intervals on ${d.n_specs} held-out specs. The dashed line is the
+      <em>same</em> v2 scorer run at zero noise, which lands exactly on the frozen v1 benchmark rate
+      (${d.strict_pass_v1.toFixed(3)}) &mdash; that agreement is what makes the drop attributable to noise rather than
+      to the change of measurement engine.</p></div>
+    <div class="card chart-card"><div class="card-title">Worst-case eye height vs link SNR</div>
+      <div class="chart-container" id="snr-chart-eye"></div>
+      <p class="chart-caption">The gap between the noiseless opening and the spec floor is the entire noise budget.
+      It closes at ${d.policy_closure_db.toFixed(1)} dB for the designs this policy actually shipped &mdash; the marked
+      vertical &mdash; and at ${dead.toFixed(1)} dB for a hypothetical design sitting on the physical ceiling.
+      <strong>Do not read the closure off the curve:</strong> the segment between two samples is straight-line
+      interpolation${cross === null ? "" : `, so the polyline appears to cross the floor at about ${cross.toFixed(1)} dB,
+      ${(d.policy_closure_db - cross).toFixed(1)} dB early`}. Only the marked vertical is measured &mdash; it is computed
+      per design from its own noiseless opening, not read off this line.</p></div>
+  </div>`;
+
+  html += `<div class="section-label">Bit error rate</div>`;
+  html += `<div class="card chart-card"><div class="chart-container" id="snr-chart-ber"></div>
+    <p class="chart-caption">Semi-analytic BER is <code>mean(Q(margin / &sigma;))</code> under a correct-feedback
+    assumption &mdash; optimistic at low SNR, and${berZeroFrom ? ` the only informative column from
+    ${berZeroFrom.snr_db} dB up, where the empirical count hits zero` : " the smoother of the two columns"}.
+    Zero errors is not a BER: ${d.n_bits.toLocaleString()} bits are transmitted and fewer are scored after
+    startup exclusion, so the empirical column bounds nothing below the order of ${berFloor} and the semi-analytic
+    line carries the high-SNR information. No BER target appears anywhere in the Astera brief; this axis exists only
+    because the stress test needed one.</p>
+    <p class="chart-caption"><strong>This chart has no shaded band, unlike the two above, and that is the point:</strong>
+    the ${dead.toFixed(1)} dB ceiling is a limit on the <em>eye</em> check, not on BER. BER degrades smoothly and
+    remains a real measurement everywhere on this axis, so the ceiling is drawn as a bare edge line rather than as a
+    region where nothing can pass.</p></div>`;
+
+  html += `<div class="section-label">Every number, per SNR point</div>`;
+  html += `<div class="card"><div style="overflow-x:auto;"><table class="dt-table"><thead><tr>
+    <th>SNR</th><th class="num">Measured</th><th class="num">Strict pass</th><th class="num">Loose pass</th>
+    <th class="num">Eye height<br/><span class="th-sub">mV, worst case</span></th>
+    <th class="num">Eye width<br/><span class="th-sub">UI</span></th>
+    <th class="num">BER<br/><span class="th-sub">empirical</span></th>
+    <th class="num">BER<br/><span class="th-sub">semi-analytic</span></th>
+    <th class="num">&rho;(boost, BER)<br/><span class="th-sub">Spearman</span></th></tr></thead><tbody>`;
+  for (const p of c) {
+    const infeasible = p.snr_db < dead;
+    html += `<tr class="${infeasible ? "snr-infeasible" : ""}">
+      <td><strong>${p.snr_db} dB</strong>${infeasible ? ' <span class="snr-tag">infeasible</span>' : ""}</td>
+      <td class="num">${p.measured_snr_db.toFixed(3)}</td>
+      <td class="num">${p.strict.toFixed(3)} <span class="dt-dim">[${p.strict_ci95[0].toFixed(2)}, ${p.strict_ci95[1].toFixed(2)}]</span></td>
+      <td class="num">${p.loose.toFixed(3)}</td>
+      <td class="num">${p.eye_v_mv.toFixed(1)}</td>
+      <td class="num">${p.eye_h_ui.toFixed(3)}</td>
+      <td class="num">${berFmt(p.ber_empirical)}</td>
+      <td class="num">${berFmt(p.ber_semi_analytic)}</td>
+      <td class="num">${p.corr_boost_vs_ber === null ? "n/a" : p.corr_boost_vs_ber.toFixed(2)}</td></tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  html += `<div class="section-label">What cannot move with SNR, and why it is reported once</div>`;
+  html += `<div class="card"><p style="font-size:var(--fs-sm);">The frozen scorer is noiseless and the 18-dimensional
+    observation carries no noise term, so the policy emits a <strong>bit-identical design at every SNR</strong>.
+    Achieved boost, boost error, valid-design count and evaluation count therefore cannot change with noise. Presenting
+    them as ${c.length} per-SNR rows would dress an architectural constant up as a robustness result, so they appear once:
+    solve rate <strong>${d.invariant.solve_rate.toFixed(3)}</strong>, mean |boost error|
+    <strong>${d.invariant.abs_boost_err_db.toFixed(2)} dB</strong>, mean evaluations
+    <strong>${d.invariant.evaluations.toFixed(1)}</strong>, over ${d.n_scored} of ${d.n_specs} specs that produced a
+    design. Only the eye and the BER can move, and only those are drawn above.</p></div>`;
+
+  html += `<div class="section-label">How the noise was injected</div>`;
+  html += `<div class="card"><p class="snr-eq"><code>${escapeHtml(d.noise_equation)}</code></p>
+    <p style="font-size:var(--fs-sm);">Injected at <code>${escapeHtml(d.injection_point)}</code>, zero-mean and white,
+    referred to the main-cursor amplitude of each design's own noiseless response. Every point is seeded explicitly and
+    the realised SNR is recovered from the scorer's own samples, not assumed.</p>
+    <div class="section-label" style="margin-top:16px;">What this measurement does not cover</div>
+    <ul class="dt-caveats">`;
+  for (const l of d.limitations) html += `<li>${escapeHtml(l)}</li>`;
+  html += `</ul><p class="help-hint">Artifact: <code>results/${escapeHtml(d.artifact)}</code>, model
+    <code>${escapeHtml(d.model)}</code>. Full method and the retrain decision are in
+    <code>docs/RESULTS_SNR_ROBUSTNESS.md</code>.</p></div>`;
+
+  $("#snr-body").innerHTML = html;
+  snrPayload = d;
+  drawSnrCharts(d);
+}
+
+/** The three charts, separated from the prose so they can be redrawn at the current
+ *  container width. They first render while the Lab view is still hidden, where a
+ *  container measures 0 and every chart falls back to its default viewBox. */
+function drawSnrCharts(d) {
+  const c = d.curve;
+  const dead = d.unreachable_below_db;
+  const shade = { shadeBelowX: dead, shadeLabel: "no design can pass here" };
+  renderLineChart($("#snr-chart-pass"), [{
+    cls: "snr-a", label: "strict pass rate",
+    points: c.map((p) => ({ x: p.snr_db, y: p.strict, lo: p.strict_ci95[0], hi: p.strict_ci95[1],
+      tooltip: `${p.snr_db} dB: ${p.strict.toFixed(3)} strict` })),
+  }], { ...shade, yMin: 0, yMax: 1, xLabel: "link SNR (dB)", yLabel: "strict pass rate",
+        yTickFmt: (t) => t.toFixed(1),
+        ariaLabel: "strict pass rate against link SNR, with the infeasible region shaded",
+        hlines: [{ y: d.strict_pass_v2_noiseless, label: "same scorer, zero noise", cls: "ref-line" }] });
+
+  renderLineChart($("#snr-chart-eye"), [{
+    cls: "snr-a", label: "measured worst-case eye",
+    points: c.map((p) => ({ x: p.snr_db, y: p.eye_v_mv,
+      tooltip: `${p.snr_db} dB: ${p.eye_v_mv.toFixed(1)} mV` })),
+  }], { ...shade, yMin: 0, xLabel: "link SNR (dB)", yLabel: "eye height (mV)",
+        yTickFmt: (t) => String(Math.round(t)),
+        ariaLabel: "worst-case eye height against link SNR, with the infeasible region shaded",
+        hlines: [
+          { y: d.eye_v_mv_noiseless, label: "noiseless opening", cls: "ref-line" },
+          { y: d.eye_v_mv_min, label: `spec floor ${d.eye_v_mv_min} mV`, cls: "target-line" },
+        ],
+        // Where the polyline appears to cross the spec floor is an artefact of drawing a
+        // straight segment between two samples. The measured closure is this line, and
+        // saying so on the plot is cheaper than hoping nobody reads a crossing off it.
+        vlines: [{ x: d.policy_closure_db, label: `measured closure ${d.policy_closure_db.toFixed(1)} dB` }] });
+
+  renderLineChart($("#snr-chart-ber"), [
+    { cls: "snr-a", label: "semi-analytic",
+      points: c.map((p) => ({ x: p.snr_db, y: p.ber_semi_analytic,
+        tooltip: `${p.snr_db} dB: ${p.ber_semi_analytic.toExponential(2)} semi-analytic` })) },
+    { cls: "snr-b", label: "empirical (arrow = zero errors, value off the axis)",
+      points: c.map((p) => ({ x: p.snr_db, y: p.ber_empirical > 0 ? p.ber_empirical : null,
+        censored: p.ber_empirical === 0,
+        tooltip: p.ber_empirical > 0
+          ? `${p.snr_db} dB: ${p.ber_empirical.toExponential(2)} empirical`
+          : `${p.snr_db} dB: zero errors counted; below this axis` })) },
+  ], { logY: true, logFloor: 1e-14, height: 300,
+       xLabel: "link SNR (dB)", yLabel: "bit error rate",
+       ariaLabel: "bit error rate against link SNR, semi-analytic and empirical",
+       // No band here, and that is a deliberate difference from the two charts above: the
+       // ceiling gates the EYE check, not BER. The edge line marks it so the omission
+       // reads as a statement rather than as a chart that forgot.
+       vlines: [{ x: dead, label: `${dead.toFixed(1)} dB eye-check ceiling — BER is not gated by it` }] });
+}
+
+/** Redraw at the current container width. Called when the Lab view is shown -- the charts
+ *  are first drawn while it is hidden -- and after a window resize. */
+function relayoutSnrCharts() {
+  if (snrPayload && $("#snr-chart-pass")) drawSnrCharts(snrPayload);
+}
+
+async function initSnrRobustness() {
+  renderSnrRobustness(await api("/api/snr-robustness"));
+}
+
 // -- Boot -----------------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
+  initSimRefresh();
   initViews();
   runIntro(false);
   pollHealth();
@@ -1463,4 +2172,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initCandidateGallery().catch((err) => { $("#gallery-grid").innerHTML = errorBannerHtml(err, "Failed to load the candidate gallery"); });
   initResults().catch((err) => { $("#results-detail").innerHTML = errorBannerHtml(err, "Failed to load results"); });
   initDesignTime().catch((err) => { $("#designtime-body").innerHTML = errorBannerHtml(err, "Failed to load design-time record"); });
+  // Artifact-backed: a missing final_report/surrogate_audit must land as a banner inside
+  // the panel, never as a section left claiming to be loading.
+  initModelPerformance().catch((err) => { $("#model-performance").innerHTML = errorBannerHtml(err, "Failed to load the model performance record"); });
+  // Artifact-backed and optional: the sweep is an extension experiment, so a missing
+  // results file must degrade to a readable "not generated" banner inside the panel
+  // rather than break the page or, worse, leave the section claiming to be loading.
+  initSnrRobustness().catch((err) => { $("#snr-body").innerHTML = errorBannerHtml(err, "Failed to load the SNR robustness record"); });
 });

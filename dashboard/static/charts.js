@@ -1,7 +1,7 @@
-// Hand-rolled SVG charts, no charting library. Three shapes: a horizontal bar chart (why
-// designs get guard-rejected), a scatter plot with a y=x reference (does achieved boost
-// track the requested target), and the live boost trace drawn while a design run is in
-// flight (every simulated circuit's boost against the target band).
+// Hand-rolled SVG charts, no charting library. A horizontal bar chart (why designs get
+// guard-rejected), a scatter plot with a y=x reference (does achieved boost track the
+// requested target), the live boost trace drawn while a design run is in flight, a folded
+// eye display, and a line chart with a shaded infeasible region (the SNR stress test).
 
 function svgEl(tag, attrs) {
   const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -194,6 +194,228 @@ function renderTraceChart(container, points, opts = {}) {
 
   container.innerHTML = "";
   container.appendChild(svg);
+}
+
+/**
+ * Line chart over an x axis, for the SNR robustness sweep.
+ *
+ * `shadeBelowX` is the whole point of this renderer and not decoration: left of it the eye
+ * metric has no feasible point in ANY design space, so a zero there says nothing about the
+ * policy. The band is drawn first, behind the data, and it is labelled on the plot rather
+ * than in a caption, because the four zeros read as failure to anyone who sees the shape
+ * before reading the prose.
+ *
+ * Label placement here is defensive, because three of this chart's labels sit exactly
+ * where its data does. The band caption goes at the BOTTOM of the band: a reference line
+ * near the top of the plot would otherwise strike straight through it. Horizontal-line
+ * captions stop short of the last x sample rather than running to the plot edge, because
+ * the line a reader most wants to check is usually the one a data point sits on top of.
+ *
+ * The x axis is labelled at the samples themselves, not at round numbers, because the
+ * grid is deliberately uneven; labels that would touch are dropped rather than shrunk.
+ *
+ * series: [{points: [{x, y, lo?, hi?, censored?}], cls, label}]
+ *   `censored: true` draws a downward arrow at the plot floor instead of a marker: the
+ *   value is off the bottom of the axis and no y is claimed for it.
+ * opts: {logY, logFloor, yMin, yMax, yTickFmt, xLabel, yLabel, width, height, ariaLabel,
+ *        shadeBelowX, shadeLabel, hlines: [{y,label,cls}], vlines: [{x,label,cls}]}
+ */
+function renderLineChart(container, series, opts = {}) {
+  // The viewBox is set to the container's own pixel width so the CSS `width: 100%` scale
+  // factor is 1 and every label renders at its nominal size. Fixed viewBoxes make chart
+  // text grow or shrink with the layout -- two charts of different viewBox width side by
+  // side end up with visibly different type sizes, and the same pair stacked at a narrow
+  // width inverts which one is bigger. The fallback matters: this panel first renders
+  // while its view is still hidden, where clientWidth is 0. Callers that care re-draw on
+  // view activation (see relayoutSnrCharts).
+  const measured = container.clientWidth;
+  const width = opts.width || (measured > 240 ? Math.round(measured) : 520);
+  const height = opts.height || 260;
+  const padLeft = 52, padRight = 14, padTop = 14, padBottom = 42;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+  const log = !!opts.logY;
+
+  const all = series.flatMap((s) => s.points);
+  const xs = all.map((p) => p.x);
+  const xLo = Math.min(...xs), xHi = Math.max(...xs);
+  const xPad = (xHi - xLo) * 0.06 || 1;
+  const x0 = xLo - xPad, x1 = xHi + xPad;
+
+  const tf = (v) => (log ? Math.log10(Math.max(v, opts.logFloor || 1e-14)) : v);
+  const ysRaw = all.map((p) => p.y).concat(all.flatMap((p) => [p.lo, p.hi]))
+    .filter((v) => typeof v === "number" && Number.isFinite(v));
+  let yLo = opts.yMin !== undefined ? tf(opts.yMin) : Math.min(...ysRaw.map(tf));
+  let yHi = opts.yMax !== undefined ? tf(opts.yMax) : Math.max(...ysRaw.map(tf));
+  (opts.hlines || []).forEach((h) => { yLo = Math.min(yLo, tf(h.y)); yHi = Math.max(yHi, tf(h.y)); });
+  if (!Number.isFinite(yLo) || !Number.isFinite(yHi) || yLo === yHi) { yLo -= 1; yHi += 1; }
+  const yPad = (yHi - yLo) * 0.08 || 1;
+  if (opts.yMin === undefined) yLo -= yPad;
+  if (opts.yMax === undefined) yHi += yPad;
+  // Censoring arrows are drawn at the plot floor, so the floor has to be empty. Without
+  // this the lowest real datum -- on this chart, the semi-analytic BER at the highest SNR
+  // -- sits in the same few pixels as the arrow beside it, and an arrow that lands on
+  // another series' marker reads as a value rather than as "off the axis". The gutter is
+  // sized in pixels, not decades, so it costs a strip rather than empty octaves.
+  // 22px of that is the arrow itself (see the censoring branch below); the rest is the
+  // clearance between its tip and the lowest real marker.
+  const CENSOR_GUTTER_PX = 40;
+  if (opts.yMin === undefined && all.some((p) => p.censored && !Number.isFinite(p.y)) && ysRaw.length) {
+    const lowest = Math.min(...ysRaw.map(tf));
+    const need = (CENSOR_GUTTER_PX / plotH) * (yHi - yLo);
+    if (lowest - yLo < need) yLo = lowest - need;
+  }
+
+  const sx = (v) => padLeft + ((v - x0) / (x1 - x0)) * plotW;
+  const sy = (v) => padTop + plotH - ((tf(v) - yLo) / (yHi - yLo)) * plotH;
+
+  const svg = svgEl("svg", {
+    viewBox: `0 0 ${width} ${height}`, class: "chart-svg", role: "img",
+    "aria-label": opts.ariaLabel || "line chart",
+  });
+
+  if (typeof opts.shadeBelowX === "number" && opts.shadeBelowX > x0) {
+    const edge = Math.min(sx(opts.shadeBelowX), padLeft + plotW);
+    svg.appendChild(svgEl("rect", {
+      x: padLeft, y: padTop, width: Math.max(edge - padLeft, 0), height: plotH,
+      class: "snr-deadzone",
+    }));
+    svg.appendChild(svgEl("line", { x1: edge, y1: padTop, x2: edge, y2: padTop + plotH, class: "snr-deadzone-edge" }));
+    if (opts.shadeLabel) {
+      // Bottom of the band, right-aligned to its own edge. The top-left corner is where
+      // a high reference line lands, and a line drawn later strikes through the text.
+      svg.appendChild(textEl({ x: edge - 6, y: padTop + plotH - 14, "text-anchor": "end",
+                               class: "snr-deadzone-label" }, opts.shadeLabel));
+    }
+  }
+
+  // y ticks: decade lines under log, nice ticks otherwise
+  const yTicks = log
+    ? (() => { const t = []; for (let e = Math.ceil(yLo); e <= Math.floor(yHi); e += 1) t.push(e); return t; })()
+    : niceTicks(yLo, yHi, 5).filter((t) => t >= yLo && t <= yHi);
+  yTicks.forEach((t) => {
+    const yv = log ? Math.pow(10, t) : t;
+    svg.appendChild(svgEl("line", { x1: padLeft, y1: sy(yv), x2: padLeft + plotW, y2: sy(yv), class: "grid-line" }));
+    svg.appendChild(textEl({ x: padLeft - 8, y: sy(yv) + 3.5, "text-anchor": "end", class: "tick-label" },
+      log ? `1e${t}` : (opts.yTickFmt ? opts.yTickFmt(t) : t)));
+  });
+  // One label per x sample, thinned so they cannot touch. An unevenly sampled x axis
+  // (this chart's grid is dense exactly where the curve bends) otherwise overlaps its own
+  // labels in the interesting region and leaves them legible only where nothing happens.
+  // Every kept label still sits on a real sample: none are interpolated tick positions.
+  const xLabelled = [...series[0].points].sort((a, b) => a.x - b.x);
+  // ~5.4px per character at the 11px tick size; only used for collision arithmetic.
+  const box = (p) => { const half = (String(p.x).length * 5.4) / 2, cx = sx(p.x);
+                       return { p, cx, left: cx - half, right: cx + half }; };
+  const first = box(xLabelled[0]);
+  const last = xLabelled.length > 1 ? box(xLabelled[xLabelled.length - 1]) : null;
+  // The two ends anchor the reader's sense of the range, so they are kept first and the
+  // interior is fitted between them -- a plain left-to-right greedy walk can keep an
+  // interior label that then collides with the forced right-hand end.
+  const kept = [first];
+  let cursor = first.right;
+  xLabelled.slice(1, -1).forEach((pt) => {
+    const b = box(pt);
+    if (b.left < cursor + 5) return;
+    if (last && b.right > last.left - 5) return;
+    kept.push(b);
+    cursor = b.right;
+  });
+  if (last) kept.push(last);
+  kept.forEach(({ p, cx }) => {
+    svg.appendChild(textEl({ x: cx, y: padTop + plotH + 18, "text-anchor": "middle", class: "tick-label" }, p.x));
+    svg.appendChild(svgEl("line", { x1: cx, y1: padTop + plotH, x2: cx, y2: padTop + plotH + 4, class: "axis-line" }));
+  });
+  svg.appendChild(svgEl("line", { x1: padLeft, y1: padTop, x2: padLeft, y2: padTop + plotH, class: "axis-line" }));
+  svg.appendChild(svgEl("line", { x1: padLeft, y1: padTop + plotH, x2: padLeft + plotW, y2: padTop + plotH, class: "axis-line" }));
+  svg.appendChild(textEl({ x: padLeft + plotW / 2, y: height - 5, "text-anchor": "middle", class: "axis-title" }, opts.xLabel || ""));
+  svg.appendChild(textEl({ x: -(padTop + plotH / 2), y: 13, "text-anchor": "middle", class: "axis-title", transform: "rotate(-90)" }, opts.yLabel || ""));
+
+  // Vertical marks ride the TOP edge, horizontal marks the LEFT edge. Keeping the two
+  // families on different edges is what stops them colliding with each other; putting a
+  // vertical mark's caption alongside its own line reads well until the curve climbs
+  // through it, which is exactly what happens on the chart this was written for.
+  (opts.vlines || []).forEach((v) => {
+    if (v.x < x0 || v.x > x1) return;
+    const vx = sx(v.x);
+    svg.appendChild(svgEl("line", { x1: vx, y1: padTop, x2: vx, y2: padTop + plotH,
+                                    class: v.cls || "snr-deadzone-edge" }));
+    if (!v.label) return;
+    // ~5.4px per character at 11px. Only used to decide which side of the line has room.
+    const fits = vx - 5 - v.label.length * 5.4 > padLeft;
+    svg.appendChild(textEl({ x: vx + (fits ? -5 : 5), y: padTop + 11,
+                             "text-anchor": fits ? "end" : "start", class: "chart-note" }, v.label));
+  });
+
+  (opts.hlines || []).forEach((h) => {
+    svg.appendChild(svgEl("line", { x1: padLeft, y1: sy(h.y), x2: padLeft + plotW, y2: sy(h.y), class: h.cls || "ref-line" }));
+    // Left edge, not right. A reference line exists to be compared against a data point,
+    // and the point that matters is usually the last one -- which is where a
+    // right-anchored caption lands, straight through the marker and its error bar.
+    if (h.label) svg.appendChild(textEl({ x: padLeft + 6, y: sy(h.y) - 6, class: "chart-note" }, h.label));
+  });
+
+  series.forEach((s) => {
+    s.points.forEach((p) => {
+      if (typeof p.lo !== "number" || typeof p.hi !== "number") return;
+      svg.appendChild(svgEl("line", { x1: sx(p.x), y1: sy(p.lo), x2: sx(p.x), y2: sy(p.hi), class: "snr-err" }));
+    });
+    const pts = s.points.filter((p) => Number.isFinite(p.y)).map((p) => `${sx(p.x)},${sy(p.y)}`);
+    if (pts.length > 1) {
+      svg.appendChild(svgEl("polyline", { points: pts.join(" "), class: `snr-line ${s.cls || ""}` }));
+    }
+    s.points.forEach((p) => {
+      if (!Number.isFinite(p.y)) {
+        if (!p.censored) return;
+        // Off the bottom of the axis, with no y asserted for it. Drawn at the plot floor
+        // rather than at a nominal detection limit, because quoting a limit here would
+        // claim a bound the measurement does not support.
+        const cx = sx(p.x), base = padTop + plotH - 4;
+        const g = svgEl("g", { class: `snr-censor ${s.cls || ""}` });
+        g.appendChild(svgEl("line", { x1: cx, y1: base - 18, x2: cx, y2: base - 5 }));
+        g.appendChild(svgEl("polygon", { points: `${cx - 4},${base - 7} ${cx + 4},${base - 7} ${cx},${base}` }));
+        attachTip(g, container, p.tooltip || `${p.x}: below the axis`);
+        svg.appendChild(g);
+        return;
+      }
+      const c = svgEl("circle", { cx: sx(p.x), cy: sy(p.y), r: 4, class: `snr-dot ${s.cls || ""}` });
+      attachTip(c, container, p.tooltip || `${p.x}: ${p.y}`);
+      svg.appendChild(c);
+    });
+  });
+
+  container.innerHTML = "";
+  container.appendChild(svg);
+
+  // Backing plates for the on-plot captions, added only once the SVG is in the document
+  // because getBBox needs a laid-out text node.
+  //
+  // Choosing a free corner for each caption does not work here: which corner is free
+  // depends on the data (an error bar rising off a zero, a curve climbing through the
+  // middle, a reference line landing where a caption starts), so every rule that reads
+  // well on one chart is struck through on another. A plate behind the text is
+  // data-independent -- whatever crosses the caption is interrupted by it and resumes on
+  // the far side, which is what a reader needs and costs nothing but a few pixels.
+  svg.querySelectorAll("text.chart-note, text.snr-deadzone-label").forEach((t) => {
+    const b = t.getBBox();
+    const r = svgEl("rect", {
+      x: b.x - 3, y: b.y - 1, width: b.width + 6, height: b.height + 2,
+      rx: 2, class: "chart-note-bg",
+    });
+    svg.insertBefore(r, t);
+  });
+
+  if (series.some((s) => s.label)) {
+    const legend = document.createElement("div");
+    legend.className = "snr-legend";
+    series.filter((s) => s.label).forEach((s) => {
+      const item = document.createElement("span");
+      item.className = "snr-legend-item";
+      item.innerHTML = `<i class="${s.cls || ""}"></i>${s.label}`;
+      legend.appendChild(item);
+    });
+    container.appendChild(legend);
+  }
 }
 
 /**

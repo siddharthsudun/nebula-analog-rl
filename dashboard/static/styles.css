@@ -1,6 +1,6 @@
 /* silQ, design tokens ------------------------------------------------------------
    Dark-first by choice: the product is an oscilloscope-grade instrument, and the ground it
-   sits on is deep navy ink with one amber signal colour. The light theme is a deliberate
+   sits on is graphite with one cyan signal colour. The light theme is a deliberate
    second palette, not an inversion. Every component reads only these tokens. */
 
 :root {
@@ -15,12 +15,12 @@
   --ink-muted: #98a3b5;
   --ink-faint: #66718a;
 
-  --accent: #f5b62e;
-  --accent-hover: #ffc857;
-  --accent-ink: #ffd27a;
-  --accent-tint: rgba(245, 182, 46, 0.12);
-  --accent-glow: rgba(245, 182, 46, 0.28);
-  --accent-contrast: #1a1200;
+  --accent: #5de4ed;
+  --accent-hover: #91eff4;
+  --accent-ink: #83eaf1;
+  --accent-tint: rgba(93, 228, 237, 0.12);
+  --accent-glow: rgba(93, 228, 237, 0.28);
+  --accent-contrast: #08252b;
 
   --success: #3ddc97;
   --success-tint: rgba(61, 220, 151, 0.13);
@@ -53,7 +53,7 @@
   --radius-xs: 6px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 8px 40px rgba(245, 182, 46, 0.18);
+  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 8px 40px rgba(93, 228, 237, 0.18);
   --page-max: 1560px;
 }
 
@@ -69,11 +69,11 @@
   --ink-muted: #5a6475;
   --ink-faint: #8b94a5;
 
-  --accent: #c47a05;
-  --accent-hover: #a56600;
-  --accent-ink: #8a5400;
-  --accent-tint: rgba(196, 122, 5, 0.12);
-  --accent-glow: rgba(196, 122, 5, 0.25);
+  --accent: #007d89;
+  --accent-hover: #006773;
+  --accent-ink: #006c77;
+  --accent-tint: rgba(0, 125, 137, 0.12);
+  --accent-glow: rgba(0, 125, 137, 0.25);
   --accent-contrast: #ffffff;
 
   --success: #147a4b;
@@ -90,7 +90,7 @@
 
   --shadow-sm: 0 1px 2px rgba(20, 24, 32, 0.05);
   --shadow-md: 0 10px 28px rgba(20, 24, 32, 0.10);
-  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 8px 30px rgba(196, 122, 5, 0.14);
+  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 8px 30px rgba(0, 125, 137, 0.14);
 }
 
 /* -- Reset & base ------------------------------------------------------------------ */
@@ -168,7 +168,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   line-height: 0.95;
   text-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
 }
-.intro-word .q { color: #f5b62e; }
+.intro-word .q { color: #5de4ed; }
 .intro-for {
   display: flex; align-items: center; gap: 14px;
   font-size: clamp(0.85rem, 1.6vw, 1.1rem);
@@ -188,7 +188,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .intro-skip:hover { background: rgba(255, 255, 255, 0.16); }
 .intro-bar {
   position: absolute; left: 0; bottom: 0; height: 3px; width: 0%;
-  background: #f5b62e; z-index: 3;
+  background: #5de4ed; z-index: 3;
 }
 .intro.leaving { animation: intro-out 0.7s ease forwards; }
 @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
@@ -254,6 +254,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .icon-btn .sun { display: none; }
 :root[data-theme="light"] .icon-btn .moon { display: none; }
 :root[data-theme="light"] .icon-btn .sun { display: block; }
+
+.pill-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 100px; height: 34px; box-sizing: border-box;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-muted);
+  font-size: var(--fs-xs); font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.pill-btn:hover { color: var(--ink); border-color: var(--border-strong); }
+.pill-btn:disabled { opacity: 0.55; cursor: default; }
+.pill-btn.spin svg { animation: pill-spin 0.8s linear infinite; }
+@keyframes pill-spin { to { transform: rotate(360deg); } }
 
 main { flex: 1; }
 .view { padding-bottom: 60px; }
@@ -444,6 +455,25 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 .req-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .link-btn { background: none; border: none; color: var(--ink-faint); font-size: var(--fs-xs); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
 .link-btn:hover { color: var(--ink); }
+
+/* The mode strip rides directly under the composer, on the hero's video wash, so it
+   carries its own surface: the segmented control's own --surface-2 fill is not opaque
+   enough to stay legible over the background on its own. */
+.composer-mode {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+  margin-top: 12px; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow-sm);
+}
+.composer-mode .mode-seg { flex: 0 0 auto; width: 336px; }
+/* min-width:0 so the detail line wraps instead of forcing the strip past the hero. */
+.composer-mode .mode-copy { flex: 1 1 260px; min-width: 0; margin-top: 0; }
+
+/* The second entry point: full width under the sliders, so it reads as the action for
+   the panel above it rather than a smaller sibling of the composer's button. */
+.panel-run { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.panel-run .run-btn { width: 100%; }
+.panel-run .help-hint { margin-top: 0; }
 
 .mode-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 4px; }
 .mode-btn {
@@ -824,6 +854,34 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .parse-table td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); }
 .parse-table .num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 16px; }
 
+/* SNR stress test -- an EXTENSION panel, deliberately not styled like the benchmark
+   sections. The info pill and the dashed rule are the whole point: a reader skimming the
+   lab must be able to tell at a glance that this section is not the Astera brief. Every
+   colour is a token, so both themes follow without a second rule set. */
+.lab-section.extension { border-top: 1px dashed var(--border-strong); }
+.extension-flag {
+  align-self: start; display: inline-flex; align-items: center;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--info); background: var(--info-tint); border: 1px solid var(--info);
+  border-radius: 999px; padding: 3px 11px;
+}
+/* 420, not 340: these charts carry a 520-wide viewBox, so a 340px column scales their
+   tick labels down to ~0.65x and the y ticks stop being legible. At 420 they go
+   single-column while each one is still readable. */
+.snr-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 12px; }
+.snr-eq { font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 9px 12px; margin-bottom: 12px; }
+.snr-eq code { background: none; padding: 0; }
+.dt-table tr.snr-infeasible td { color: var(--ink-faint); }
+.dt-table tr.snr-infeasible td strong { color: var(--ink-muted); }
+.snr-tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint); border: 1px solid var(--border-strong); border-radius: 4px; padding: 1px 5px; }
+.snr-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.snr-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-muted); }
+.snr-legend-item i { width: 14px; height: 3px; border-radius: 2px; background: var(--ink-faint); }
+.snr-legend-item i.snr-a { background: var(--accent); }
+.snr-legend-item i.snr-b { background: var(--info); }
+
 /* Charts */
 .chart-svg { width: 100%; height: auto; overflow: visible; font-family: var(--font-ui); }
 .chart-svg .axis-line { stroke: var(--border-strong); stroke-width: 1; }
@@ -844,6 +902,27 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .chart-svg .tp.pass { fill: var(--success); }
 .chart-svg .tp.final { fill: var(--accent); stroke: var(--ink); stroke-width: 2; }
 .chart-svg .chart-note { fill: var(--ink-faint); font-size: 11px; }
+/* Backing plate under an on-plot caption. Not fully opaque: inside the shaded band an
+   opaque chip reads as a hole punched in the band, while 0.85 is already enough to knock
+   back the 1-1.5px lines and error bars that would otherwise strike through the text. */
+.chart-svg .chart-note-bg { fill: var(--surface); fill-opacity: 0.85; }
+/* The infeasible band. Drawn behind the data on purpose -- left of this edge the eye check
+   has no feasible point at any sizing, so the zeros there are the metric's floor. */
+.chart-svg .snr-deadzone { fill: var(--ink); fill-opacity: 0.08; }
+.chart-svg .snr-deadzone-edge { stroke: var(--ink-faint); stroke-width: 1; stroke-dasharray: 3 3; }
+/* One step stronger than a tick label on purpose: this caption is the reason the band is
+   drawn, and it has to be read before the curve shape is. */
+.chart-svg .snr-deadzone-label { fill: var(--ink-muted); font-size: 10px; font-weight: 700; }
+.chart-svg .snr-err { stroke: var(--ink-faint); stroke-width: 1.5; stroke-opacity: 0.6; }
+.chart-svg .snr-line { fill: none; stroke-width: 2; stroke-linejoin: round; }
+.chart-svg .snr-line.snr-a { stroke: var(--accent); }
+.chart-svg .snr-line.snr-b { stroke: var(--info); stroke-dasharray: 5 4; }
+.chart-svg .snr-dot { stroke: var(--surface); stroke-width: 1; }
+.chart-svg .snr-dot.snr-a { fill: var(--accent); }
+.chart-svg .snr-dot.snr-b { fill: var(--info); }
+/* Censored observation: zero errors counted, true value off the bottom of the axis. */
+.chart-svg .snr-censor line { stroke: var(--info); stroke-width: 2; }
+.chart-svg .snr-censor polygon { fill: var(--info); }
 .chart-tooltip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 11px; padding: 5px 8px; border-radius: 5px; transform: translate(-50%, -130%); white-space: nowrap; opacity: 0; transition: opacity 0.1s ease; font-family: var(--font-mono); z-index: 5; }
 .chart-tooltip.show { opacity: 1; }
 .chart-container { position: relative; }
@@ -891,9 +970,135 @@ table.data tbody tr:hover { background: var(--surface-2); }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .checks { grid-template-columns: 1fr; }
   .mode-seg { grid-template-columns: 1fr; }
+  .composer-mode .mode-seg { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }
 }
+
+/* SNR input contract */
+#noise-inputs { padding-bottom: 16px; }
+#noise-inputs .field, #noise-inputs .help-hint { margin: 12px 16px; }
+#noise-inputs select { width:100%; padding:9px; border:1px solid var(--border, #ddd); border-radius:8px; background:var(--surface, #fff); color:inherit; }
+.noise-pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.noise-pair[hidden] { display:none; }
+.noise-pair .field { min-width:0; }
+.noise-pair input { width:100%; min-width:0; }
+.noise-result p { padding:0 16px; font-size:13px; line-height:1.6; }
+.noise-table-scroll { overflow-x:auto; margin:16px; }
+.noise-result table { width:100%; border-collapse:collapse; font-size:12px; }
+.noise-result th, .noise-result td { padding:8px; text-align:left; border-bottom:1px solid var(--border, #ddd); white-space:nowrap; }
+/* Optional SNR controls sit with the request, before the circuit workspace. */
+#noise-settings { border: 0; margin: 0; padding: 0; min-width: 0; }
+#noise-settings[hidden] { display: none; }
+#snr-advanced { margin-top: 18px; }
+#noise-state { margin-left: 10px; font-size: 11px; opacity: .65; }
+#snr-advanced .adv-body { max-width: 760px; }
+
+/* -- Alternative circuits (Pareto selector) ------------------------------------------ */
+.circuits {
+  margin-top: 18px; padding: 18px; border: 1px solid var(--line);
+  border-radius: 14px; background: var(--panel);
+}
+.c-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.c-title { margin: 2px 0 0; font-size: 1.02rem; font-weight: 600; line-height: 1.35; }
+.c-meta { font-size: .78rem; color: var(--muted); text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.c-pending { color: var(--warning); }
+
+.c-tabs { display: flex; gap: 8px; margin: 14px 0 0; flex-wrap: wrap; }
+.c-tab {
+  flex: 1 1 150px; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: transparent;
+  cursor: pointer; text-align: left; color: inherit; font: inherit;
+  transition: border-color .15s, background .15s;
+}
+.c-tab:hover { border-color: var(--accent); }
+.c-tab.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.c-tab-n { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.c-tab-l { font-size: .92rem; font-weight: 600; }
+.c-tab-v { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.c-body { margin-top: 14px; }
+.c-opt { font-size: .88rem; margin-bottom: 10px; }
+.c-metrics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.c-metric {
+  flex: 1 1 120px; padding: 8px 10px; border: 1px solid var(--line);
+  border-radius: 8px; display: flex; flex-direction: column; gap: 2px;
+}
+.c-metric.best { border-color: var(--accent); }
+.c-mk { font-size: .72rem; color: var(--muted); }
+.c-mv { font-size: .92rem; font-variant-numeric: tabular-nums; }
+
+.c-deltas { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: .8rem; margin-bottom: 10px; }
+.c-dlabel { color: var(--muted); }
+.c-delta { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.c-delta.better { color: var(--ok, #3fb950); border-color: currentColor; }
+.c-delta.worse { color: var(--warning); border-color: currentColor; }
+.c-delta.base { color: var(--muted); }
+
+.c-foot, .pvt-offer { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.pvt-offer { margin-top: 10px; }
+.c-pvt { font-size: .8rem; display: inline-flex; align-items: center; gap: 5px; }
+.c-pvt.ok { color: var(--ok, #3fb950); }
+.c-pvt.warn { color: var(--warning); }
+.c-pvt.bad { color: var(--bad, #f85149); }
+.c-pvt.running { color: var(--muted); }
+.c-scope { font-size: .78rem; color: var(--muted); margin: 6px 0 10px; }
+
+@media (max-width: 640px) {
+  .c-tabs { flex-direction: column; }
+  .c-meta { text-align: left; }
+}
+
+/* --- Model performance (evidence view) ------------------------------------- */
+/* Reuses .card / .dt-table / .stat-row from the design-time panel; only the pieces
+   that panel has no equivalent for are defined here. */
+.mp-head { margin: 32px 0 18px; }
+.mp-head h2 { font-family: var(--font-display); font-size: var(--fs-xl); margin: 0 0 8px;
+              letter-spacing: -0.01em; }
+.mp-head p { font-size: var(--fs-sm); color: var(--ink-muted); max-width: 68ch; margin: 0; }
+.mp-rule { height: 1px; background: var(--border); margin: 40px 0 32px; }
+
+.mp-coverage { margin-top: 14px; }
+.mp-bars { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 12px; }
+/* The fill is a background layer so the caption and value sit on top of it and stay
+   readable at any width -- a short bar must not clip its own label. */
+.mp-bar { position: relative; display: flex; align-items: center; gap: 10px;
+          padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+          overflow: hidden; font-size: var(--fs-sm); }
+.mp-bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--success-tint); }
+.mp-bar-fill.warn { background: var(--warning-tint); }
+.mp-bar-k { position: relative; flex: 1; color: var(--ink-muted); }
+.mp-bar-v { position: relative; font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums; color: var(--ink); }
+
+.mp-defs { margin: 0; display: grid; gap: 14px; }
+.mp-defs dt { font-size: var(--fs-sm); color: var(--ink); font-weight: 600; }
+.mp-defs dd { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--ink-muted);
+              max-width: 78ch; line-height: 1.55; }
+
+@media (max-width: 640px) {
+  .mp-bar { flex-wrap: wrap; }
+  .mp-defs dd { max-width: none; }
+}
+
+/* The Fastest-100% explainer. Its job is to stop a reader quoting the rate on its own,
+   so the four supporting figures are laid out as equals, not as a headline plus fine print. */
+.mp-hundred { margin-top: 14px; }
+.mp-why { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 14px; margin: 16px 0; }
+.mp-why > div { padding: 12px 14px; border: 1px solid var(--border);
+                border-radius: var(--radius-sm); background: var(--surface-2); }
+.mp-why dt { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--ink);
+             margin-bottom: 5px; }
+.mp-why dd { margin: 0; font-size: var(--fs-xs); color: var(--ink-muted); line-height: 1.5; }
+
+/* New choices animate without shifting the selected circuit. */
+.c-tabs { overflow-x:auto; scroll-behavior:smooth; }
+.c-tab { flex:0 0 auto; transition:background .18s ease,border-color .18s ease; }
+.c-tab:focus-visible { outline:2px solid var(--accent, #39dce6); outline-offset:3px; }
+.c-tab.arriving { animation:circuit-arrive .3s ease-out both; }
+@keyframes circuit-arrive { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .c-tab.arriving { animation:none; } .c-tabs { scroll-behavior:auto; } }

@@ -17,6 +17,7 @@ import os
 import sys
 import threading
 import time
+import uuid
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import Any
@@ -100,6 +101,12 @@ CURATED: dict[str, dict[str, str]] = {
         "label": "Generalization",
         "blurb": "How the policy performs on specs it was not trained around.",
     },
+    "policy_snr_sweep_v1.json": {
+        "label": "SNR robustness (extension, not the brief)",
+        "blurb": "A stress test run BESIDE the submission: the frozen policy evaluated "
+                 "at -5 to 20 dB link SNR. Astera's problem statement specifies no SNR "
+                 "and no BER target, and no benchmark number here changes.",
+    },
 }
 FEATURED_ORDER = list(CURATED.keys())
 
@@ -160,10 +167,22 @@ def _warm_up() -> None:
     means a request during warm-up gets an honest, immediate 409 instead.
     """
     with _startup_lock:
-        _startup["warming"] = True
+        _startup.update(warming=True, ready=False, error=None)
     try:
         with _run_lock:
+            from eqrl.runtime import prepare
+            prepare()  # Prewarm the watchdog-owned pipeline and all PVT workers.
             get_evaluator("tt", fast=True, channel_loss_db=12.0)
+            # Fastest's stage 1 is a corpus lookup, and the kNN tree over the 374,588-record
+            # surrogate corpus costs 1.66 s to build on first use (0.00 s cached). That is
+            # MORE than Fastest's entire 1.4 s search window, and pipeline.py builds it
+            # inside the request, before the first evaluation -- so an unwarmed server
+            # fails the first Fastest request outright: the budget expires on evaluation
+            # zero and the run returns no design at all. The Pareto worker pays the same
+            # cost through pareto.proposals. Warming it here is what keeps the measured
+            # budgets about search instead of about one-time setup.
+            from eqrl.experiments.fastest_hedge import load_fastest_assets
+            load_fastest_assets()
             if (REPO_ROOT / POLICY).exists():
                 from eqrl.experiments.final_comparison import load_policy
                 # Absolute: uvicorn's cwd is the operator's, not necessarily the repo
@@ -184,8 +203,15 @@ def _warm_up() -> None:
 async def lifespan(app: FastAPI):
     # Background thread, not `await`ed, so uvicorn binds the port immediately and
     # `/api/health` can be polled while the SKY130 parse is still running.
-    threading.Thread(target=_warm_up, daemon=True, name="warm-up").start()
-    yield
+    warmup = threading.Thread(target=_warm_up, daemon=True, name="warm-up")
+    warmup.start()
+    try:
+        yield
+    finally:
+        import asyncio
+        from eqrl.runtime import close
+        await asyncio.to_thread(warmup.join)
+        await asyncio.to_thread(close)
 
 
 app = FastAPI(title="SILQ Dashboard", lifespan=lifespan)
@@ -214,6 +240,7 @@ def get_evaluator(corner: str = "tt", fast: bool = True, channel_loss_db: float 
 ERROR_CODES: dict[str, int] = {
     "spec_not_understood": 101,     # the words could not be read as a design spec
     "invalid_request": 102,         # a field was the wrong type or out of range
+    "invalid_noise_request": 103,   # incomplete or conflicting external-noise inputs
     "policy_missing": 201,          # the frozen checkpoint is not on disk
     "pipeline_busy": 202,           # a run is already in flight in this process
     "search_halted": 301,           # a tier-5 search-integrity guard fired
@@ -262,7 +289,7 @@ def _run_busy_error() -> JSONResponse:
             "Both that warm-up and a live request drive the one resident ngspice "
             "process (eqrl.sim.server.get_server), which is not reentrant, so the "
             "request cannot start until warm-up releases it.",
-            "Wait for the health indicator to show ready -- about 20 seconds after "
+            "Wait for the health indicator to show ready -- after "
             "boot -- then try again.")
     return _api_error(
         409, "pipeline_busy", "A simulator-backed operation is already in progress",
@@ -318,17 +345,43 @@ def health():
     if error:
         detail = f"Startup warm-up failed: {error}"
     elif warming:
-        detail = "Loading SKY130 device models and the trained policy (about 20 seconds)..."
+        detail = "Loading SKY130 models, independent PVT workers and the trained policy..."
     elif not ready:
         detail = "Starting up..."
     elif policy is None:
         detail = (f"Simulator loaded, but the policy checkpoint at {POLICY} is missing "
                   "-- live pipeline runs will fail.")
     else:
-        detail = "Simulator and policy loaded -- ready to run."
+        detail = "Simulator, independent PVT workers and policy loaded -- ready to run."
 
     return {"ready": ready, "warming": warming, "error": error, "policy": policy,
             "detail": detail}
+
+
+@app.post("/api/sim/refresh")
+def sim_refresh():
+    """Clear the resident ngspice process's accumulated plot history.
+
+    `eqrl.sim.server.get_server()` is one libngspice instance held for the life of
+    this process; every AC/noise/transient/op call leaves a "plot" (ac1, ac2, ...)
+    behind that ngspice never frees on its own. Left alone, that grows for as long as
+    the dashboard is up and every call gets slower -- measured locally as 200s+ for a
+    `fastest`-mode request that normally takes under 1s. `_prime()` already does this
+    before every eval going forward, so this exists only to fix a process that has
+    been resident since before that fix, without paying for a full restart (~15s
+    SKY130 model reparse) to get there.
+    """
+    if not _run_lock.acquire(blocking=False):
+        return _run_busy_error()
+    try:
+        from eqrl.sim.server import get_server
+        try:
+            get_server().destroy_all_plots()
+        except Exception as e:
+            return _unexpected_error(e)
+        return {"ok": True, "detail": "Cleared the resident simulator's plot history."}
+    finally:
+        _run_lock.release()
 
 
 # -- Guard layer --------------------------------------------------------------
@@ -811,6 +864,72 @@ def get_result(name: str):
     return FileResponse(_safe_results_path(name), media_type="application/json")
 
 
+# -- SNR robustness (extension experiment) --------------------------------------
+
+SNR_ARTIFACT = "policy_snr_sweep_v1.json"
+
+
+@app.get("/api/snr-robustness")
+def snr_robustness():
+    """The extension stress test, reduced to what the panel draws.
+
+    Deliberately NOT folded into /api/design-time. That endpoint assembles the claim the
+    brief actually asks for; this is a separate experiment on a separate axis, and the UI
+    keeps them apart so a reader cannot mistake one for the other.
+
+    The framing sentence and every caveat come from the artifact rather than from the
+    page, so a rerun that changes the model's limitations changes the wording too.
+    """
+    doc = _load_results_json(SNR_ARTIFACT)
+    if doc is None:
+        return _api_error(
+            404, "artifact_missing", "SNR robustness artifact not generated",
+            f"results/{SNR_ARTIFACT} is not on disk.",
+            "Run: PYTHONPATH=src python -m eqrl.experiments.policy_snr_sweep --specs 24")
+    inv, rch = doc["snr_invariant"], doc["reachability"]
+    return {
+        "what": doc["what"],
+        "model": doc["model"],
+        "artifact": SNR_ARTIFACT,
+        "n_specs": inv["n_specs"],
+        "n_scored": inv["n_with_design"],
+        "snr_points_db": doc["snr_points_db"],
+        "noise_equation": doc["noise_model"]["equation"],
+        "injection_point": doc["noise_model"]["injection_point"],
+        "limitations": doc["noise_model"]["limitations"],
+        # the two anchors the curve is read against: the frozen benchmark's own rate, and
+        # the same v2 scorer at zero noise. Their agreement is what makes the drop
+        # attributable to noise rather than to the change of measurement contract.
+        "strict_pass_v1": inv["strict_pass_v1"],
+        "strict_pass_v2_noiseless": doc["noiseless_v2_reference"]["strict_pass_rate"],
+        "eye_v_mv_noiseless": doc["noiseless_v2_reference"]["eye_v_mv"]["mean"],
+        # the empirical BER column floors at zero below ~1/(n_bits * scored fraction); the
+        # panel needs the bit count to say where that floor is instead of drawing a zero
+        "n_bits": doc["n_bits"],
+        # below this SNR the eye_v check has no feasible point in ANY design space, so a
+        # zero there is a property of the metric and not of the policy
+        "unreachable_below_db": rch["best_case_closure_snr_db"],
+        "policy_closure_db": rch["policy_closure_snr_db"]["mean"],
+        "eye_v_mv_min": rch["eye_v_mv_min"],
+        "invariant": {
+            "abs_boost_err_db": inv["abs_boost_err_db"]["mean"],
+            "evaluations": inv["evaluations"]["mean"],
+            "solve_rate": inv["solve_rate"],
+        },
+        "curve": [{
+            "snr_db": c["snr_db"],
+            "strict": c["strict_pass_rate"], "strict_ci95": c["strict_ci95"],
+            "loose": c["loose_pass_rate"],
+            "ber_empirical": c["ber_empirical"]["mean"],
+            "ber_semi_analytic": c["ber_semi_analytic"]["mean"],
+            "eye_v_mv": c["eye_v_mv"]["mean"],
+            "eye_h_ui": c["eye_h_ui"]["mean"],
+            "measured_snr_db": c["measured_snr_db"]["mean"],
+            "corr_boost_vs_ber": c["corr_boost_vs_ber"],
+        } for c in doc["curve"]],
+    }
+
+
 # -- Design time ----------------------------------------------------------------
 
 @app.get("/api/design-time")
@@ -901,6 +1020,218 @@ def design_time():
     }
 
 
+# -- Model performance ----------------------------------------------------------
+
+
+#: Fastest's per-case rerun, which is served to the browser as a static snapshot source.
+#: Read from there rather than re-deriving it so this panel and the evidence table can
+#: never disagree about the same run.
+FASTEST_RERUN = DASHBOARD_DIR / "static" / "data" / "fastest_full32.json"
+
+
+def _fastest_breakdown(tol_db: float) -> dict[str, Any] | None:
+    """Take Fastest's 100% apart, from its own per-case record.
+
+    A 100% invites exactly one question -- is it real? -- and the record answers it
+    without hedging. It IS real: 32 of 32 specifications returned a verified circuit.
+    What it is not is a measure of the model. Every case reports
+    `reason == "start already on target"`, meaning the circuit retrieved from the frozen
+    corpus was already inside the +/-%.1f dB tolerance before the solver refined anything,
+    and the worst case landed two orders of magnitude inside that tolerance. So the rate
+    measures corpus coverage of this spec sample, and the tolerance is far looser than the
+    precision the solver reaches once seeded. Both facts are returned here; quoting the
+    rate without them is the misreading this block exists to prevent.
+    """
+    try:
+        rows = json.loads(FASTEST_RERUN.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not rows:
+        return None
+
+    errs = sorted(r["abs_err_db"] for r in rows if r.get("abs_err_db") is not None)
+    evals = sorted(r["optimizer_evals"] for r in rows if r.get("optimizer_evals") is not None)
+    reasons: dict[str, int] = {}
+    for r in rows:
+        reasons[r.get("reason") or "unrecorded"] = reasons.get(r.get("reason") or "unrecorded", 0) + 1
+    solved = sum(1 for r in rows if r.get("status") == "solved" and r.get("passed"))
+
+    def median(xs):
+        if not xs:
+            return None
+        mid = len(xs) // 2
+        return xs[mid] if len(xs) % 2 else (xs[mid - 1] + xs[mid]) / 2
+
+    worst = errs[-1] if errs else None
+    return {
+        "cases": len(rows),
+        "solved": solved,
+        "solve_rate": solved / len(rows),
+        "tol_db": tol_db,
+        "median_abs_err_db": median(errs),
+        "max_abs_err_db": worst,
+        # How much room the WORST case had left. The headline claim of this block.
+        "margin_factor": (tol_db / worst) if worst else None,
+        "median_evals": median(evals),
+        "max_evals": evals[-1] if evals else None,
+        "refined_cases": sum(1 for e in evals if e > 1),
+        "reasons": reasons,
+        "seed_already_on_target": reasons.get("start already on target", 0),
+        "note": "Every case is recorded as \"start already on target\": the circuit looked "
+                "up from the frozen corpus was inside tolerance before the solver changed "
+                "anything. The rate therefore measures how well the corpus covers this "
+                "recorded spec sample, not how well the model designs.",
+    }
+
+
+
+@app.get("/api/model-performance")
+def model_performance():
+    """What the two learned models actually score, with the metric defined beside it.
+
+    This panel exists because the checks readout on a delivered circuit is NOT a model
+    score. `pipeline.verify` sets `passed = all(checks)` and only `passed` circuits are
+    ever rendered as verified, so that readout is structurally pinned at "N of N" and
+    carries no information about the policy. The numbers below are the ones that do.
+
+    Two models, and only ONE of them has an accuracy:
+
+      * the SURROGATE is supervised regression -- predicted dB against simulated dB on a
+        held-out split -- so error and r^2 mean what they normally mean;
+      * the POLICY is reinforcement learning. There is no label to be right about. Its
+        analogue is solve rate under a fixed evaluation budget, and a solve rate is
+        meaningless without the chance line it is measured against.
+
+    So every policy rate here is returned WITH its preregistered null, including the one
+    that fails: strict solves sit at the chance-matched expectation (p = 0.75). Reporting
+    the rate and hiding the null is the specific thing this endpoint refuses to do.
+    """
+    audit = _load_results_json("surrogate_audit.json")
+    report = _load_results_json("final_report.json")
+    if not (audit and report):
+        raise HTTPException(status_code=404, detail="model-performance artifacts are missing")
+
+    # The 100% on the evidence page is Fastest's, and it is the one number on this site a
+    # reader is most likely to misread as model accuracy, so it gets explained from its own
+    # per-case record rather than restated. Optional: a missing file drops the block.
+    fastest = _fastest_breakdown(report["tol"])
+
+    split = audit["iid_split"]
+    deciles = split["boost_by_distance_decile"]
+    surrogate = {
+        "corpus_records": audit["corpus_records"],
+        "n_test": split["n_test"],
+        "metrics": [
+            {
+                "key": key,
+                "label": label,
+                "unit": unit,
+                "mae": split["per_metric"][key]["mae"],
+                "median_abs_err": split["per_metric"][key]["median_abs_err"],
+                "r2": split["per_metric"][key]["r2"],
+                "sd_of_truth": split["per_metric"][key]["sd_of_truth"],
+            }
+            for key, label, unit in (("boost_db", "Boost", "dB"),
+                                     ("dc_gain_db", "DC gain", "dB"),
+                                     ("peak_freq_ghz", "Peak frequency", "GHz"))
+        ],
+        "coverage": {
+            "nearest": deciles[0]["within_1p5db"],
+            "farthest": deciles[-1]["within_1p5db"],
+            "note": "Fraction of held-out circuits whose predicted boost lands within the "
+                    "%.1f dB tolerance, for the decile nearest the training corpus and the "
+                    "decile farthest from it. The gap IS the extrapolation cost."
+                    % report["tol"],
+        },
+        "ground_truth": audit["ground_truth_check"],
+    }
+
+    order = ["PPO-restart", "PPO", "CMA-ES", "TPE", "RANDOM"]
+    arms = []
+    for name in order:
+        a = report["arms"].get(name)
+        if not a:
+            continue
+        chance = a.get("chance_matched") or {}
+        track = a.get("tracking_all_valid") or {}
+        arms.append({
+            "name": name,
+            "is_policy": name.startswith("PPO"),
+            "strict": a["strict"],
+            "loose": a["loose"],
+            "n_specs": a["n_specs"],
+            "evals_to_strict_median": a["strict_median"],
+            "median_abs_err_db": track.get("median_abs_err_db"),
+            "chance_expected": chance.get("expected"),
+            "chance_p": chance.get("p_one_sided"),
+            # A rate only beats chance when the one-sided p clears the preregistered 0.05.
+            "beats_chance": (chance.get("p_one_sided") is not None
+                             and chance["p_one_sided"] < 0.05),
+        })
+
+    return {
+        "protocol": {
+            "n_specs": report["n_specs"], "budget": report["budget"],
+            "tol_db": report["tol"], "spec_seed": report["spec_seed"],
+            "policy": POLICY,
+        },
+        "surrogate": surrogate,
+        "fastest": fastest,
+        "arms": arms,
+        "metrics_explained": [
+            {"name": "Held-out error (surrogate)",
+             "body": "Mean absolute difference, in dB, between the surrogate's predicted "
+                     "boost and the value ngspice actually measures, over %d circuits the "
+                     "surrogate never saw during fitting. This is the closest thing this "
+                     "project has to a conventional accuracy figure."
+                     % split["n_test"]},
+            {"name": "r\u00b2 (surrogate)",
+             "body": "Share of the variance in the simulated value the prediction "
+                     "reproduces. 1.0 is exact; 0.0 is no better than always guessing the "
+                     "corpus mean. Read it next to the spread of the truth it is "
+                     "explaining, which is why sd_of_truth travels with it."},
+            {"name": "Strict solve rate (policy)",
+             "body": "Specifications out of %d for which the policy found a circuit that is "
+                     "electrically valid AND lands within %.1f dB of the requested boost, "
+                     "inside a budget of %d simulator evaluations. It is not an accuracy: "
+                     "there is no correct answer to be near, only a specification to meet."
+                     % (report["n_specs"], report["tol"], report["budget"])},
+            {"name": "Chance-matched line",
+             "body": "What that same solve count would be if the policy ignored the "
+                     "requested target entirely and simply produced the same NUMBER of "
+                     "distinct feasible circuits. Preregistered before the run. A solve "
+                     "rate above this line is aim; a solve rate at it is volume."},
+            {"name": "Evaluations to a strict solve",
+             "body": "Median number of simulator calls spent before the first strict solve. "
+                     "This is the quantity the problem statement actually asks to reduce, "
+                     "and it is where the measured result is significant."},
+            {"name": "Mode solve rate (Fastest, Auto, Thinking)",
+             "body": "Fraction of benchmark specifications that came back with a verified "
+                     "nominal circuit meeting its boost target. This is a SYSTEM rate for "
+                     "one search strategy -- retrieval plus solver plus guards -- on one "
+                     "recorded spec sample. It is not the policy's accuracy, and the three "
+                     "modes share a single policy, so a difference between them is a "
+                     "difference in search strategy, never in training."},
+        ],
+        "caveats": [
+            "The policy's strict solve rate does NOT clear its preregistered chance line "
+            "(16 observed against 16.9 expected, p = 0.75). The bar set before the run was "
+            "roughly 21 of 32. That negative is reported here because it is the result.",
+            "The defensible claim is evaluation count, not solve count: a strict solve costs "
+            "a median of 6 evaluations against 14 for random search over the same space.",
+            "Both models were fitted and scored at the typical corner. Neither figure is a "
+            "PVT, mismatch, extracted-layout or BER claim.",
+            "The checks readout on a delivered circuit is not on this page for a reason: it "
+            "reports the condition the circuit was filtered on, so it always reads N of N.",
+            "Fastest's 100% is a real measurement of an easy task, not a perfect model. On "
+            "every one of the 32 cases the corpus seed was already inside tolerance before "
+            "the solver refined anything, so the rate says the retrieval step covers this "
+            "spec sample -- not that the search would hold up on a specification the corpus "
+            "does not already cover.",
+        ],
+    }
+
+
 # -- Schematic ------------------------------------------------------------------
 
 class SchematicRequest(BaseModel):
@@ -932,6 +1263,7 @@ def schematic_custom(req: SchematicRequest):
 # -- Live pipeline --------------------------------------------------------------
 
 class PipelineRunRequest(BaseModel):
+    noise_request: dict[str, Any] | None = None
     target_boost_db: float
     channel_loss_db: float = DEFAULT_SPEC.channel_loss_db
     spec_index: int = 0
@@ -940,6 +1272,20 @@ class PipelineRunRequest(BaseModel):
     #: Acceptance constraints in the Spec's own SI units (watts, volts), keyed by the
     #: fields in eqrl.pipeline.REQUIREMENT_FIELDS. Null or absent means the competition
     #: default. See that constant for what setting one does and does not change.
+    requirements: dict[str, float | None] | None = None
+
+
+class PvtCheckRequest(BaseModel):
+    """Full-grid PVT signoff of one specific circuit, on explicit request.
+
+    Fastest mode and the Pareto alternatives are nominally verified only. This is how a
+    scientist promotes a circuit they like to full 45-corner signoff -- it measures the
+    sizing it is handed and never substitutes a different one.
+    """
+    design: dict[str, float]
+    target_boost_db: float
+    channel_loss_db: float = DEFAULT_SPEC.channel_loss_db
+    tol: float | None = None
     requirements: dict[str, float | None] | None = None
 
 
@@ -1008,6 +1354,7 @@ def pipeline_defaults():
         "channel_loss_db": DEFAULT_SPEC.channel_loss_db,
         "boost_tol_db": DEFAULT_SPEC.boost_tol_db,
         "statuses": {"solved": SOLVED, "closed_not_verified": CLOSED_NOT_VERIFIED,
+                     "pvt_not_verified": "pvt_not_verified",
                      "unsolved": UNSOLVED, "fallback": FALLBACK},
         # The acceptance constraints a user may set, with the competition default for
         # each in display units, so the UI can offer them without hardcoding a table.
@@ -1136,6 +1483,7 @@ def pipeline_parse_spec(req: ParseSpecRequest):
         "recognised": sorted(r.recognised),
         "fields": rows,
         "requirements": requirements,
+        "noise": r.noise,
         "source": r.source,
         "llm_backend": r.llm_backend,
         "llm_ms": r.llm_ms,
@@ -1163,7 +1511,80 @@ def pipeline_parse_spec(req: ParseSpecRequest):
 # error rather than quietly corrupting the first one's narration.
 
 _state_lock = threading.Lock()          # guards the event list against the polling reader
-_run_state: dict[str, Any] = {"active": False, "stage": None, "events": [], "t0": 0.0}
+#: `generation` increments once per run and is the cancellation token for the Pareto
+#: worker: a thread still measuring alternatives for run N must not publish into run N+1's
+#: state, and the frontend must not show run N's circuits beside run N+1's primary.
+_run_state: dict[str, Any] = {"active": False, "stage": None, "events": [], "t0": 0.0,
+                              "generation": 0, "pareto": None, "pareto_active": False}
+_pareto_thread: threading.Thread | None = None
+
+#: How long alternatives may keep measuring after the primary circuit has been returned.
+#: This is off the request's critical path by construction -- the primary result is already
+#: in the client's hands -- so it is bounded for resource reasons, not latency ones.
+PARETO_SECONDS = 25.0
+#: Full 45-corner signoff of one specific circuit, requested explicitly from the UI.
+PVT_CHECK_SECONDS = 240.0
+
+
+def _pareto_worker(result: dict[str, Any], target: float, channel: float,
+                   requirements: dict | None, generation: int) -> None:
+    """Measure alternative sizings at TT and publish the Pareto set as it fills in.
+
+    Runs after `/api/pipeline/run` has already responded. It touches only the PVT worker
+    pool -- separate processes -- and never `eqrl.sim.server`'s resident ngspice, which is
+    why it is safe to run without `_run_lock` while the next request is being served.
+    """
+    from eqrl import pareto as pareto_mod
+    from eqrl import pipeline as pl
+    from eqrl.pvt_workers import get_pool
+
+    def cancelled() -> bool:
+        with _state_lock:
+            return _run_state["generation"] != generation
+
+    try:
+        spec = pl.spec_for(target, channel, result["spec"]["boost_tol_db"], requirements)
+        until = time.monotonic() + PARETO_SECONDS
+        pool = get_pool(deadline=until)
+        candidates = pareto_mod.proposals(result, spec, 30)
+        items = [dict(design=result["design"], verification=result["verification"],
+                      origin="primary circuit")]
+        carrier = dict(result)
+        carrier["pareto"] = dict(
+            objectives=list(pareto_mod.OBJECTIVES), evaluated=0, measured_items=items,
+            scope="Nominal TT measurements taken for this request. PVT signoff is per "
+                  "circuit -- use Check PVT on whichever circuit you choose.")
+        for offset in range(0, len(candidates), 5):
+            if cancelled() or time.monotonic() >= until - 1:
+                break
+            batch = candidates[offset:offset + 5]
+            rows, _counts = pool.evaluate(
+                "search", batch, [("tt", spec.vdd_nominal, 27.0)], spec,
+                REPO_ROOT / "results" / "pareto" / result["request_id"], until)
+            for candidate in batch:
+                items.append(dict(
+                    design=candidate["design"], origin=candidate["origin"],
+                    verification=pareto_mod.verification_from_row(rows[candidate["id"]][0])))
+            carrier["pareto"]["measured_items"] = list(items)
+            carrier["pareto"]["evaluated"] += len(batch)
+            pareto_mod.finalize(carrier, spec)
+            if cancelled():
+                break
+            with _state_lock:
+                _run_state["pareto"] = json.loads(json.dumps(carrier["pareto"], default=str))
+            _emit("pareto", "Measured circuit tradeoffs updated.", kind="pareto")
+            if carrier["pareto"].get("complete"):
+                break
+    except Exception as exc:
+        if not cancelled():
+            _emit("pareto", f"Alternative circuits could not be measured: "
+                            f"{type(exc).__name__}: {exc}", kind="pareto_error")
+    finally:
+        with _state_lock:
+            if _run_state["generation"] == generation:
+                _run_state["pareto_active"] = False
+        if not cancelled():
+            _emit("pareto", "Finished comparing alternative circuits.", kind="pareto_done")
 
 
 def _emit(stage: str, text: str, kind: str = "note", **extra: Any) -> None:
@@ -1260,13 +1681,13 @@ def _narrating():
 
     def verify(dv, spec):
         cur["stage"] = "verify"
-        _emit("verify", "Stage 3, independent verification. The delivered design is "
+        _emit("verify", "Nominal verification before PVT repair. The candidate is "
                         "re-simulated from scratch and scored against all ten hard specs.",
               kind="stage")
         v = orig_verify(dv, spec)
         m = v.get("measures") or {}
         if v.get("passed") and "boost_db" in m:
-            _emit("verify", f"Verified: {m['boost_db']:.3f} dB, all ten checks pass.",
+            _emit("verify", f"Nominal check: {m['boost_db']:.3f} dB, all ten checks pass; PVT follows.",
                   kind="stage")
         elif not v.get("guard_valid", True):
             _emit("verify", f"The final design was REJECTED by the guard layer on "
@@ -1306,78 +1727,113 @@ def pipeline_progress(since: int = 0):
             "elapsed_s": (round(time.perf_counter() - _run_state["t0"], 1)
                           if _run_state["t0"] else 0.0),
             "events": events,
+            # Alternatives keep arriving after the run itself reports inactive, so the
+            # client has to know to keep polling on `pareto_active` rather than `active`.
+            "generation": _run_state["generation"],
+            "pareto_active": _run_state["pareto_active"],
+            "pareto": _run_state["pareto"],
         }
+
+
+def _schedule_runtime_warmup():
+    with _startup_lock:
+        if _startup["warming"]:
+            return
+        _startup.update(warming=True, ready=False, error=None)
+    threading.Thread(target=_warm_up, daemon=True, name="runtime-recovery").start()
+
+
+def _runtime_event(event, generation):
+    with _state_lock:
+        if generation != _run_state["generation"]:
+            return
+        if event.get("kind") == "pareto_start":
+            _run_state["pareto_active"] = True
+        if event.get("kind") == "pareto":
+            _run_state["pareto"] = event["pareto"]
+        if event.get("kind") == "pareto_done":
+            _run_state["pareto_active"] = False
+        _run_state["stage"] = event.get("stage", _run_state["stage"])
+        _run_state["events"].append(dict(event, i=len(_run_state["events"]),
+            t=round(time.perf_counter()-_run_state["t0"], 2)))
+
+
+def _runtime_unavailable():
+    _schedule_runtime_warmup()
+    return _api_error(503,"pipeline_busy","Simulation workers are warming up",
+        "Device models and independent simulation workers are initialized before the timed request.",
+        "Wait for the readiness indicator. No simulation budget has been spent.")
 
 
 @app.post("/api/pipeline/run")
 def pipeline_run(req: PipelineRunRequest):
+    from eqrl.runtime import get_runtime, ready, NotReady
+    from eqrl.realtime import LIMITS
     if req.mode not in MODES:
-        return _api_error(
-            422, "invalid_request", f'"{req.mode}" is not a design mode',
-            f"mode must be one of {', '.join(MODES)}.",
-            "Pick one of the listed modes -- see GET /api/pipeline/defaults.")
-
-    policy_path = REPO_ROOT / POLICY
-    if not policy_path.is_file():
-        return _api_error(
-            503, "policy_missing", "Policy checkpoint not found",
-            f"The frozen PPO checkpoint at {POLICY} is absent from disk.",
-            f"Restore {POLICY} (see RESULTS.md section 20) before running the live "
-            "pipeline.")
-
+        return _api_error(422,"invalid_request","Unknown mode",str(req.mode),"Choose a listed mode.")
+    if not ready():
+        return _runtime_unavailable()
     if not _run_lock.acquire(blocking=False):
-        with _startup_lock:
-            warming = _startup["warming"]
-        if warming:
-            return _api_error(
-                409, "pipeline_busy", "Still starting up",
-                "The server is loading SKY130 device models and the trained policy. "
-                "Both that warm-up and a live run drive the one resident ngspice process "
-                "(eqrl.sim.server.get_server), which is not reentrant, so a run cannot "
-                "start until warm-up releases it.",
-                "Wait for the health indicator to show ready -- about 20 seconds after "
-                "boot -- then try again.")
-        return _api_error(
-            409, "pipeline_busy", "A design run is already in progress",
-            "This server runs one design at a time. The live trace is produced by "
-            "wrappers installed process-wide for the duration of a run, so two runs at "
-            "once would interleave their circuits into one another's trace.",
-            "Wait for the run already going to finish -- it takes about 20-30 seconds -- "
-            "then try again.")
+        return _api_error(409,"pipeline_busy","A simulator operation is active",
+            "One primary request runs at a time.","Wait for the active operation.")
     try:
         with _state_lock:
-            _run_state.update(active=True, stage="load", events=[],
-                              t0=time.perf_counter())
-        try:
-            with _narrating():
-                result = design(req.target_boost_db, req.channel_loss_db,
-                                spec_index=req.spec_index,
-                                allow_fallback=req.allow_fallback,
-                                mode=req.mode,
-                                requirements=req.requirements)
-        except ValueError as e:
-            return _api_error(422, "invalid_request", "Request rejected", str(e),
-                              "Check the requirement field names against "
-                              "GET /api/pipeline/defaults.")
-        except SearchHalted as e:   # BaseException -- must be caught explicitly, first
-            _emit(_run_state["stage"] or "search",
-                  f"Halted by a tier-5 search-integrity guard: {e.check.value}",
-                  kind="error")
-            return _search_halted_error(e)
-        except NgspiceError as e:
-            _emit(_run_state["stage"] or "search", f"Simulator error: {e}", kind="error")
-            return _ngspice_error(e)
-        except Exception as e:
-            _emit(_run_state["stage"] or "search",
-                  f"{type(e).__name__}: {e}", kind="error")
-            return _unexpected_error(e)
-
-        result["describe_text"] = describe(result)
-        return json.loads(json.dumps(result, default=str))
+            _run_state.update(active=True,stage="load",events=[],t0=time.perf_counter(),pareto=None,pareto_active=False)
+            _run_state["generation"] += 1
+            generation=_run_state["generation"]
+        payload=dict(target_boost_db=req.target_boost_db,channel_loss_db=req.channel_loss_db,
+            mode=req.mode,spec_index=req.spec_index,allow_fallback=req.allow_fallback,
+            requirements=req.requirements,noise_request=req.noise_request)
+        result=get_runtime().run(payload,LIMITS[req.mode],lambda e:_runtime_event(e,generation))
+        result["generation"]=generation
+        result["request_requirements"]=req.requirements
+        return result
+    except NotReady:
+        return _runtime_unavailable()
+    except ValueError as exc:
+        return _api_error(422,"invalid_request","Request rejected",str(exc),"Check the requested limits.")
+    except Exception as exc:
+        return _unexpected_error(exc)
     finally:
         with _state_lock:
-            _run_state["active"] = False
+            _run_state["active"]=False
         _run_lock.release()
+        if not ready():_schedule_runtime_warmup()
+
+
+_pvt_check_lock = threading.Lock()
+
+
+@app.post("/api/pipeline/pvt")
+def pipeline_pvt(req: PvtCheckRequest):
+    """Check exactly this sizing, with no substitute anchor and no nominal-cache pass."""
+    from eqrl.runtime import get_runtime, ready, NotReady
+    from eqrl.circuits.ctle import DesignVars
+    from eqrl import pipeline as pl
+    try:
+        dv=DesignVars(**req.design)
+        pl.spec_for(req.target_boost_db,req.channel_loss_db,1.5 if req.tol is None else req.tol,req.requirements)
+        import math
+        if not all(math.isfinite(float(v)) for v in req.design.values()):
+            raise ValueError("Sizing values must be finite")
+    except (TypeError,ValueError) as exc:
+        return _api_error(422,"invalid_request","Circuit sizing rejected",str(exc),"Use the selected circuit's recorded sizing and limits.")
+    if not ready():return _runtime_unavailable()
+    if not _run_lock.acquire(blocking=False):
+        return _api_error(409,"pipeline_busy","A simulator operation is active","The PVT check shares simulation capacity.","Wait for the active operation.")
+    try:
+        with _state_lock:
+            _run_state["active"]=True
+            generation=_run_state["generation"]
+        payload=dict(kind="pvt",design=req.design,target_boost_db=req.target_boost_db,
+            channel_loss_db=req.channel_loss_db,tol=1.5 if req.tol is None else req.tol,requirements=req.requirements)
+        return get_runtime().run(payload,15.0,lambda e:_runtime_event(e,generation))
+    except Exception as exc:
+        return _unexpected_error(exc)
+    finally:
+        with _state_lock:_run_state["active"]=False
+        _run_lock.release()
+        if not ready():_schedule_runtime_warmup()
 
 
 # -- Static frontend -------------------------------------------------------------

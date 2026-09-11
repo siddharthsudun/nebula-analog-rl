@@ -1,0 +1,136 @@
+{
+  "schema": "silq.frontend.evidence.v1",
+  "title": "Historical nominal mode comparison",
+  "spec_seed": 137,
+  "expected_cases": 32,
+  "matched_cases": 31,
+  "complete": false,
+  "indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30
+  ],
+  "scope": "Historical nominal TT measurements, before automatic PVT repair and optional SNR assessment. Modes share a policy; they are search strategies, not separately trained models.",
+  "tolerance_db": 1.5,
+  "timestamp_note": "Snapshot built 2026-09-10. Historical run; not a claim for the current integrated pipeline. Fastest row updated 2026-09-10 from a full 32-case rerun (scratchpad/fastest_full32.json) after a stage-1 corpus-seed retry fix (surrogate_stage1 now tries up to 4 successive nearest corpus seeds on guard-invalid instead of 1); the other four modes are unchanged and still reflect the original mode_bench5.json sweep. Fastest's median runtime also reflects an unrelated ngspice shared-library fix (destroy-all-plots per eval, applied in this repo since this snapshot's original build) that removed a resident-process slowdown affecting all modes equally when re-measured -- do not read the runtime drop as evidence the retry itself got faster.",
+  "error_definition": "Median absolute target-boost error across cases with a reported finite measurement. Unmeasured cases are counted separately.",
+  "solve_definition": "Recorded solved status and passed flag. Non-solve rate is not bit error rate.",
+  "chance_definition": "Spec-blind empirical target-hit estimate matched to each case's optimizer evaluation budget. It does not check all physical constraints, is not a p-value and is not evidence of physical infeasibility.",
+  "sources": [
+    {
+      "name": "scratchpad/mode_bench5.json",
+      "url": "/static/data/mode_bench5.json",
+      "sha256": "1b0ec9cdb293beefa5f97f8555db17e7d430bd9276e4c128f46ad043bbbb3343"
+    },
+    {
+      "name": "scratchpad/mode_bench5.py",
+      "url": "/static/data/mode_bench5.py",
+      "sha256": "89e51b5c1f68c7b2c79734e0d98b1b40d373e7e8273ad98f41b110c8159d5728"
+    },
+    {
+      "name": "results/target_tracking_clean40k.json",
+      "url": "/static/data/target_tracking_clean40k.json",
+      "sha256": "5c99a693ab4d56dec7513b7170e034369a96a34b3d796e4dcb3cc82c9ebf30b2"
+    },
+    {
+      "name": "scratchpad/fastest_full32.py",
+      "url": "/static/data/fastest_full32.py",
+      "sha256": "e31b272b5f1d2dda55330b1216d15d5afb82a5318268bd10fcd1321d82b8e039"
+    },
+    {
+      "name": "scratchpad/fastest_full32.json",
+      "url": "/static/data/fastest_full32.json",
+      "sha256": "5c6f420e2de454d5eab031b633d3c6edf396ed7487a1a5bb14d2c985fe7af69e"
+    }
+  ],
+  "modes": [
+    {
+      "mode": "auto",
+      "cases": 31,
+      "solved": 30,
+      "non_solved": 1,
+      "solve_rate": 0.967741935483871,
+      "median_error_db": 0.0002780392174592805,
+      "error_cases": 31,
+      "median_seconds": 16.8,
+      "median_evaluations": 1,
+      "empirical_target_hit_rate": 0.48697682643237233
+    },
+    {
+      "mode": "fastest",
+      "cases": 31,
+      "solved": 31,
+      "non_solved": 0,
+      "solve_rate": 1.0,
+      "median_error_db": 0.00021377939438593785,
+      "error_cases": 31,
+      "median_seconds": 0.66,
+      "median_evaluations": 1,
+      "empirical_target_hit_rate": 0.3936377402752005
+    },
+    {
+      "mode": "thinking",
+      "cases": 31,
+      "solved": 30,
+      "non_solved": 1,
+      "solve_rate": 0.967741935483871,
+      "median_error_db": 0.0029010783775014204,
+      "error_cases": 31,
+      "median_seconds": 127.9,
+      "median_evaluations": 13,
+      "empirical_target_hit_rate": 0.9512573531874148
+    },
+    {
+      "mode": "default",
+      "cases": 31,
+      "solved": 18,
+      "non_solved": 13,
+      "solve_rate": 0.5806451612903226,
+      "median_error_db": 0.11261203139920006,
+      "error_cases": 23,
+      "median_seconds": 86.8,
+      "median_evaluations": 8,
+      "empirical_target_hit_rate": 0.9018979239536195
+    },
+    {
+      "mode": "retarget",
+      "cases": 31,
+      "solved": 18,
+      "non_solved": 13,
+      "solve_rate": 0.5806451612903226,
+      "median_error_db": 0.11261203139920006,
+      "error_cases": 23,
+      "median_seconds": 84.3,
+      "median_evaluations": 8,
+      "empirical_target_hit_rate": 0.9018979239536195
+    }
+  ]
+}

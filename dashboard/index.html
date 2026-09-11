@@ -3,27 +3,32 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>silQ</title>
+<title>silQ / Signal to silicon</title>
 <meta name="description" content="silQ turns a written equalizer spec into a verified SKY130 CTLE circuit. Built for Astera Labs." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
-<link rel="stylesheet" href="/static/styles.css?v=21" />
+<link rel="stylesheet" href="/static/styles.css?v=40" />
+<link rel="stylesheet" href="/static/silicon.css?v=42" />
+<link rel="icon" href="/static/media/silq-favicon.svg" type="image/svg+xml" />
 <script>
   // Theme before first paint. Dark is the product's own identity; light is a stored choice.
   try { var t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("silq_theme"); if (t === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
 </script>
 </head>
 <body>
+<a class="skip-link" href="#design-workspace">Skip to circuit workspace</a>
 
 <!-- ================= INTRO ================= -->
-<div class="intro" id="intro" aria-label="silQ intro">
-  <video id="intro-video" muted playsinline preload="auto" src="/static/media/intro.mp4"></video>
+<div class="intro intro-chip-film" id="intro" role="dialog" aria-modal="true" aria-label="silQ intro" hidden>
+  <video id="intro-video" muted playsinline preload="none" data-src="/static/media/silq-converge-v3.mp4" poster="/static/media/silq-converge-v3-poster.jpg"></video>
   <div class="intro-shade"></div>
   <div class="intro-mask"></div>
   <div class="intro-lockup" id="intro-lockup">
+    <div class="intro-kicker">SIGNAL INTELLIGENCE / SILICON PRECISION</div>
     <div class="intro-word">sil<span class="q">Q</span></div>
-    <div class="intro-for">built for <img src="/static/media/astera-labs-logo-dark.png" alt="Astera Labs" /></div>
+    <p class="intro-tagline">Signal to silicon.</p>
+    <a class="intro-for" href="https://www.asteralabs.com" target="_blank" rel="noopener noreferrer">built for <img src="/static/media/astera-labs-logo-dark.png" alt="Astera Labs" /></a>
   </div>
   <button class="intro-skip" id="intro-skip" type="button">Skip intro</button>
   <div class="intro-bar" id="intro-bar"></div>
@@ -44,14 +49,20 @@
         </a>
       </div>
       <nav class="nav-tabs" aria-label="Views">
-        <button class="nav-tab active" data-view="design" type="button">Design</button>
-        <button class="nav-tab" data-view="lab" type="button">Lab</button>
+        <button class="nav-tab active" data-view="design" type="button" aria-current="page">Studio</button>
+        <button class="nav-tab" data-view="evidence" type="button">Evidence</button>
+        <button class="nav-tab" data-view="lab" type="button">Explore</button>
       </nav>
       <div class="nav-right">
         <div class="status-pill" id="health-pill">
           <span class="status-dot" id="health-dot"></span>
           <span id="health-label">checking&hellip;</span>
         </div>
+        <button class="pill-btn" id="sim-refresh-btn" type="button"
+                title="Clear the simulator's accumulated run history -- use this if runs have been getting slower this session">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span>Refresh</span>
+        </button>
         <button class="icon-btn" id="theme-toggle" type="button" title="Switch theme" aria-label="Switch theme">
           <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -65,17 +76,46 @@
     <section class="view" id="view-design">
 
       <div class="hero">
-        <div class="hero-bg" aria-hidden="true">
-          <video id="hero-video" muted loop playsinline preload="metadata" src="/static/media/hero-bg.mp4"></video>
-        </div>
         <div class="wrap">
-          <div class="hero-inner">
-            <div class="eyebrow">Type to circuit</div>
-            <h1>Describe the equalizer. <em>Get the circuit.</em></h1>
-            <p class="hero-sub">Write the spec the way you would say it to a colleague. silQ reads it, a trained policy searches SKY130 for a CTLE that meets it, a solver lands it on your exact boost, and an independent re-simulation signs it off. Every number on screen is a real SPICE result.</p>
-
+          <div class="hero-introduction">
+            <div class="hero-copy">
+              <div class="eyebrow">Analog intelligence. Measured.</div>
+              <h1>Signal to <em>silicon.</em></h1>
+              <p class="hero-sub">Your equalizer spec. A real circuit.<br />A record of why it works.</p>
+              <p class="hero-description">Design a SKY130 CTLE with guided search, physical checks and independent SPICE verification.</p>
+              <div class="hero-actions"><a class="btn btn-primary" href="#design-workspace">Open the studio <span aria-hidden="true">↗</span></a><button class="text-action" type="button" data-open-view="evidence">Explore the evidence <span aria-hidden="true">→</span></button></div>
+              <div class="hero-tags"><span>SKY130</span><span>1-stage CTLE + 1-tap DFE</span><span>5 Gb/s NRZ</span></div>
+            </div>
+            <div class="silicon-object" aria-label="Illustrative signal path through a silicon die">
+              <div class="object-top"><span>silQ / RECEIVE PATH</span><span class="object-status">CONCEPT VIEW</span></div>
+              <div class="chip-scene" aria-hidden="true">
+                <svg viewBox="0 0 600 340" class="chip-art" fill="none">
+                  <defs><linearGradient id="die-surface" x1="180" y1="70" x2="410" y2="280" gradientUnits="userSpaceOnUse"><stop stop-color="#273842"/><stop offset=".48" stop-color="#111C25"/><stop offset="1" stop-color="#0A1018"/></linearGradient><linearGradient id="trace-light"><stop stop-color="#5DE4ED" stop-opacity="0"/><stop offset=".6" stop-color="#5DE4ED"/><stop offset="1" stop-color="#98F0F5"/></linearGradient></defs>
+                  <g stroke="#263741" stroke-width="1"><path d="M0 86H118L165 132H206M0 102H106L155 150H206M0 118H95L145 169H206M0 134H83L136 188H206M0 250H115L165 205H206M600 100H480L437 140H397M600 116H491L444 158H397M600 132H506L454 178H397M600 250H484L435 207H397"/><path d="M254 0V70L266 96M276 0V67L286 96M326 0V75L319 96M348 0V62L339 96M253 340V263L266 240M278 340V275L286 240M322 340V265L319 240M346 340V268L339 240"/></g>
+                  <g stroke="url(#trace-light)" stroke-width="2"><path d="M0 102H106L155 150H206M0 118H95L145 169H206"/><path d="M397 158H444L491 116H600M397 178H454L506 132H600"/></g>
+                  <path d="M190 106L297 52L416 112V233L308 289L190 229Z" fill="#080D12" stroke="#314650"/>
+                  <path d="M203 110L297 65L402 118V225L308 275L203 222Z" fill="url(#die-surface)" stroke="#455A65"/>
+                  <path d="M218 119L298 82L385 125V214L307 256L218 214Z" fill="#0C151D" stroke="#294451"/>
+                  <path d="M234 128L298 99L369 134V203L307 237L234 203Z" stroke="#5DE4ED" stroke-opacity=".5"/>
+                  <g stroke="#345864" stroke-width=".6"><path d="M242 140L299 114L354 143M242 147L299 121L354 150M242 154L299 128L354 157M242 161L299 135L354 164M242 168L299 142L354 171M242 175L299 149L354 178M242 182L299 156L354 185M242 189L299 163L354 192M242 196L299 170L354 199"/></g>
+                  <path d="M278 153L304 141L333 156V182L307 195L278 180Z" fill="#142D38" stroke="#71EDF1"/>
+                  <path d="M291 161L304 155L319 163V176L307 182L291 174Z" fill="#5DE4ED" fill-opacity=".2"/>
+                  <g fill="#5DE4ED"><circle cx="106" cy="102" r="2.5"/><circle cx="491" cy="116" r="2.5"/><circle cx="95" cy="118" r="2.5"/><circle cx="506" cy="132" r="2.5"/></g>
+                </svg>
+                <span class="chip-label in">RX± <small>CHANNEL IN</small></span><span class="chip-label out">EQ± <small>SIGNAL OUT</small></span>
+              </div>
+              <div class="object-bottom"><span>01 / RECEIVE</span><span>02 / EQUALIZE</span><span>03 / VERIFY</span></div>
+            </div>
+          </div>
+          <div class="proof-rail" aria-label="Architecture and verification protocol"><div><strong>01</strong><span>Analog stage</span><small>Source-degenerated CTLE</small></div><div><strong>05</strong><span>Guard tiers</span><small>Physical validity before scoring</small></div><div><strong>45</strong><span>PVT corners</span><small>Full-grid acceptance protocol</small></div><div><strong>10</strong><span>Hard checks</span><small>Independent circuit verification</small></div></div>
+        </div>
+      </div>
+      <div class="wrap studio-heading" id="design-workspace"><div><span class="eyebrow">01 / Design studio</span><h2>Make the specification concrete.</h2></div><span class="section-caption">Describe it. Inspect it. Verify it.</span></div>
+      <div class="studio-request wrap">
+          <div class="hero-inner request-panel">
+            <div class="request-head"><span class="panel-title">Design brief</span><span class="panel-meta">Natural language → circuit constraints</span></div>
             <div class="composer" id="composer">
-              <label for="spec-text" class="sr-only" hidden>Describe the equalizer</label>
+              <label for="spec-text" class="sr-only">Describe the equalizer</label>
               <textarea id="spec-text" rows="3" placeholder="PCIe Gen2 receiver CTLE, about 9 dB of peaking over a 12 dB channel, under 12 mW, keep HD3 below -30 dB"></textarea>
               <div class="composer-foot">
                 <span class="reader-badge" id="reader-badge"><span class="dot"></span><span id="reader-label">keyword reader</span></span>
@@ -93,7 +133,14 @@
               </div>
             </div>
 
-            <div class="examples" id="examples">
+            <!-- The mode selector sits beside the composer because it governs the very next
+                 run: it is the second half of "what do you want", not a sidebar setting. -->
+            <div class="composer-mode">
+              <div class="mode-seg" id="mode-seg" role="radiogroup" aria-label="Design mode"></div>
+              <div class="mode-copy"><div class="mode-tag" id="mode-tag"></div><div class="mode-detail" id="mode-detail"></div></div>
+            </div>
+
+            <details class="brief-examples"><summary>Start from an example</summary><div class="examples" id="examples">
               <span class="examples-label">Try</span>
               <button class="example-chip" type="button" data-text="PCIe Gen2 CTLE, about 9 dB boost over a 12 dB channel, under 12 mW">PCIe Gen2, 9 dB, under 12 mW</button>
               <button class="example-chip" type="button" data-text="USB 3.0 receiver equalizer with 6 dB of peaking for a 10 dB lossy link, eye height at least 250 mV">USB 3.0, 6 dB, 250 mV eye</button>
@@ -101,11 +148,42 @@
               <button class="example-chip" type="button" data-text="Low power CTLE: 5 dB boost, 8 dB channel, power below 6 mW and area under 0.03 mm2">Low power, 5 dB</button>
             </div>
 
-            <div class="parse-strip" id="parse-strip">
+            </details>
+            <p class="help-hint run-budget-note">Design runs include full PVT verification and repair, with up to 15 additional minutes when needed.</p>
+            <details class="adv" id="snr-advanced">
+              <summary>Advanced <span id="noise-state">SNR off</span></summary>
+              <div class="adv-body">
+            <div class="panel" id="noise-inputs">
+              <div class="panel-head"><span class="panel-title">SNR and external noise</span><span class="panel-meta">assessed after search</span></div>
+              <label class="checkbox-field"><input type="checkbox" id="noise-enabled" /><span>Consider SNR<div class="hint">Optional. Off means external SNR does not affect your circuit or its result.</div></span></label>
+              <fieldset id="noise-settings" disabled hidden>
+              <label class="field"><span class="field-label">Noise information</span><select id="noise-mode"><option value="measured">Measured</option><option value="estimated">Estimated</option><option value="unknown" selected>Unknown</option></select></label>
+              <label class="field" data-noise-modes="estimated" hidden><span class="field-label">Estimate type</span><select id="noise-form"><option value="range">Range</option><option value="budget">Maximum budget</option></select></label>
+              <label class="field" data-noise-modes="measured"><span class="field-label">Measured input</span><select id="noise-unit"><option value="rms">External noise RMS</option><option value="snr">Input SNR (dB)</option></select></label>
+              <label class="field" id="noise-value-field" hidden><span class="field-label" id="noise-value-label">Measured noise (mV RMS)</span><input id="noise-value" type="number" step="any" /></label>
+              <div id="noise-range-fields" class="noise-pair"><label class="field"><span class="field-label">Low noise (mV RMS)</span><input id="noise-low" data-provenance="noise" type="number" min="0" step="any" value="1" /></label><label class="field"><span class="field-label">High noise (mV RMS)</span><input id="noise-high" data-provenance="noise" type="number" min="0" step="any" value="50" /></label></div>
+              <label class="field"><span class="field-label">Signal reference</span><select id="noise-signal-reference"><option value="tx_vpp">Transmitter differential Vpp</option><option value="ctle_input_vrms">CTLE-input differential RMS</option></select></label>
+              <label class="field"><span class="field-label" id="noise-signal-label">Differential TX amplitude (Vpp)</span><input id="noise-signal" type="number" min="0" step="any" value="1" data-provenance="signal" /></label>
+              <div class="noise-pair"><label class="field"><span class="field-label">Band low (MHz)</span><input id="noise-band-low" type="number" min="10" max="5000" step="any" value="10" data-provenance="bandwidth" /></label><label class="field"><span class="field-label">Band high (MHz)</span><input id="noise-band-high" type="number" min="10" max="5000" step="any" value="5000" data-provenance="bandwidth" /></label></div>
+              <p class="help-hint" id="noise-assumption-note" aria-live="polite"></p>
+              <p class="help-hint">Signal RMS uses the stated band. Range results check five sampled noise values. Receiver device noise is measured separately and added as independent noise power.</p>
+              </fieldset>
+            </div>
+
+                <label class="checkbox-field"><input type="checkbox" id="allow-fallback" /><span>Allow a fixed fallback design<div class="hint">Only if the search finds no valid design. The result labels any fallback.</div></span></label>
+              </div>
+            </details>
+
+            <div class="parse-strip" id="parse-strip" aria-live="polite">
               <div class="parse-empty">Start typing. Every quantity the readers recognise appears here, with which reader found it.</div>
             </div>
           </div>
-        </div>
+          <aside class="workflow-panel" aria-label="How silQ designs">
+            <div class="eyebrow">The design path</div>
+            <h3>Every proposal<br />answers to physics.</h3>
+            <ol class="workflow-list"><li><span>01</span><div><strong>Search the design space</strong><p>PPO or a measured corpus proposes the starting circuit.</p></div></li><li><span>02</span><div><strong>Close the specification</strong><p>Constrained refinement sizes the devices toward your target.</p></div></li><li><span>03</span><div><strong>Check the corners</strong><p>PVT repair and a fresh 45-corner repeat determine acceptance.</p></div></li></ol>
+            <div class="workflow-foot"><span class="status-dot ready"></span><p>Measured circuit results.<br /><span>Clear provenance for every final design.</span></p></div>
+          </aside>
       </div>
 
       <div class="wrap">
@@ -114,7 +192,7 @@
           <!-- ---------- Spec panel ---------- -->
           <aside class="spec-panel">
             <div class="panel">
-              <div class="panel-head"><span class="panel-title">Target</span><span class="panel-meta">steers the search</span></div>
+              <div class="panel-head"><span class="panel-title">Target constraints</span><span class="panel-meta">steers the search</span></div>
               <div class="slider-field">
                 <div class="slider-head"><span class="field-label">Target boost</span><span class="slider-value"><span id="target-val">9.0</span><span class="u">dB</span></span></div>
                 <input type="range" id="target" min="3" max="12" step="0.1" value="9.0" />
@@ -123,7 +201,16 @@
                 <div class="slider-head"><span class="field-label">Channel loss at Nyquist</span><span class="slider-value"><span id="channel-val">12.0</span><span class="u">dB</span></span></div>
                 <input type="range" id="channel" min="6" max="20" step="0.1" value="12.0" />
               </div>
+              <div class="panel-run">
+                <button class="btn btn-primary run-btn" id="run-btn-spec" type="button">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12h4l2-6 4 12 2-6h4"/></svg>
+                  Design from these numbers
+                </button>
+                <div class="help-hint">Use the sliders and limits directly. Bypasses the language reader.</div>
+              </div>
+
             </div>
+
 
             <div class="panel">
               <div class="panel-head"><span class="panel-title">Acceptance limits</span><span class="panel-meta">scored at verification</span></div>
@@ -134,19 +221,6 @@
               </div>
             </div>
 
-            <div class="panel">
-              <div class="panel-head"><span class="panel-title">Mode</span></div>
-              <div class="mode-seg" id="mode-seg" role="radiogroup" aria-label="Design mode"></div>
-              <div class="mode-copy"><div class="mode-tag" id="mode-tag"></div><div class="mode-detail" id="mode-detail"></div></div>
-              <details class="adv">
-                <summary>Advanced</summary>
-                <div class="adv-body">
-                  <label class="field"><span class="field-label">Spec index</span><input type="number" id="spec-index" min="0" max="999" step="1" value="0" /></label>
-                  <div class="help-hint">Seeds stage 1's environment at 1000 + this. Recorded in the result so the run is reproducible.</div>
-                  <label class="checkbox-field"><input type="checkbox" id="allow-fallback" /><span>Allow a fixed fallback design<div class="hint">Only if nothing guard-valid comes out. The fallback ignores your target and is not an AI result; it is labelled as such.</div></span></label>
-                </div>
-              </details>
-            </div>
           </aside>
 
           <!-- ---------- Stage ---------- -->
@@ -193,7 +267,8 @@
                     <span class="step-arrow">&rsaquo;</span>
                     <span class="step" data-stage="refine"><span class="sd"></span>G3.2 refinement</span>
                     <span class="step-arrow">&rsaquo;</span>
-                    <span class="step" data-stage="verify"><span class="sd"></span>Verification</span>
+                    <span class="step" data-stage="verify"><span class="sd"></span>Nominal check</span>
+                    <span class="step" data-stage="pvt"><span class="sd"></span>PVT repair + verification</span>
                   </div>
                   <div class="chart-container" id="trace-chart"></div>
                 </div>
@@ -204,6 +279,8 @@
               </div>
             </div>
 
+            <div class="circuits" id="circuits-card" hidden></div>
+
             <div class="result" id="result"></div>
           </div>
         </div>
@@ -212,7 +289,7 @@
           <div class="gallery-head">
             <div>
               <div class="eyebrow">Candidate comparison</div>
-              <h2 id="gallery-title">What the guard keeps and rejects</h2>
+              <h2 id="gallery-title">The circuit is only half the story.</h2>
               <p id="gallery-scope">Loading the artifact-backed candidate selection.</p>
             </div>
             <button class="btn" id="gallery-run" type="button" disabled>Measure gallery</button>
@@ -231,18 +308,31 @@
       </div>
     </section>
 
+    <section class="view evidence-view" id="view-evidence" hidden>
+      <div class="wrap">
+        <div class="lab-head"><span class="eyebrow">02 / Evidence</span><h1>Precision, with receipts.</h1><p>Search modes compared on the same historical specifications. The numbers are useful because the conditions are visible.</p></div>
+        <div class="evidence-scope"><span class="scope-badge">HISTORICAL / NOMINAL TT</span><p>These are search modes, not five independently trained models. This comparison predates automatic PVT repair and SNR assessment.</p></div>
+        <div class="mp-head"><h2>How well does the model actually do?</h2><p>Two learned components, scored separately, each metric defined where it is printed. The pass count on a delivered circuit is not among them: it reports the condition the circuit was filtered on, so it always reads N of N.</p></div>
+        <div id="model-performance" aria-live="polite"><div class="gallery-empty">Loading the model performance record&hellip;</div></div>
+        <div class="mp-rule"></div>
+        <div id="mode-evidence" aria-live="polite"><div class="gallery-empty">Loading the recorded comparison…</div></div>
+        <div class="evidence-principles"><div><span>01 / PERFORMANCE</span><h3>A rate needs a protocol.</h3><p>Sample size, target tolerance and evaluation budget travel with every comparison.</p></div><div><span>02 / VALIDITY</span><h3>A number needs a circuit.</h3><p>A high boost never compensates for an invalid operating point.</p></div><div><span>03 / SCOPE</span><h3>Verification has boundaries.</h3><p>Schematic PVT checks are distinct from mismatch yield, extracted layout and BER certification.</p></div></div>
+        <button class="btn" type="button" data-open-view="lab">Inspect the raw experiments <span aria-hidden="true">↗</span></button>
+      </div>
+    </section>
     <!-- ================= LAB VIEW ================= -->
     <section class="view" id="view-lab" hidden>
       <div class="wrap">
         <div class="lab-head">
-          <div class="eyebrow">Lab</div>
-          <h1>Look under the hood.</h1>
+          <div class="eyebrow">03 / Explore</div>
+          <h1>Open the instrument.</h1>
           <p>The guard layer that throws away broken circuits, the raw artifacts behind every claim, and the benchmark record against sweeping the parameter space.</p>
         </div>
         <div class="lab-nav">
           <a class="btn sm" href="#lab-guard">Guard sandbox</a>
           <a class="btn sm" href="#lab-results">Results explorer</a>
           <a class="btn sm" href="#lab-bench">Benchmark record</a>
+          <a class="btn sm" href="#lab-snr">Stress test (extension)</a>
         </div>
 
         <div class="lab-section" id="lab-guard">
@@ -267,7 +357,7 @@
           <div class="split">
             <div class="stack">
               <div class="card">
-                <div class="card-title">Design variables (eqrl.circuits.ctle.DesignVars)</div>
+                <div class="card-title">Device sizing</div>
                 <div class="field-grid" id="guard-fields"></div>
               </div>
               <div class="card">
@@ -312,21 +402,31 @@
           <p class="lab-intro">The brief asks for device sizing that uses fewer search spaces and takes significantly less time than sweeping the MOS/R/C/L parameter space. Design time is evaluation count times cost per evaluation, so both are measured here: against real baselines at a matched budget, and against an exhaustive sweep that was actually run, not estimated.</p>
           <div id="designtime-body"><p class="artifact-meta">loading design-time record&hellip;</p></div>
         </div>
+
+        <div class="lab-section extension" id="lab-snr">
+          <div class="extension-flag">Extension experiment  /  not part of the Astera problem statement</div>
+          <h2>Stress test: how far does the link degrade before the design stops working?</h2>
+          <p class="lab-intro">Astera's brief specifies a CTLE retargeting task with <strong>no link SNR and no BER requirement</strong>. This is a robustness experiment run <em>beside</em> the submission, on its own axis. Nothing on this panel changes any benchmark number, the reward, the observation, or the frozen scorer  /  and the headline result here is a limit of the <em>metric</em>, not a score for the policy.</p>
+          <div id="snr-body"><p class="artifact-meta">loading SNR robustness record&hellip;</p></div>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     <div class="wrap footer-inner">
-      <span><strong>silQ</strong> for the Nebula 2026 Astera Labs analog track. Inference only: the frozen policy is loaded, never trained.</span>
+      <div class="footer-brand"><strong>sil<span class="q">Q</span></strong><span>Signal to silicon.</span></div><span class="footer-note">Nebula 2026 · Astera Labs analog track<br />SKY130 · CTLE + DFE · Schematic-level design</span>
       <span class="spacer"></span>
+      <a class="footer-astera" href="https://www.asteralabs.com" target="_blank" rel="noopener noreferrer" aria-label="Astera Labs website"><img class="logo-dark" src="/static/media/astera-labs-logo-dark.png" alt="Astera Labs" /><img class="logo-light" src="/static/media/astera-labs-logo-light.png" alt="Astera Labs" /></a>
       <button class="link-btn" id="replay-intro" type="button">Replay intro</button>
     </div>
   </footer>
 </div>
 
 <script src="/static/vendor/gsap.min.js"></script>
-<script src="/static/charts.js?v=21"></script>
-<script src="/static/app.js?v=21"></script>
+<script src="/static/charts.js?v=40"></script>
+<script src="/static/snr-input.js?v=2"></script>
+<script src="/static/app.js?v=42"></script>
+<script src="/static/evidence.js?v=40"></script>
 </body>
 </html>

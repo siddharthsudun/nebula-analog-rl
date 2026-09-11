@@ -83,3 +83,26 @@ def test_every_element_the_script_addresses_exists_in_the_document():
         f"no script injects: {', '.join(dangling)}.\n"
         "Either the markup lost the element or the selector has a typo; both surface at "
         "runtime as a null dereference in whichever handler touched it first.")
+
+
+def test_every_button_that_looks_like_a_run_button_is_wired_to_a_handler():
+    """A second entry point is easy to draw and easy to leave inert.
+
+    The composer's button and the slider panel's button both start the same single-flight
+    pipeline run. They are found by the `run-btn` class (that is how `setRunButtonWarming`
+    and `runDesign` enable and disable them together), so the failure mode is a button
+    that is styled like the real one, disabled and re-enabled like the real one, and does
+    nothing at all when clicked because nobody bound it. That reads as a hung backend.
+    """
+    html = (ROOT / "dashboard" / "index.html").read_text(encoding="utf-8")
+    script = _script("app.js")
+    buttons = re.findall(r'<button\b[^>]*\bclass="[^"]*\brun-btn\b[^"]*"[^>]*>', html)
+    assert len(buttons) >= 2, "expected both run entry points in the markup"
+    for tag in buttons:
+        ident = re.search(r'\bid="([A-Za-z0-9_-]+)"', tag)
+        assert ident, f"a run button carries no id, so nothing can bind it: {tag}"
+        bound = re.search(
+            rf'\$\("#{re.escape(ident.group(1))}"\)\.addEventListener\("click"', script)
+        assert bound, (
+            f"#{ident.group(1)} is drawn as a run button but has no click handler in "
+            "app.js; it will look enabled and do nothing.")
