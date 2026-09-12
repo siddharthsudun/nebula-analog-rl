@@ -63,7 +63,11 @@ Rules:
 - A peak/peaking FREQUENCY stated as a RANGE sets peak_freq_lo_ghz and peak_freq_hi_ghz,
   lowest first. Stated as a SINGLE value ("peak at 3 GHz") it is the band CENTRE: set
   peak_freq_lo_ghz to 0.9x and peak_freq_hi_ghz to 1.1x that value and record an
-  _assumptions entry saying so. Nyquist, data rate, bandwidth and supply are NOT the
+  _assumptions entry saying so. Stated with a ONE-SIDED comparator ("peak below 3 GHz",
+  "peak at least 1.8 GHz") it bounds ONE edge: set peak_freq_hi_ghz for below/under/up
+  to/at most, peak_freq_lo_ghz for above/over/at least, leave the other edge unset, and
+  record an _assumptions entry. Do NOT centre a band on a one-sided ask -- that invents a
+  bound on the side the user deliberately left open. Nyquist, data rate, bandwidth and supply are NOT the
   peak frequency, however close they sit to the word "peaking".
 - Never add an _assumptions entry for a field the user named unambiguously.
 - SNR is STRICTLY OPTIONAL and separate from noise_vrms_max (receiver device noise).
@@ -526,7 +530,20 @@ _GAP_NOFREQ = (r"(?:(?!nyquist|data\s*rate|\bGb|\bGT|bandwidth|baud|symbol\s*rat
                r"|supply|vdd)[^\n])*?")
 #: ...and the mirror guard on the far side: in SerDes prose "9 dB peaking at 4 GHz
 #: Nyquist" quotes the boost measured AT Nyquist, not a request to move the peak there.
-_NOT_NYQ = r"(?!\s*(?:nyquist|nrz|pam|(?:of\s+)?(?:bandwidth|bw)\b))"
+#: The rate words belong here as well as in `_GAP_NOFREQ` because they can follow the
+#: figure instead of preceding it -- "8 dB peaking, 5 GHz baud rate" names the link, not
+#: a peak the user wants moved to 5 GHz.
+_NOT_NYQ = (r"(?!\s*(?:nyquist|nrz|pam|baud|(?:of\s+)?(?:bandwidth|bw)\b"
+            r"|(?:data|symbol|baud|bit)?\s*rate\b))")
+#: Words that bound the peak on ONE side only. Kept separate from `_OF`'s general
+#: comparator list because here the DIRECTION decides which band edge is set, so "under"
+#: and "over" cannot be folded into one alternation and thrown away.
+_ONESIDE_UPPER = frozenset(["below", "under", "beneath", "up to", "no higher than",
+                            "not above", "at most", "less than", "lower than"])
+_ONESIDE_LOWER = frozenset(["above", "over", "beyond", "no lower than", "not below",
+                            "at least", "greater than", "higher than", "more than"])
+_ONESIDE = "|".join(w.replace(" ", r"\s+")
+                    for w in sorted(_ONESIDE_UPPER | _ONESIDE_LOWER, key=len, reverse=True))
 #: A point ask ("peak at 3 GHz") names a centre, but the Spec stores a band and
 #: `hard_pass`'s peak_in_band needs two edges. +/-10% is the width: measured against the
 #: 374,588-row corpus (scratchpad/band_reach.py) it leaves between 1,879 and 14,299
@@ -639,6 +656,23 @@ def _heuristic(text: str) -> ParseResult:
         unit = 1e-3 if (m.group(m.lastindex) or "G").upper() == "M" else 1.0
         lo, hi = sorted((float(m.group(1)) * unit, float(m.group(3)) * unit))
         kw["peak_freq_lo_ghz"], kw["peak_freq_hi_ghz"] = lo, hi
+    elif m := re.search(rf"{_PEAK}{_GAP_NOFREQ}({_ONESIDE})\s*({_N})\s*{_FU}{_NOT_NYQ}",
+                        text, re.I):
+        # A ONE-SIDED ask bounds ONE edge and says nothing about the other. Reading
+        # "peak below 3 GHz" as a centre -- which is what the point rule below would do
+        # with it -- invents a 2.7 GHz FLOOR the user never stated and a 3.3 GHz ceiling
+        # ABOVE the one they did, so the run is scored against a band that contradicts
+        # the request in both directions. The unbounded edge stays at the competition
+        # default, which is the honest answer to a question the user did not ask.
+        # Collapse the whitespace the regex was allowed to span: "no  higher  than".
+        upper = " ".join(m.group(1).lower().split()) in _ONESIDE_UPPER
+        f = float(m.group(2)) * (1e-3 if m.group(3).upper() == "M" else 1.0)
+        field = "peak_freq_hi_ghz" if upper else "peak_freq_lo_ghz"
+        kw[field] = f
+        assume[field] = (
+            f'read "{m.group(1)} {f:g} GHz" as a {"ceiling" if upper else "floor"} on the '
+            f'peak and left the {"low" if upper else "high"} edge of the band at its '
+            "default. Set that edge yourself to bound the peak from both sides.")
     else:
         # A POINT ask names a centre and no width. Both word orders occur: "peak at
         # 3 GHz" and "a 3 GHz peak". Reading one needs a judgement call, so it makes the

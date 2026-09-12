@@ -445,3 +445,79 @@ class TestTheKeySurfaceCannotDrift:
         assert sp.PEAK_POINT_TOL == 0.10, (
             "the prompt spells 0.9x/1.1x literally; a different tolerance here would make "
             "the two readers disagree on every point ask")
+
+
+class TestOneSidedPeakAsk:
+    """A comparator bounds ONE edge. The point rule must not swallow these.
+
+    Before this existed, "peak below 3 GHz" went to the point rule and came back as
+    2.7-3.3 GHz: a 2.7 GHz FLOOR the user never stated, and a ceiling ABOVE the one they
+    did. The run was then scored against a band that contradicts the request on both
+    sides, and `hard_pass`'s peak_in_band reported it satisfied.
+    """
+
+    @pytest.mark.parametrize("text,lo,hi", [
+        ("peak below 3 GHz", None, 3.0),
+        ("keep the peak under 2.2 GHz", None, 2.2),
+        ("peaking up to 2.4 GHz", None, 2.4),
+        ("peak not above 2.2 GHz", None, 2.2),
+        ("peak at most 2.0 GHz", None, 2.0),
+        ("peak less than 1.9 GHz", None, 1.9),
+        ("peak above 2 GHz", 2.0, None),
+        ("peak at least 1.8 GHz", 1.8, None),
+        ("peak no lower than 1.6 GHz", 1.6, None),
+        ("peak greater than 1.7 GHz", 1.7, None),
+        ("peaking over 1.5 GHz", 1.5, None),
+        ("peak below 2400 MHz", None, 2.4),
+    ])
+    def test_only_the_named_edge_moves(self, text, lo, hi):
+        spec = parse(text).spec
+        d = sp.Spec()      # the competition band, untouched
+        if lo is None:
+            assert spec.peak_freq_lo_ghz == pytest.approx(d.peak_freq_lo_ghz), (
+                "the unbounded edge must stay at the competition default: the user asked "
+                "nothing about it, and answering anyway is the fabrication this parser "
+                "exists to prevent")
+            assert spec.peak_freq_hi_ghz == pytest.approx(hi)
+        else:
+            assert spec.peak_freq_lo_ghz == pytest.approx(lo)
+            assert spec.peak_freq_hi_ghz == pytest.approx(d.peak_freq_hi_ghz)
+
+    @pytest.mark.parametrize("text,field", [
+        ("peak below 3 GHz", "peak_freq_hi_ghz"),
+        ("peak at least 1.8 GHz", "peak_freq_lo_ghz"),
+    ])
+    def test_the_one_sided_reading_is_declared(self, text, field):
+        """It is still a judgement call, so it still has to be visible."""
+        res = parse(text)
+        assert field in res.assumptions
+        assert "default" in res.assumptions[field]
+
+    def test_a_two_sided_ask_still_wins_over_the_comparator_rule(self):
+        """"peak from 1.5 to 2.0" contains "to", which is also a one-sided word."""
+        spec = parse("peak from 1.5 to 2.0 GHz").spec
+        assert (spec.peak_freq_lo_ghz, spec.peak_freq_hi_ghz) == pytest.approx((1.5, 2.0))
+
+    def test_the_prompt_teaches_the_same_convention(self):
+        """The two readers must agree, or every one-sided ask arrives as a conflict."""
+        for word in ("one-sided", "peak_freq_hi_ghz for below", "leave the other edge"):
+            assert word in sp._SYSTEM, f"the LLM prompt does not mention {word!r}"
+
+
+@pytest.mark.parametrize("text", [
+    "8 dB peaking, 5 GHz baud rate",
+    "6 dB peaking, 10 GHz symbol rate",
+    "9 dB peaking, 5 GHz data rate",
+    "7 dB peaking at 4 GHz baud",
+])
+def test_a_rate_word_AFTER_the_figure_is_not_a_peak_request(text):
+    """`_GAP_NOFREQ` only guards words BEFORE the number.
+
+    "8 dB peaking, 5 GHz baud rate" names the link. Read as a peak request it plants a
+    4.5-5.5 GHz band, which is outside the tunable range entirely -- so the search is
+    steered at something the circuit cannot do, for a requirement nobody made.
+    """
+    spec = parse(text).spec
+    d = sp.Spec()
+    assert (spec.peak_freq_lo_ghz, spec.peak_freq_hi_ghz) == pytest.approx(
+        (d.peak_freq_lo_ghz, d.peak_freq_hi_ghz))

@@ -474,8 +474,43 @@ function setBandEdge(field, si) {
   // What the knob could NOT represent is the caller's to report. The rail is one octave
   // wide on purpose, so an ask outside it is a legitimate refusal -- but a refusal the
   // user never sees is indistinguishable from the run having honoured them.
-  return { landed: Number(knob.value), lo: min, hi: max,
-           clamped: Math.abs(Number(knob.value) - si) > step / 2 };
+  return { landed: Number(knob.value), lo: min, hi: max, clamped: _offRail(si, min, max) };
+}
+
+//: "Clamped" must mean OUTSIDE THE RAIL and nothing else. Comparing the landed value to
+//: the ask instead also fires when the OTHER knob was in the way, which is not a range the
+//: tool cannot represent -- and an error that cries wolf on a request the rail can serve
+//: is how a real out-of-range message gets ignored.
+const _offRail = (si, min, max) => si < min - 1e-9 || si > max + 1e-9;
+
+/** Both edges at once.
+ *
+ *  Setting them one at a time reads the OTHER knob's current value as a bound, so a second
+ *  request in the same session is bounded by the first one's answer: "peak between 1.5 and
+ *  2.0 GHz" typed after a 2.45-2.50 GHz ask landed on 1.50-2.50 GHz, which is neither
+ *  request -- and nothing reported it, because each edge on its own sat inside the rail.
+ *  An edge the reader did not state keeps the knob where it is. */
+function setBandPair(loSi, hiSi) {
+  const lo = $("#fband-lo"), hi = $("#fband-hi");
+  if (!lo || !hi) return {};
+  const step = Number(lo.step) || 0.05, min = Number(lo.min), max = Number(lo.max);
+  const snap = (x) => Number((Math.round(x / step) * step).toFixed(6));
+  const fit = (x) => snap(Math.min(Math.max(x, min), max));
+  let a = fit(loSi === undefined ? Number(lo.value) : loSi);
+  let b = fit(hiSi === undefined ? Number(hi.value) : hiSi);
+  // Keep at least one step of band. A stated edge wins over one the reader left alone;
+  // when both are stated and land on the same rail end (an ask wholly above or below the
+  // rail), the band opens inward from that end rather than collapsing to zero width.
+  if (b < a + step) {
+    a = loSi === undefined ? fit(b - step) : Math.min(a, fit(max - step));
+    b = fit(Math.max(b, a + step));
+    a = fit(Math.min(a, b - step));
+  }
+  lo.value = a; hi.value = b;
+  updateBand();
+  const seen = (si, landed) => (si === undefined ? null
+    : { landed, lo: min, hi: max, clamped: _offRail(si, min, max) });
+  return { peak_freq_lo_ghz: seen(loSi, a), peak_freq_hi_ghz: seen(hiSi, b) };
 }
 
 /** The two-knob band, wired once /api/pipeline/defaults has said what the competition
@@ -582,6 +617,14 @@ async function initSpec() {
 let parseSeq = 0;
 let lastParse = null;          // last successful parse (any backend)
 let lastParseText = "";
+//: An ask a rail cannot represent is an ERROR, not a rounding. The rails carry the problem
+//: statement's tunable range, so a request outside one is outside what this tool claims to
+//: design, and `runDesign` will not spend simulator budget on it: it refuses until the
+//: operator has read the message and said, in a click, to score the run at the value the
+//: rail actually holds. The acknowledgement is per-parse -- the next keystroke clears it --
+//: because it is consent to ONE substitution, not a standing preference for being clamped.
+let lastOutOfRange = [];
+let outOfRangeAck = false;
 let llmReadText = null;        // text that has already been read by Claude
 let readingWithClaude = false;
 
@@ -612,10 +655,26 @@ function applyParse(spec) {
     return { landed: v, lo, hi, clamped: Math.abs(v - asked) > 1e-9 };
   };
   const note = (row, r) => { if (r && r.clamped) outOfRange.push({ row, ...r }); };
+  const band = {};
   for (const row of spec.fields || []) {
-    if (row.field === "target_boost_db") { note(row, rail(target, row.asked)); updateTarget(); }
+    if (BAND_FIELDS.includes(row.field)) band[row.field] = row;   // applied as one ask below
+    else if (row.field === "target_boost_db") { note(row, rail(target, row.asked)); updateTarget(); }
     else if (row.field === "channel_loss_db") { note(row, rail(channel, row.asked)); updateChannel(); }
     else if (row.role === "scores") note(row, setRequirementSI(row.field, row.asked));
+  }
+  if (BAND_FIELDS.some((f) => band[f])) {
+    // An edge the reader did NOT state goes back to the competition default, because that
+    // is exactly what the parser's own assumption text promises: "left the other edge at
+    // its default". Leaving the PREVIOUS request's edge in place makes that sentence
+    // false and sends a bound neither request contained -- "peak below 2.2 GHz" followed
+    // by "peak at least 1.8 GHz" was landing on 1.80-2.20 GHz.
+    const dflt = (f) => {
+      const r = defaults.requirements.find((q) => q.field === f);
+      return r ? r.default_disp / (r.scale || 1) : undefined;
+    };
+    const landed = setBandPair(band.peak_freq_lo_ghz?.asked ?? dflt(BAND_FIELDS[0]),
+                               band.peak_freq_hi_ghz?.asked ?? dflt(BAND_FIELDS[1]));
+    for (const f of BAND_FIELDS) if (band[f]) note(band[f], landed[f]);
   }
   refreshRequirementTags();
   return outOfRange;
@@ -637,16 +696,62 @@ function renderChips(spec, outOfRange = []) {
   const notes = [];
   if (spec.noise?.enabled) notes.push(`<div class="note info">SNR request recognized. Review the optional settings in Advanced; the SNR switch controls whether it is applied.</div>`);
   else if (spec.noise?.source === 'explicit_opt_out') notes.push(`<div class="note info">SNR is off, as requested.</div>`);
+  const saidAlready = new Set();
   for (const r of rows) {
-    if (r.assumption) notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(r.label)}</strong> was read from an ambiguous word: ${escapeHtml(r.assumption)}</div></div>`);
+    if (r.assumption) {
+      // Both band edges carry the SAME sentence: it describes one reading, not two.
+      const label = BAND_FIELDS.includes(r.field) ? "Peak frequency band" : r.label;
+      const key = `${label} ${r.assumption}`;
+      if (!saidAlready.has(key)) {
+        saidAlready.add(key);
+        notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(label)}</strong> was read from an ambiguous word: ${escapeHtml(r.assumption)}</div></div>`);
+      }
+    }
     if (r.conflict && r.conflict_note) notes.push(`<div class="note info">${ICONS.info}<div>${escapeHtml(r.conflict_note)}</div></div>`);
     if (r.conflict_llm) notes.push(`<div class="note warn">${ICONS.info}<div><strong>${escapeHtml(r.label)}</strong>: the keyword reader and Claude disagree (${escapeHtml(prettyDisp(r.conflict_llm.heuristic * (r.asked_disp / r.asked || 1), r.unit))} vs ${escapeHtml(prettyDisp(r.conflict_llm.llm * (r.asked_disp / r.asked || 1), r.unit))}). The keyword value is applied; click the chip to use Claude's.</div></div>`);
   }
   for (const w of spec.warnings || []) notes.push(`<div class="note warn">${ICONS.info}<div>${escapeHtml(w)}</div></div>`);
-  for (const c of outOfRange) notes.push(`<div class="note bad">${ICONS.xCircle}<div><strong>${escapeHtml(c.row.label)}</strong>: you asked for ${escapeHtml(prettyDisp(c.row.asked_disp, c.row.unit))}, but this control only spans ${escapeHtml(compactNum(c.lo))}–${escapeHtml(compactNum(c.hi))} ${escapeHtml(c.row.unit)}. The run will be scored at ${escapeHtml(prettyDisp(c.landed, c.row.unit))}, <em>not</em> at what you asked for.</div></div>`);
+  //: One ask, one error. The band is a single request carried on two knobs, so reporting
+  //: each knob separately turns "peak at 3 GHz" into two errors and buries the number the
+  //: user actually typed under the arithmetic the reader did for them.
+  const rangeNote = (label, asked, landed, c) => notes.push(
+    `<div class="note bad">${ICONS.xCircle}<div><strong>Out of range — ${escapeHtml(label)}</strong>`
+    + `<br>You asked for ${escapeHtml(asked)}. This control spans ${escapeHtml(compactNum(c.lo))}–`
+    + `${escapeHtml(compactNum(c.hi))} ${escapeHtml(c.row.unit)}, which is `
+    + `the tunable range the problem statement sets, so the request cannot be carried out `
+    + `as written. <strong>The run is blocked</strong>: `
+    + `it would be scored at ${escapeHtml(landed)}, <em>not</em> at ${escapeHtml(asked)}. Reword the request `
+    + `inside that range, or <button type="button" class="chip-btn" data-ack-range="1">run it at `
+    + `${escapeHtml(landed)}</button>.</div></div>`);
+  const bandOut = outOfRange.filter((c) => BAND_FIELDS.includes(c.row.field));
+  if (bandOut.length) {
+    // The in-range edge is not in `outOfRange`, so both halves of the span are read back
+    // from the rows and the knobs -- otherwise a half-clamped band ("2 to 3 GHz") would
+    // report only the edge that failed and hide the interval the run will actually use.
+    const span = (a, b) => `${fmt(a, 2)}–${fmt(b, 2)} GHz`;   // one unit, not two
+    const askedEdge = (f) => (rows.find((q) => q.field === f) || {}).asked_disp;
+    // A ONE-SIDED ask is not a span. Printing the unstated edge's default beside it reads
+    // as an inverted band ("you asked for 3.00-2.50 GHz") and makes the user's own
+    // request look like the nonsense.
+    const lo = askedEdge("peak_freq_lo_ghz"), hi = askedEdge("peak_freq_hi_ghz");
+    const asked = lo !== undefined && hi !== undefined ? span(lo, hi)
+      : lo !== undefined ? `a peak above ${fmt(lo, 2)} GHz`
+      : `a peak below ${fmt(hi, 2)} GHz`;
+    const landed = span(Number($("#fband-lo").value), Number($("#fband-hi").value));
+    rangeNote("Peak frequency band", asked, landed, bandOut[0]);
+  }
+  for (const c of outOfRange.filter((q) => !BAND_FIELDS.includes(q.row.field))) {
+    rangeNote(c.row.label, prettyDisp(c.row.asked_disp, c.row.unit),
+              prettyDisp(c.landed, c.row.unit), c);
+  }
   const reader = spec.llm_backend ? `Claude (${spec.llm_backend}) and the keyword reader` : "keyword reader";
   const head = `<div class="parse-empty">${reader}: ${rows.length} field${rows.length === 1 ? "" : "s"} recognised. Anything you wrote that is not listed was not understood; anything not listed at all stays at its default.</div>`;
   strip.innerHTML = `<div class="chips">${chips.join("")}</div>${notes.length ? `<div class="parse-notes">${notes.join("")}</div>` : ""}${head}`;
+  $$("[data-ack-range]", strip).forEach((b) => b.addEventListener("click", () => {
+    outOfRangeAck = true;
+    $$("[data-ack-range]", strip).forEach((o) => { o.textContent = "will run at this value"; o.disabled = true; });
+    toast("Acknowledged. The run will be scored at the values the controls hold, not at what you asked for.", false);
+  }));
   $$("[data-use-llm]", strip).forEach((b) => b.addEventListener("click", () => {
     const field = b.dataset.useLlm, si = Number(b.dataset.val);
     if (field === "target_boost_db") { $("#target").value = si; updateTarget(); }
@@ -669,6 +774,7 @@ async function parseNow(text, backend) {
   const seq = ++parseSeq;
   if (!text) {
     lastParse = null; lastParseText = "";
+    lastOutOfRange = []; outOfRangeAck = false;
     $("#parse-strip").innerHTML = `<div class="parse-empty">Start typing. Every quantity the readers recognise appears here, with which reader found it.</div>`;
     return null;
   }
@@ -677,13 +783,16 @@ async function parseNow(text, backend) {
     if (seq !== parseSeq && backend === "off") return null;   // a newer keystroke won
     lastParse = spec; lastParseText = text;
     if (backend !== "off") llmReadText = text;
-    renderChips(spec, applyParse(spec));
+    lastOutOfRange = applyParse(spec);
+    outOfRangeAck = false;
+    renderChips(spec, lastOutOfRange);
     if (spec.llm_backend) setReaderBadge("llm", `Claude read it in ${fmt((spec.llm_ms || 0) / 1000, 1)} s`);
     else if (backend !== "off") setReaderBadge("", "Claude unavailable, keyword reader only");
     return spec;
   } catch (err) {
     if (seq !== parseSeq && backend === "off") return null;
     lastParse = null; lastParseText = text;
+    lastOutOfRange = []; outOfRangeAck = false;
     if (backend !== "off") llmReadText = text;
     if (err.status === 422) renderParseRefusal(err);
     else $("#parse-strip").innerHTML = errorBannerHtml(err, "Reader failed");
@@ -1098,6 +1207,36 @@ async function runDesign({ useComposer = true } = {}) {
     // stronger reader a chance first. A refusal stops the run: nothing was understood.
     const spec = await readWithClaude();
     if (!spec && !lastParse) return;
+  }
+  // Refuse BEFORE the budget is spent, and only on the composer path: the panel's own
+  // controls cannot leave their rails, so a slider-driven run has nothing to be out of.
+  if (useComposer && lastOutOfRange.length && !outOfRangeAck) {
+    $("#result").innerHTML = errorBannerHtml({
+      title: "Out of range",
+      // Same collapse as the reader strip: the band is one ask on two knobs, and naming
+      // it twice here would contradict the single error shown a few pixels above.
+      detail: [...new Map(lastOutOfRange.map((c) => {
+        const band = BAND_FIELDS.includes(c.row.field);
+        const label = band ? "Peak frequency band" : c.row.label;
+        // A one-sided ask ("peak below 3 GHz") parses ONE edge; the other falls back to
+        // the rail so this cannot throw inside the guard and let the run through.
+        const edge = (f, fb) => {
+          const r = (lastParse?.fields || []).find((q) => q.field === f);
+          return fmt(r ? r.asked_disp : fb, 2);
+        };
+        const stated = (f) => (lastParse?.fields || []).find((q) => q.field === f);
+        const asked = !band ? prettyDisp(c.row.asked_disp, c.row.unit)
+          : stated(BAND_FIELDS[0]) && stated(BAND_FIELDS[1])
+            ? `${edge(BAND_FIELDS[0], c.lo)}-${edge(BAND_FIELDS[1], c.hi)} GHz`
+          : stated(BAND_FIELDS[0]) ? `a peak above ${edge(BAND_FIELDS[0], c.lo)} GHz`
+          : `a peak below ${edge(BAND_FIELDS[1], c.hi)} GHz`;
+        return [label, `${label}: you asked for ${asked}, and this control spans `
+          + `${compactNum(c.lo)}-${compactNum(c.hi)} ${c.row.unit}.`];
+      })).values()].join(" "),
+      hint: "Reword the request inside that range, or accept the substitution in the "
+        + "reader strip above to run at the value the control holds.",
+    }, "Out of range");
+    return;
   }
   let noiseRequest;
   try { noiseRequest = readNoiseRequest(); }

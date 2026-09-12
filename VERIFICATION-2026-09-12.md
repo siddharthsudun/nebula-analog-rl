@@ -14,8 +14,8 @@ path is unchanged and measured to be unchanged (control run at the bottom).
 
 | Suite | Before | After |
 |---|---|---|
-| `pytest tests/` | 812 passed, 3 skipped, 2 xfailed | **865 passed**, 3 skipped, 2 xfailed |
-| `node tests/*.cjs` | 19 passed, 0 failed | **22 passed**, 0 failed |
+| `pytest tests/` | 812 passed, 3 skipped, 2 xfailed | **885 passed**, 3 skipped, 2 xfailed |
+| `node tests/*.cjs` | 19 passed, 0 failed | **30 passed**, 0 failed |
 
 The 3 skips are the ngspice-not-installed DFE tests. `pdk.available()` is true on this
 machine, so the seven Pareto tests CI has to skip **do run here, and pass** — the
@@ -94,13 +94,70 @@ silence is not. Measured:
 > quietly cut to 12 dB, and the run then reports both satisfied.
 
 2.45–2.50 GHz is not a rounded version of 3 GHz — it is a different requirement,
-attributed to the user, and marked as met. `applyParse` now returns every ask its rails
-could not represent and the composer prints it at refusal severity, naming the ask, the
-rail and what the run will actually be scored at. Three new tests pin it, including one
-that a request which fits every rail reports *nothing* — a note on an honoured run would
-train people to ignore the notes.
+attributed to the user, and marked as met. The rail stays where it is — that range is the problem statement's, and the tool should
+not accept asks outside the scope it claims. So an out-of-range ask is now an **error**:
 
-## 6. Does the widened band actually solve?
+* the reader strip shows **"Out of range — Peak frequency band"**, naming what you asked
+  for, what the control spans, *why* it spans that, and what the run would be scored at
+  instead;
+* **the run is refused** before any simulator budget is spent, the same way a bad
+  signal/noise input is already refused;
+* the only way past it is to reword the request, or click **"run it at 2.45–2.50 GHz"** —
+  an explicit, per-request consent that the next keystroke clears.
+
+A request that fits every rail still reports *nothing* — a note on an honoured run would
+train people to ignore the notes, which is how the silent clamp survived this long.
+
+## 6. A second bug, found while testing the first
+
+Typing a *second* request in the same session silently truncated it.
+
+The two band edges were applied one at a time, and each read the **other knob's current
+value** as its bound. So after any ask that parked the knobs at the top of the rail:
+
+> "PCIe Gen2 CTLE, 9 dB boost over a 12 dB channel, **peak between 1.5 and 2.0 GHz**"
+> → the band landed on **1.50–2.50 GHz**
+
+which is neither request. Nothing reported it, because each edge *on its own* was inside
+the rail. Both edges are now applied as one ask, and "clamped" now means *outside the
+rail* and nothing else — an edge the other knob pushed was being reported as a range the
+tool cannot represent, and an error that cries wolf on a request the rail can serve is how
+a real out-of-range message gets ignored. Three regression tests.
+
+Same class of fix: the band is **one** ask on two knobs, so it now produces one chip
+message, one assumption note and one error, not two of each.
+
+## 7. A third bug, in the same corner
+
+Probing one-sided asks after the fix above found the point rule swallowing them:
+
+| ask | before | after |
+|---|---|---|
+| "peak **below** 3 GHz" | 2.70–3.30 GHz | 1.25–3.00 GHz |
+| "peak **at least** 1.8 GHz" | 1.62–1.98 GHz | 1.80–2.50 GHz |
+| "keep the peak **under** 2.2 GHz" | 1.98–2.42 GHz | 1.25–2.20 GHz |
+
+"Peak below 3 GHz" was read as a band *centred* on 3 GHz — inventing a 2.7 GHz **floor**
+the user never stated and a 3.3 GHz ceiling **above** the one they did. The run was then
+scored against a band that contradicts the request on both sides and reported it
+satisfied. Eighteen comparator spellings now bound one edge and leave the other at the
+competition default, and say so in `assumptions`. Twenty new tests.
+
+One more guard came out of the same probe: **"8 dB peaking, 5 GHz baud rate"** was read as
+a request to move the peak to 5 GHz. The rate words were guarded only *before* the figure,
+not after it, so a link speed quoted after the peaking figure planted a 4.5–5.5 GHz band —
+outside the tunable range entirely, steering the search at something the circuit cannot do
+for a requirement nobody made.
+
+Across every way I could think of to state the peak — two-sided, point, one-sided, and the
+eight traps that must claim nothing — the parser now reads **44/44**.
+
+Two consequences fixed with it: the unstated edge was keeping the *previous* request's
+value ("peak below 2.2 GHz" then "peak at least 1.8 GHz" landed on 1.80–2.20 GHz, which
+makes the assumption sentence a lie), and the error message printed a one-sided ask as a
+fake span — "you asked for 3.00–2.50 GHz" made the user's own request look like nonsense.
+
+## 8. Does a band above the rail actually solve?
 
 The API has no rail, so a band above 2.5 GHz is now reachable for the first time.
 Measured, `thinking` mode, 8 dB target over a 12 dB channel:
@@ -115,21 +172,25 @@ Measured, `thinking` mode, 8 dB target over a 12 dB channel:
 The control reproduces the frozen behaviour exactly — winner `ppo:4001`, two restarts,
 `n_surrogate_starts` 0 — so the band-first reordering still does not fire at the defaults.
 
-## 7. One decision that is yours, not mine
+## 9. Decision taken
 
-**Should the peak-band rail be widened past 2.5 GHz?**
+**The rail stays at 1.25–2.50 GHz.** The circuit and the API can both go above it —
+2.70–3.30 GHz solves in 10.6 s and passes the guards — but that range is the problem
+statement's tunable range, and a tool that quietly accepts asks outside the scope it
+claims is worth less than one that says no. An out-of-range ask is therefore an error
+that stops the run, not a rounding (section 5).
 
-The circuit can do it: 2.70–3.30 GHz solves in 10.6 s and passes the guards. The parser
-and the API can both express it. The *only* thing stopping a user is the slider, whose
-comment ties its range to the competition problem statement's tunable range.
-
-Widening it would let the tool accept asks outside the competition's stated scope. That
-is a scope-and-credibility call, so I have not made it. Until you do, an out-of-rail ask
-is now clamped *visibly* instead of silently, which is correct either way.
-
-## 8. Flag
+## 10. Flags
 
 `BUS_KEY_LOCATION.txt` (1,396 bytes) sits untracked in the repo root and is **not
 gitignored**. I have not opened it. Given the name, it is exactly the file the
 "never `git add -A`" rule exists to protect — worth either ignoring it or moving it out
 of the tree.
+
+**The requirement panel is sticky, and I have not changed that.** A value applied from
+one request stays in its box when the next request does not mention it: type "under 12 mW"
+and then a request with no power ceiling, and the run still carries 12 mW. It is visible
+in the panel — unlike the band collision in section 6, which produced a number neither
+request contained — so it is defensible as a deliberate design. But it is the same family
+of surprise, and whether the panel should reset per request is a product call rather than
+a defect I should silently decide.
