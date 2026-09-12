@@ -251,17 +251,52 @@ ERROR_CODES: dict[str, int] = {
 }
 
 
-def _api_error(status: int, code: str, title: str, detail: str, hint: str,
-               extra: dict | None = None) -> JSONResponse:
+
+# Every "artifact_missing" says the same thing about what to do next, and saying it in
+# one place is what stops three endpoints drifting into three different answers.
+MISSING_HINT = ("Regenerate it from the repo root, or point the dashboard at a results "
+                "tree that has it. This endpoint reports the gap rather than inventing "
+                "numbers for a record that was never produced.")
+
+def _error_body(code: str, title: str, detail: str, hint: str,
+                extra: dict | None = None) -> dict:
     number = ERROR_CODES.get(code, 500)
-    return JSONResponse(status_code=status, content={
+    return {
         "error_code": code, "error_number": number,
         # Pre-formatted so every surface -- the dashboard, curl, a screenshot in a bug
         # report -- shows the same string rather than each one inventing a format.
         "label": f"Error {number}",
         "title": title, "detail": detail, "hint": hint,
         **(extra or {}),
-    })
+    }
+
+
+def _api_error(status: int, code: str, title: str, detail: str, hint: str,
+               extra: dict | None = None) -> JSONResponse:
+    return JSONResponse(status_code=status, content=_error_body(code, title, detail, hint, extra))
+
+
+class ApiError(HTTPException):
+    """The same body as `_api_error`, from a site that has to RAISE rather than return.
+
+    `_api_error` builds a response, which only works where the handler itself can return
+    one. The artifact and path checks below sit in helpers and in the middle of endpoint
+    bodies, so they raised a bare `HTTPException` instead -- and FastAPI renders that as
+    `{"detail": "artifact not found"}`: no code, no number, no hint, nothing the taxonomy
+    above promises. The dashboard could only show it as "Failed to load: artifact not
+    found", which names neither what is missing nor how to make it exist. Same taxonomy,
+    raisable, so no failure path is outside it.
+    """
+
+    def __init__(self, status: int, code: str, title: str, detail: str, hint: str,
+                 extra: dict | None = None) -> None:
+        super().__init__(status_code=status, detail=title)
+        self.body = _error_body(code, title, detail, hint, extra)
+
+
+@app.exception_handler(ApiError)
+async def _api_error_handler(request, exc: ApiError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content=exc.body)
 
 
 def _search_halted_error(e: SearchHalted) -> JSONResponse:
@@ -299,6 +334,25 @@ def _run_busy_error() -> JSONResponse:
         "Wait for the operation already in progress to finish, then try again.")
 
 
+def _policy_missing_error(mode: str) -> JSONResponse:
+    """The 201 slot in the taxonomy above, which nothing was raising.
+
+    A checkout with no `results/seq_clean40k.zip` is an installation state, not a bug in
+    this server -- that is exactly what the 2xx band is for. Without this the run reached
+    `fc.load_policy` and came back through `_unexpected_error` as "Unexpected server
+    error / FileNotFoundError", whose next step is "Retry" -- advice that cannot ever
+    work, over a cause the message never names. /api/health already reports the missing
+    checkpoint; this says the same thing at the moment someone asks for the thing that
+    needs it.
+    """
+    return _api_error(
+        503, "policy_missing", "The trained policy is not in this checkout",
+        f"{POLICY} is missing, and {mode} mode loads it before its first evaluation. "
+        f"Nothing was searched.",
+        "Restore the checkpoint (see SETUP.md), then reload this page. Fastest is the "
+        "one mode that runs without it; no other mode can succeed until the file is back.")
+
+
 def _unexpected_error(e: Exception) -> JSONResponse:
     return _api_error(
         500, "internal_error", "Unexpected server error",
@@ -321,10 +375,17 @@ def _load_results_json(name: str) -> Any | None:
 
 def _safe_results_path(name: str) -> Path:
     if "/" in name or "\\" in name or ".." in name or not name.endswith(".json"):
-        raise HTTPException(400, "invalid artifact name")
+        raise ApiError(
+            400, "invalid_request", "That is not an artifact name",
+            f"{name!r} is not a plain <name>.json inside results/. Path separators and "
+            f"parent references are refused before the filesystem is touched.",
+            "Ask for one of the names the dashboard links to; this endpoint does not "
+            "serve arbitrary paths.")
     p = (RESULTS_DIR / name).resolve()
     if p.parent != RESULTS_DIR.resolve() or not p.is_file():
-        raise HTTPException(404, "artifact not found")
+        raise ApiError(
+            404, "artifact_missing", "That artifact has not been generated",
+            f"results/{name} does not exist in this checkout.", MISSING_HINT)
     return p
 
 
@@ -529,7 +590,12 @@ def _gallery_catalog() -> dict[str, dict[str, Any]]:
     delivered = _load_results_json("delivered_circuit.json")
     pvv = _load_results_json("pass_vs_valid.json")
     if not delivered or not pvv:
-        raise HTTPException(status_code=404, detail="candidate-gallery artifacts are missing")
+        raise ApiError(
+            404, "artifact_missing", "The candidate gallery has not been generated",
+            "It is built from results/delivered_circuit.json and results/pass_vs_valid.json, "
+            f"and this checkout is missing "
+            f"{', '.join(n for n, got in (('delivered_circuit.json', delivered), ('pass_vs_valid.json', pvv)) if not got)}.",
+            MISSING_HINT)
 
     delivered_pvt = delivered.get("pvt") or {}
     dc_min = ((delivered_pvt.get("worst_case_by_metric") or {})
@@ -951,7 +1017,13 @@ def design_time():
     speed = _load_results_json("speedup.json")
     delivered = _load_results_json("delivered_circuit.json")
     if not (report and sweep and speed and delivered):
-        raise HTTPException(status_code=404, detail="design-time artifacts are missing")
+        raise ApiError(
+            404, "artifact_missing", "The design-time record has not been generated",
+            "It is built from four artifacts, and this checkout is missing "
+            + ", ".join(n for n, got in (("final_report.json", report), ("sweep_baseline.json", sweep),
+                                         ("speedup.json", speed), ("delivered_circuit.json", delivered))
+                        if not got) + ".",
+            MISSING_HINT)
 
     order = ["PPO-restart", "PPO", "CMA-ES", "TPE", "RANDOM"]
     arms = []
@@ -1110,7 +1182,12 @@ def model_performance():
     audit = _load_results_json("surrogate_audit.json")
     report = _load_results_json("final_report.json")
     if not (audit and report):
-        raise HTTPException(status_code=404, detail="model-performance artifacts are missing")
+        raise ApiError(
+            404, "artifact_missing", "The model-performance record has not been generated",
+            "It is built from two artifacts, and this checkout is missing "
+            + ", ".join(n for n, got in (("surrogate_audit.json", audit), ("final_report.json", report))
+                        if not got) + ".",
+            MISSING_HINT)
 
     # The 100% on the evidence page is Fastest's, and it is the one number on this site a
     # reader is most likely to misread as model accuracy, so it gets explained from its own
@@ -1782,6 +1859,12 @@ def pipeline_run(req: PipelineRunRequest):
     from eqrl.realtime import LIMITS
     if req.mode not in MODES:
         return _api_error(422,"invalid_request","Unknown mode",str(req.mode),"Choose a listed mode.")
+    # `fastest` never loads the checkpoint (pipeline.py:829) and `auto` starts with it, so
+    # both still work in a checkout that has no policy; refusing them would take away
+    # capability that is really there. Every other mode loads it before its first
+    # evaluation, so refuse those HERE, while "nothing was searched" is still true.
+    if req.mode not in ("fastest", "auto") and not (REPO_ROOT / POLICY).is_file():
+        return _policy_missing_error(req.mode)
     if req.noise_request is not None:
         # Parsed HERE, before the worker is handed anything. Resolution is pure arithmetic
         # and costs nothing, while the worker only reaches it AFTER the search -- so an
@@ -1817,6 +1900,11 @@ def pipeline_run(req: PipelineRunRequest):
     except ValueError as exc:
         return _api_error(422,"invalid_request","Request rejected",str(exc),"Check the requested limits.")
     except Exception as exc:
+        # Auto reaches this only when its Fastest leg did not solve and the escalation
+        # went looking for the policy. Test the file rather than the exception text: the
+        # file is a fact, and what PPO.load raises for a missing archive is not.
+        if not (REPO_ROOT / POLICY).is_file():
+            return _policy_missing_error(req.mode)
         return _unexpected_error(exc)
     finally:
         with _state_lock:

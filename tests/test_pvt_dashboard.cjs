@@ -6,7 +6,9 @@ const source=fs.readFileSync('dashboard/static/app.js','utf8');
 // From the corner-count helpers, not from netlistWithVerdict itself: the exported
 // provenance header now names the grid that actually ran, so the helpers are part of
 // the unit under test.
-const code=source.slice(source.indexOf('const pvtCount ='),source.indexOf('function verdictHtml'));
+// Starts at CHECK_META, not at the corner-count helpers: pvtFailureLabel reads the
+// human label for a failing check out of it, so it is part of the unit under test.
+const code=source.slice(source.indexOf('const CHECK_META ='),source.indexOf('function verdictHtml'));
 const context=vm.createContext({defaults:{statuses:{solved:'solved',fallback:'fallback',closed_not_verified:'closed_but_failed_verification'}}});
 vm.runInContext(code,context);
 test('PVT verified exports cannot claim only TT was checked',()=>{
@@ -33,4 +35,45 @@ test('failed PVT is explicit in exported circuit and fixed reuse is attributed',
  assert.match(text,/NOT VERIFIED/);
  assert.match(text,/fixed delivered sizing/);
  assert.doesNotMatch(text,/TYPICAL CORNER ONLY/);
+});
+
+// The failure message is the whole point of the panel. `unresolved_within_budget` is the
+// single token the certifier emits for EVERY non-acceptance, and shown raw it is read as
+// "the run went over budget" -- the opposite of what it means. These pin the reading.
+test('a corner miss is reported as a corner miss, not as a budget',()=>{
+ const text=context.pvtFailureLabel({accepted:false,status:'unresolved_within_budget',verification:{rows:[
+  {corner:['tt',1.8,27],passed:true,checks:{boost_target:true}},
+  {corner:['ss',1.71,125],passed:false,checks:{boost_target:false,power:true}},
+  {corner:['fs',1.71,125],passed:false,checks:{boost_target:false,power:true}},
+ ]}});
+ assert.match(text,/1 \/ 3 corners/);
+ assert.match(text,/Boost on target/);
+ assert.match(text,/ss, 1\.71 V, 125/);
+ assert.match(text,/fs, 1\.71 V, 125/);
+ assert.doesNotMatch(text,/budget/);
+});
+// The one status that really IS the clock must still say so.
+test('a sweep that ran out of time says so in words',()=>{
+ const text=context.pvtFailureLabel({accepted:false,status:'budget_exhausted'});
+ assert.match(text,/ran out of time/);
+ assert.doesNotMatch(text,/corners/);
+});
+// A refusal the rows do not explain -- disjoint-worker-pid checks fail outside the grid --
+// must fall back to the token rather than name a corner that passed.
+test('a non-acceptance with no failing row falls back to the raw status',()=>{
+ const text=context.pvtFailureLabel({accepted:false,status:'unresolved_within_budget',verification:{rows:[
+  {corner:['tt',1.8,27],passed:true,checks:{boost_target:true}},
+ ]}});
+ assert.match(text,/unresolved_within_budget/);
+ assert.doesNotMatch(text,/1 \/ 1 corners/);
+});
+// The netlist outlives the session, so it keeps the machine token AND gains the reason.
+test('the exported netlist carries both the status token and the reason',()=>{
+ const text=context.netlistWithVerdict({netlist:'* final',status:'pvt_not_verified',provenance:{},pvt:{
+  accepted:false,status:'unresolved_within_budget',verification:{rows:[
+   {corner:['ss',1.71,125],passed:false,checks:{boost_target:false}},
+  ]}}});
+ assert.match(text,/NOT VERIFIED \(unresolved_within_budget\)/);
+ assert.match(text,/0 \/ 1 corners/);
+ assert.match(text,/Boost on target/);
 });

@@ -59,7 +59,13 @@ function animateIn(targets, vars, delayMs = 0) {
 // Fetch wrapper that never swallows a failure into a blank panel. Understands the
 // structured error shape {"error_code","title","detail","hint"} and plain FastAPI
 // {"detail": ...}; either way the thrown Error carries enough to render something honest.
-async function api(path, opts) {
+//
+// `api` and `apiText` differ only in how they read a SUCCESSFUL body; the failure path is
+// this one function, so no caller can end up with a worse error story than the others.
+// Four callers used to call `fetch` themselves and threw `server returned 404` -- no
+// code, no title, no next step -- and that bare string is what a missing results artifact
+// looked like to the reader. A wrapper only helps if nothing goes around it.
+async function apiFetch(path, opts) {
   let res;
   try {
     res = await fetch(path, opts);
@@ -93,8 +99,10 @@ async function api(path, opts) {
     err.status = res.status;
     throw err;
   }
-  return res.json();
+  return res;
 }
+async function api(path, opts) { return (await apiFetch(path, opts)).json(); }
+async function apiText(path, opts) { return (await apiFetch(path, opts)).text(); }
 function postJSON(path, body) {
   return api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 }
@@ -275,12 +283,12 @@ function initSimRefresh() {
     btn.disabled = true;
     btn.classList.add("spin");
     try {
-      const res = await fetch("/api/sim/refresh", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) toast("Simulator refreshed", true);
-      else toast(data.detail || "Refresh failed", false);
-    } catch {
-      toast("Refresh failed -- network error", false);
+      await api("/api/sim/refresh", { method: "POST" });
+      toast("Simulator refreshed", true);
+    } catch (err) {
+      // A toast has room for one line, so it takes the title -- the shortest thing the
+      // taxonomy guarantees -- rather than `detail`, which is written to be the long one.
+      toast(err.title || err.message || "Refresh failed", false);
     } finally {
       btn.disabled = false;
       btn.classList.remove("spin");
@@ -879,18 +887,10 @@ function placeSvg(svg) {
 }
 
 async function fetchSchematic(fieldsHuman, title, subtitle) {
-  const res = await fetch("/api/schematic", {
+  return apiText("/api/schematic", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fields: fieldsHuman, title, subtitle }),
   });
-  if (!res.ok) {
-    let parsed = null;
-    try { parsed = JSON.parse(await res.text()); } catch { /* not JSON */ }
-    const err = new Error(parsed && parsed.title ? parsed.title : `server returned ${res.status}`);
-    if (parsed && parsed.title) Object.assign(err, { title: parsed.title, detail: parsed.detail || null, hint: parsed.hint || null });
-    throw err;
-  }
-  return res.text();
 }
 
 // Coalesced: during a run candidates arrive faster than the drawing is worth refreshing,
@@ -922,9 +922,7 @@ async function showDeliveredOnStage() {
     if (tt) setReadout("Boost at tt", `${fmt(tt.boost_db, 2)}<span class="u">dB</span>`, `target ${fmt(d.spec && d.spec.target_boost_db, 2)} dB, ${fmt(tt.power_w * 1e3, 2)} mW, ${d.pvt.corners_passed}/${d.pvt.corners_total} PVT corners`);
   } catch { /* the drawing still loads below */ }
   try {
-    const res = await fetch("/api/schematic");
-    if (!res.ok) throw new Error(`server returned ${res.status}`);
-    placeSvg(await res.text());
+    placeSvg(await apiText("/api/schematic"));
   } catch (err) {
     $("#schematic-holder").innerHTML = errorBannerHtml(err, "Could not load the delivered schematic");
   }
@@ -1371,12 +1369,78 @@ function pvtCornersLabel(pvt) {
 //: because the budget ran out, or because Fastest only ever checked three corners.
 const pvtNeedsFullCheck = (pvt) => !pvt || !pvt.accepted || pvtCount(pvt) < 45;
 
+//: A status token is not a diagnosis. `unresolved_within_budget` is the ONE string the
+//: certifier emits for every non-acceptance (pvt_fast.py:58, pvt_repair.py:160, :221),
+//: and printed raw it reads as "the run went over budget" -- which is the one thing it
+//: does not mean. It means the opposite: the sweep finished INSIDE its budget and the
+//: design still missed a corner. `budget_exhausted` is the separate status that really
+//: is the clock. The rows record which corners failed and on which check, so say that
+//: instead of the token: the panel already had all of it and was throwing it away.
+const PVT_STATUS_PLAIN = {
+  budget_exhausted: "the corner sweep ran out of time before it finished",
+  failed: "a worker died during the corner sweep",
+  incomplete: "the corner sweep did not finish",
+};
+//: The grid stores a corner as [process, vdd, temp_c] -- "ss, 1.71 V, 125 degC".
+const pvtCornerText = (c) => (Array.isArray(c)
+  ? `${c[0]}, ${Number(c[1]).toFixed(2)} V, ${Number(c[2]).toFixed(0)} \u00b0C`
+  : String(c));
+
+function pvtFailureLabel(pvt) {
+  const plain = PVT_STATUS_PLAIN[pvt && pvt.status];
+  if (plain) return plain;
+  const rows = (pvt && pvt.verification && pvt.verification.rows) || [];
+  const bad = rows.filter((row) => row.passed === false);
+  // Nothing measured, or a refusal the rows do not explain (a shared worker pid, say):
+  // fall back to the token rather than invent a reason the artifact does not support.
+  if (!rows.length || !bad.length) return `not accepted (${(pvt && pvt.status) || "unresolved"})`;
+  const meta = typeof CHECK_META === "object" ? CHECK_META : {};
+  const names = [...new Set(bad.flatMap((row) => Object.entries(row.checks || {})
+    .filter(([, ok]) => !ok).map(([k]) => (meta[k] || { label: k }).label)))];
+  const where = [...new Set(bad.map((row) => pvtCornerText(row.corner)))];
+  return `${rows.length - bad.length} / ${rows.length} corners — ${names.join(" and ") || "a check"}`
+    + ` failed at ${where.slice(0, 2).join("; ")}`
+    + (where.length > 2 ? ` and ${where.length - 2} more` : "");
+}
+
+//: Check keys are the pipeline's own field names -- `boost_target`, `peak_in_band`,
+//: `eye_h`. They are not English, and they reached the reader in three places: the
+//: verdict sub-line, the competition-spec chip, and the header of the exported netlist.
+//: CHECK_META already holds the human label for every one of them; these sites were
+//: printing the key beside it.
+const checkLabel = (k) => (CHECK_META[k] || { label: k }).label;
+const checkNames = (keys) => (keys || []).map(checkLabel).join(", ");
+
+//: A run's status is a wire value (`closed_but_failed_verification`), fine in JSON and
+//: wrong in a sentence. The map covers the four the pipeline emits; the underscore
+//: fallback covers a fifth added later, which is the case a hand-written map gets wrong
+//: by going silently stale.
+const STATUS_TEXT = {
+  solved: "verified",
+  closed_but_failed_verification: "closed but failed verification",
+  unsolved: "found nothing",
+  fallback_fixed_design_not_ai: "fell back to the fixed design",
+};
+const statusText = (s) => STATUS_TEXT[s] || String(s || "").replace(/_/g, " ");
+
+//: Guard reasons are tier-coded identifiers: `T4.10_dc_gain_implausible`. The tier code
+//: is worth keeping -- the guard documentation is indexed by it -- and the rest is a
+//: sentence with the spaces removed. Derived rather than a hand-written table of all
+//: twenty, because a table goes stale the moment guards.py gains a twenty-first.
+const GUARD_WORDS = { dc: "DC", hd3: "HD3", mosfet: "MOSFET", pdk: "PDK", pvt: "PVT", ac: "AC" };
+function guardReasonText(reason) {
+  const m = /^(T\d+\.\d+)_(.+)$/.exec(String(reason || ""));
+  if (!m) return String(reason || "");
+  const words = m[2].split("_").map((w, i) => GUARD_WORDS[w] || (i ? w : w[0].toUpperCase() + w.slice(1)));
+  return `${m[1]} \u2014 ${words.join(" ")}`;
+}
+
 function netlistWithVerdict(r) {
   if (!r || !r.netlist) return "";
   const st = defaults.statuses, v = r.verification;
   const L = ["*", "* ---------------- SILQ provenance ----------------"];
   if (r.pvt) {
-    L.push("* PVT: " + (r.pvt.accepted ? `independent ${pvtCornersLabel(r.pvt)} acceptance` : "NOT VERIFIED; " + r.pvt.status),
+    L.push("* PVT: " + (r.pvt.accepted ? `independent ${pvtCornersLabel(r.pvt)} acceptance` : "NOT VERIFIED (" + r.pvt.status + "); " + pvtFailureLabel(r.pvt)),
       "* Schematic-level only; no mismatch yield or extracted-layout sign-off.");
     if (r.provenance.fixed_anchor_reused) L.push("* FINAL SOURCE: fixed delivered sizing, reverified for this target.");
   }
@@ -1397,7 +1461,7 @@ function netlistWithVerdict(r) {
   } else if (r.status === st.closed_not_verified) {
     L.push("* FAILED INDEPENDENT VERIFICATION -- DO NOT USE.",
            "* The solver reported it reached target; a fresh re-simulation disagreed.",
-           "* Failing checks: " + ((v && v.failing || ["(unreported)"]).join(", ")),
+           "* Failing checks: " + (v && v.failing && v.failing.length ? checkNames(v.failing) : "(unreported)"),
            "* This design does not meet the requested specification.");
   } else {
     L.push("* UNSOLVED. No guard-valid design was found for this specification.");
@@ -1414,7 +1478,11 @@ function verdictHtml(r) {
   let cls, icon, title, sub;
   if (r.pvt && !r.pvt.accepted) {
     cls = "warn"; icon = "alertTriangle"; title = "PVT acceptance not established";
-    sub = "The candidate did not receive independent full-grid acceptance within the repair budget. This does not prove the target is physically infeasible.";
+    //: "within the repair budget" was true only for `budget_exhausted` and wrong for the
+    //: common case, and it is the sentence that made a 0.2 dB corner miss read as an
+    //: overrun. Name the corners and the check that failed; pvtFailureLabel falls back to
+    //: the status token when the rows do not say.
+    sub = `${pvtFailureLabel(r.pvt)}. This does not prove the target is physically infeasible.`;
   } else if (r.noise_evaluation && r.status !== st.fallback) {
     cls = r.overall_passed && !r.overall_conditional ? "ok" : "warn";
     icon = r.overall_passed ? "checkCircle" : "alertTriangle";
@@ -1439,7 +1507,7 @@ function verdictHtml(r) {
     sub = `An independent re-simulation at the typical corner (tt, 27 C, nominal Vdd) passes every hard check, boost included. This is not a PVT sign-off — no corner sweep was run on this design.${v && typeof v.abs_err_db === "number" ? ` The delivered boost is ${fmt(v.abs_err_db, 2)} dB from the number you asked for, inside the ±${fmt(r.spec.boost_tol_db, 2)} dB tolerance.` : ""}`;
   } else if (r.status === st.closed_not_verified) {
     cls = "warn"; icon = "alertTriangle"; title = "Closed, but failed independent verification";
-    sub = `The solver reported it reached the target; the fresh re-simulation disagrees${v && v.failing && v.failing.length ? `, failing ${v.failing.join(", ")}` : ""}.`;
+    sub = `The solver reported it reached the target; the fresh re-simulation disagrees${v && v.failing && v.failing.length ? `, failing ${checkNames(v.failing)}` : ""}.`;
   } else {
     cls = "neutral"; icon = "xCircle"; title = "Unsolved";
     sub = "The architecture ran and did not reach a guard-valid design for this spec.";
@@ -1447,13 +1515,13 @@ function verdictHtml(r) {
   const bars = [];
   if (v && reqs.length) {
     bars.push(`<span class="state-chip ${v.passed ? "ok" : "bad"}"><span class="dot"></span>your limits: ${v.passed ? "pass" : "fail"}</span>`);
-    if ("competition_passed" in v) bars.push(`<span class="state-chip ${v.competition_passed ? "ok" : "warn"}"><span class="dot"></span>competition spec: ${v.competition_passed ? "pass" : `fails ${(v.competition_failing || []).join(", ")}`}</span>`);
+    if ("competition_passed" in v) bars.push(`<span class="state-chip ${v.competition_passed ? "ok" : "warn"}"><span class="dot"></span>competition spec: ${v.competition_passed ? "pass" : `fails ${checkNames(v.competition_failing)}`}</span>`);
   } else if (v) {
     bars.push(`<span class="state-chip ${v.passed ? "ok" : "bad"}"><span class="dot"></span>competition spec: ${v.passed ? "pass" : "fail"}</span>`);
   }
   if (r.auto) {
     bars.push(r.auto.escalated
-      ? `<span class="state-chip warn"><span class="dot"></span>auto: fast attempt ${escapeHtml(r.auto.first_status || "")}, escalated to Thinking</span>`
+      ? `<span class="state-chip warn"><span class="dot"></span>auto: fast attempt ${escapeHtml(statusText(r.auto.first_status))}, escalated to Thinking</span>`
       : `<span class="state-chip ok"><span class="dot"></span>auto: fast search verified first time</span>`);
   } else if (r.mode) {
     bars.push(`<span class="state-chip"><span class="dot"></span>${escapeHtml(r.mode)} mode</span>`);
@@ -1600,7 +1668,7 @@ function circuitPvtHtml(item) {
   if (live && live.state === "done") {
     return live.accepted
       ? `<span class="c-pvt ok">${ICONS.check} PVT verified, ${pvtCornersLabel(live.result)}</span>`
-      : `<span class="c-pvt bad">PVT not accepted (${escapeHtml(live.status || "unresolved")})</span>`;
+      : `<span class="c-pvt bad">PVT not accepted — ${escapeHtml(pvtFailureLabel(live.result || live))}</span>`;
   }
   if (item.pvt && item.pvt.accepted) return `<span class="c-pvt ok">${ICONS.check} PVT verified, ${pvtCornersLabel(item.pvt)}</span>`;
   return `<span class="c-pvt warn">Nominal (tt) only — PVT not run for this circuit</span>`;
@@ -1756,7 +1824,7 @@ async function presentResult(r, elapsedS, ctx) {
     // not actually been measured, rather than leaving the engineer to re-run the design.
     const offer = r.design && pvtNeedsFullCheck(r.pvt);
     const shortGrid = r.pvt.accepted && pvtCount(r.pvt) < 45;
-    html += `<div class="panel"><div class="panel-head"><span class="panel-title">PVT acceptance</span><span class="panel-meta">${r.pvt.accepted ? escapeHtml(pvtCornersLabel(r.pvt)) + ' independently verified' : escapeHtml(r.pvt.status)}</span></div>`
+    html += `<div class="panel"><div class="panel-head"><span class="panel-title">PVT acceptance</span><span class="panel-meta">${r.pvt.accepted ? escapeHtml(pvtCornersLabel(r.pvt)) + ' independently verified' : escapeHtml(pvtFailureLabel(r.pvt))}</span></div>`
       + `<p>${escapeHtml(r.pvt.scope || '')}</p>`
       + `<p>${r.pvt.evaluations} recorded corner evaluations${r.pvt.cost_complete ? '' : '; count incomplete after interruption'}. ${r.provenance.fixed_anchor_reused ? 'Fixed delivered sizing reused and independently checked for this specification.' : 'Final sizing and measurements are shown in the circuit above.'}</p>`
       + (offer ? `<div class="pvt-offer"><span class="c-pvt warn">${shortGrid
@@ -1791,7 +1859,7 @@ async function presentResult(r, elapsedS, ctx) {
       });
       if (label) label.innerHTML = res.accepted
         ? `<span class="c-pvt ok">${ICONS.check} PVT verified, 45 / 45 corners</span>`
-        : `<span class="c-pvt bad">PVT not accepted (${escapeHtml(res.status || "unresolved")})</span>`;
+        : `<span class="c-pvt bad">PVT not accepted — ${escapeHtml(pvtFailureLabel(res))}</span>`;
       pvtBtn.textContent = "Check PVT";
       pvtBtn.disabled = !!res.accepted;
       const primary = paretoState.data?.items?.find((item) => item.is_primary);
@@ -2061,7 +2129,7 @@ function deliveredHtml(d) {
 
 function passVsValidHtml(d) {
   const totalPass = d.pass_valid + d.pass_invalid;
-  const tableRows = d.designs.map((x) => `<tr><td>${fmt(x.target_boost_db, 2)}</td><td>${fmt(x.channel_loss_db, 2)}</td><td>${fmt(x.boost_db, 2)}</td><td>${Math.round(x.eye_v_mv)}</td><td><span class="badge ${x.guard_valid ? "valid" : "invalid"}">${x.guard_valid ? "valid" : "REJECTED"}</span></td><td style="font-family:var(--font-ui); color:var(--ink-muted);">${escapeHtml(x.guard_reason || "")}</td></tr>`).join("");
+  const tableRows = d.designs.map((x) => `<tr><td>${fmt(x.target_boost_db, 2)}</td><td>${fmt(x.channel_loss_db, 2)}</td><td>${fmt(x.boost_db, 2)}</td><td>${Math.round(x.eye_v_mv)}</td><td><span class="badge ${x.guard_valid ? "valid" : "invalid"}">${x.guard_valid ? "valid" : "REJECTED"}</span></td><td style="font-family:var(--font-ui); color:var(--ink-muted);">${escapeHtml(guardReasonText(x.guard_reason))}</td></tr>`).join("");
   return `
     <div class="card">${kpiGrid([
       { label: "Passed all 8 hard specs", value: String(totalPass) }, { label: "and were guard-valid", value: String(d.pass_valid) },
@@ -2174,9 +2242,7 @@ function renderDesignTime(d) {
   $("#designtime-body").innerHTML = html;
 }
 async function initDesignTime() {
-  const res = await fetch("/api/design-time");
-  if (!res.ok) throw new Error(`server returned ${res.status}`);
-  renderDesignTime(await res.json());
+  renderDesignTime(await api("/api/design-time"));
 }
 
 // -- Evidence: what the learned models actually score -----------------------------------------
@@ -2255,9 +2321,7 @@ function renderModelPerformance(d) {
   $("#model-performance").innerHTML = html;
 }
 async function initModelPerformance() {
-  const res = await fetch("/api/model-performance");
-  if (!res.ok) throw new Error(`server returned ${res.status}`);
-  renderModelPerformance(await res.json());
+  renderModelPerformance(await api("/api/model-performance"));
 }
 
 // -- Lab: SNR stress test (extension, not the brief) -----------------------------------------
