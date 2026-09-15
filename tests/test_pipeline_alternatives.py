@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from eqrl import pipeline
+from silq import pipeline
 
 from tests.test_solve_pipeline import AI_DESIGN, stub  # noqa: F401  (fixture re-use)
 
@@ -163,7 +163,7 @@ class TestDesignWiring:
             None, None, 0))
 
         pvt_calls = []
-        monkeypatch.setattr("eqrl.pvt_repair.apply_pvt_stage",
+        monkeypatch.setattr("silq.pvt_repair.apply_pvt_stage",
                             lambda result, *a, **k: pvt_calls.append(1))
 
         r = pipeline.design(8.92, 14.83)

@@ -21,10 +21,10 @@ import dataclasses
 
 import pytest
 
-from eqrl.envs.equalizer_env import _margins
-from eqrl.envs.sequential_env import SequentialEqualizerEnv, _shaped
-from eqrl.sim.measures import Measures
-from eqrl.specs import DEFAULT_SPEC, hard_pass
+from silq.envs.equalizer_env import _margins
+from silq.envs.sequential_env import SequentialEqualizerEnv, _shaped
+from silq.sim.measures import Measures
+from silq.specs import DEFAULT_SPEC, hard_pass
 
 
 def passing(**over) -> Measures:

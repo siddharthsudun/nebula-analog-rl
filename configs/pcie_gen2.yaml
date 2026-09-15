@@ -1,4 +1,4 @@
-# PCIe Gen 2 receiver equalizer target — matches eqrl.specs.Spec defaults.
+# PCIe Gen 2 receiver equalizer target — matches silq.specs.Spec defaults.
 # The LLM wrapper can also generate one of these from a natural-language prompt.
 data_rate_gbps: 5.0
 nyquist_ghz: 2.5

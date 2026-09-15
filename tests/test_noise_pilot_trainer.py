@@ -1,5 +1,5 @@
 import pytest
-from eqrl.agents.train_noise_pilot import _build_parser, _validated_config, _env_counters, _noise_fields
+from silq.agents.train_noise_pilot import _build_parser, _validated_config, _env_counters, _noise_fields
 
 
 def test_default_budget_is_exactly_five_rollouts():
@@ -34,7 +34,7 @@ def test_noise_progress_uses_actual_environment_info():
 
 def test_worker_factory_can_be_serialized_without_native_handles(tmp_path):
     import cloudpickle
-    from eqrl.agents.train_noise_pilot import _worker_factory
+    from silq.agents.train_noise_pilot import _worker_factory
     factory = _worker_factory({'seed': 7, 'horizon': 20}, 0, tmp_path)
     restored = cloudpickle.loads(cloudpickle.dumps(factory))
     assert callable(restored)

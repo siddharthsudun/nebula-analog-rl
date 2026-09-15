@@ -8,7 +8,7 @@ There is no automatic checkpoint promotion.
 ## User and API contract
 
 `POST /api/pipeline/run` accepts optional `noise_request` with schema
-`eqrl.snr.request.v2`. Omitting it preserves legacy behavior. New dashboard runs
+`silq.snr.request.v2`. Omitting it preserves legacy behavior. New dashboard runs
 always send their selected noise mode.
 
 ```json

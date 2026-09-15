@@ -12,7 +12,7 @@ for ck in $(ls results/checkpoints/seq_dcfix40k_*_steps.zip 2>/dev/null \
   out="results/rollouts/rollout_${steps}.json"
   [ -f "$out" ] && { echo "skip $steps (done)"; continue; }
   echo "=== rolling out $steps steps ==="
-  $PY -m eqrl.experiments.policy_rollout --model "$ck" --specs 8 --out "$out" \
+  $PY -m silq.experiments.policy_rollout --model "$ck" --specs 8 --out "$out" \
       2>&1 | grep -vE "^Note:" | grep -E "spec [0-9]|solved [0-9]+/"
 done
 echo "=== curve ==="

@@ -17,9 +17,9 @@
                 )
             except FileNotFoundError:
 >               raise NgspiceError("ngspice not found — `brew install ngspice`") from None
-E               eqrl.sim.ngspice_runner.NgspiceError: ngspice not found — `brew install ngspice`
+E               silq.sim.ngspice_runner.NgspiceError: ngspice not found — `brew install ngspice`
 
-src\eqrl\sim\ngspice_runner.py:42: NgspiceError
+src\silq\sim\ngspice_runner.py:42: NgspiceError
 =========================== short test summary info ===========================
 FAILED tests/test_server_resident.py::TestAgreesWithSubprocess::test_dc_gain_and_boost_match
 1 failed, 333 passed, 18 skipped, 1 xfailed in 775.64s (0:12:55)

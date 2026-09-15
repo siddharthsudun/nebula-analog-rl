@@ -28,16 +28,16 @@ also works on Python ≤3.13.)
 ## 3. Verify each layer
 ```bash
 # Phase 0 — SPICE loop (should print boost rising with Cs)
-PYTHONPATH=src .venv/bin/python -m eqrl.sim.ngspice_runner --selftest
+PYTHONPATH=src .venv/bin/python -m silq.sim.ngspice_runner --selftest
 
 # Env sanity
-PYTHONPATH=src .venv/bin/python -c "from gymnasium.utils.env_checker import check_env; from eqrl.envs.equalizer_env import EqualizerEnv; check_env(EqualizerEnv().unwrapped, skip_render_check=True); print('OK')"
+PYTHONPATH=src .venv/bin/python -c "from gymnasium.utils.env_checker import check_env; from silq.envs.equalizer_env import EqualizerEnv; check_env(EqualizerEnv().unwrapped, skip_render_check=True); print('OK')"
 
 # Baseline (runs real ngspice per trial)
-PYTHONPATH=src .venv/bin/python -m eqrl.baselines.sweep --method random --budget 80
+PYTHONPATH=src .venv/bin/python -m silq.baselines.sweep --method random --budget 80
 
 # Train (PPO through the ngspice loop)
-PYTHONPATH=src .venv/bin/python -m eqrl.agents.train --algo ppo --timesteps 20000
+PYTHONPATH=src .venv/bin/python -m silq.agents.train --algo ppo --timesteps 20000
 ```
 
 ## Confirmed working versions
@@ -48,7 +48,7 @@ optuna (for `--method bayesian`).
 Needs `ANTHROPIC_API_KEY` set for the real Claude parser; without it, a keyword heuristic
 fallback runs so nothing breaks:
 ```bash
-PYTHONPATH=src .venv/bin/python -m eqrl.llm.spec_parser "PCIe Gen2 CTLE, ~9 dB boost, under 12 mW"
+PYTHONPATH=src .venv/bin/python -m silq.llm.spec_parser "PCIe Gen2 CTLE, ~9 dB boost, under 12 mW"
 ```
 
 ## Note on the current circuit
@@ -65,7 +65,8 @@ default. Any number quoted from a `fast=True` run has two placeholder metrics in
 
 # Windows (native) — verified 2026-08-15
 
-Full suite green: **274 passed, 3 xfailed**, real ngspice + real SKY130. No WSL needed.
+Full suite green: **908 passed, 3 skipped, 2 xfailed** (re-run 15 Sep 2026), real ngspice +
+real SKY130. No WSL needed.
 
 Two gotchas cost the most time, both documented in `scripts/win-env.ps1`:
 - conda-forge ships **two** binaries. `ngspice.exe` is the **GUI** build and blocks on
@@ -86,12 +87,12 @@ Invoke-WebRequest `
 
 $env:MAMBA_ROOT_PREFIX = "$env:USERPROFILE\Downloads\mamba-root"
 & "$env:USERPROFILE\Downloads\micromamba.exe" create -y `
-  -p "$env:USERPROFILE\eqrl-ngspice" -c conda-forge ngspice
+  -p "$env:USERPROFILE\silq-ngspice" -c conda-forge ngspice
 
 # expose the CONSOLE build under the name the runner calls
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\eqrl-ngspice\shim" | Out-Null
-Copy-Item "$env:USERPROFILE\eqrl-ngspice\Library\bin\ngspice_con.exe" `
-          "$env:USERPROFILE\eqrl-ngspice\shim\ngspice.exe"
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\silq-ngspice\shim" | Out-Null
+Copy-Item "$env:USERPROFILE\silq-ngspice\Library\bin\ngspice_con.exe" `
+          "$env:USERPROFILE\silq-ngspice\shim\ngspice.exe"
 ```
 This also installs `Library\bin\ngspice.dll`, which is what PySpice's `NgSpiceShared`
 needs for the resident server. PySpice itself is not yet installed or tested here.

@@ -24,9 +24,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from eqrl import pipeline
-from eqrl.baselines.robust import robust_design
-from eqrl.circuits import pdk
+from silq import pipeline
+from silq.baselines.robust import robust_design
+from silq.circuits import pdk
 
 ROOT = Path(__file__).resolve().parent.parent
 DELIVERED = ROOT / "results" / "delivered_circuit.json"
@@ -107,7 +107,7 @@ class _FakeSolver:
 def stub(monkeypatch):
     """Install a fake solver + a fake verifier + a fake netlist writer."""
     # These historical nominal-stage tests isolate PVT, covered by test_pvt_pipeline.
-    monkeypatch.setattr("eqrl.pvt_repair.apply_pvt_stage", lambda result, *a, **k: result)
+    monkeypatch.setattr("silq.pvt_repair.apply_pvt_stage", lambda result, *a, **k: result)
     def install(*, best_design, passed=True, reached=True):
         fake = _FakeSolver(best_design=best_design, reached=reached)
         monkeypatch.setattr(pipeline, "_fc", lambda: fake)
@@ -244,7 +244,7 @@ class TestG32CannotCompleteAndFallbackIsExplicit:
 
 
 class TestTheResultSurvivesBeingWrittenDown:
-    """`eqrl.solve` dumps the result to JSON. A run that solves the spec and then dies in
+    """`silq.solve` dumps the result to JSON. A run that solves the spec and then dies in
     the encoder has not delivered anything, so the coercion is tested, not assumed."""
 
     def test_numpy_scalars_are_coerced(self):
@@ -265,12 +265,12 @@ class TestTheResultSurvivesBeingWrittenDown:
 
 class TestTheEntryPointUsesThePipeline:
     def test_solve_imports_the_architecture_and_not_a_private_copy(self):
-        """`eqrl.solve` must be a front end, not a second implementation."""
+        """`silq.solve` must be a front end, not a second implementation."""
         import inspect
 
-        from eqrl import solve
+        from silq import solve
         src = inspect.getsource(solve)
-        assert "from eqrl.pipeline import" in src
+        assert "from silq.pipeline import" in src
         assert "robust_design" not in src, \
             "solve.py must not reach for the fixed design itself; the labelled fallback " \
             "lives in pipeline.design(allow_fallback=True)"
@@ -280,7 +280,7 @@ class TestTheEntryPointUsesThePipeline:
         that fails 10 of 45 corners. A demo run must not quietly rewrite it."""
         import inspect
 
-        from eqrl import solve
+        from silq import solve
         m = re.search(r'"--out",\s*default="([^"]+)"', inspect.getsource(solve))
         assert m, "could not find the --out default in solve.py"
         assert m.group(1) != "results/solved_design.json"
@@ -293,7 +293,7 @@ def _sim_available() -> bool:
     if not pdk.available():
         return False
     try:
-        from eqrl.sim.server import get_server
+        from silq.sim.server import get_server
         get_server("tt")
         return True
     except Exception:
@@ -377,7 +377,7 @@ class TestEndToEndReproducesTheDeliveredCircuit:
         inner per-phase counters see, and any future code path that measures without
         being counted makes this fail.
         """
-        from eqrl.simcount import counting
+        from silq.simcount import counting
 
         s = manifest["spec"]
         with counting() as outer:
@@ -394,7 +394,7 @@ class TestEndToEndReproducesTheDeliveredCircuit:
 
     def test_a_real_result_is_json_serialisable(self, run):
         """The stubbed version of this cannot fail; only a real `hard_pass` returns the
-        numpy booleans that broke the first end-to-end `eqrl.solve` run."""
+        numpy booleans that broke the first end-to-end `silq.solve` run."""
         json.dumps(run)
 
 

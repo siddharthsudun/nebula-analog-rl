@@ -54,7 +54,7 @@ A receiver equalizer that undoes channel loss at high frequency. Two blocks:
   where the analog sizing action is.)
 
 ### Design variables (the RL action space)
-Six continuous knobs, exactly as implemented in `ACTION_SPACE` (`src/eqrl/circuits/ctle.py:124`):
+Six continuous knobs, exactly as implemented in `ACTION_SPACE` (`src/silq/circuits/ctle.py:124`):
 
 | Variable | Meaning | Range |
 |---|---|---|
@@ -70,8 +70,8 @@ Six continuous knobs, exactly as implemented in `ACTION_SPACE` (`src/eqrl/circui
   excluded from `ACTION_SPACE` (declared at `ctle.py:124`; the exclusion of
   `w_dfe`, and the reason for it, at `ctle.py:97-99`). The 1-tap DFE is a receiver-DSP block, not an
   analog knob: it is applied at the slicer and **adapted at runtime to the measured first
-  post-cursor** in the eye engine (`src/eqrl/sim/eye.py:120-128`). It is always on — the
-  eye metric in `measure_all` is post-DFE (`src/eqrl/sim/measures.py:174`), so every
+  post-cursor** in the eye engine (`src/silq/sim/eye.py:120-128`). It is always on — the
+  eye metric in `measure_all` is post-DFE (`src/silq/sim/measures.py:174`), so every
   reward and all 45 PVT corners are scored with it active. Sizing a tap at design time
   would model a receiver nobody builds; a real DFE adapts to the channel it sees.
 - **`C_load`** is a fixed parasitic model, not searched.
@@ -80,7 +80,7 @@ Start continuous (PPO/DDPG); optionally discretize per-knob (AutoCkt style) if t
 is unstable.
 
 ### Measurements (the observation vector)
-Extracted from SPICE per candidate — see `src/eqrl/sim/measures.py`:
+Extracted from SPICE per candidate — see `src/silq/sim/measures.py`:
 - **DC/AC:** peaking (dB), peak frequency, DC gain, boost = peak − DC
 - **Linearity:** HD3 from a transient/PSS at 100 MHz diff input (FFT of output)
 - **Noise:** integrated input-referred noise 10 MHz–5 GHz (`.noise`)

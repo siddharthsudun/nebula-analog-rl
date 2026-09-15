@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from eqrl.guards import Check, OperatingPoint, check_circuit_sanity
-from eqrl.sim.probe import (
+from silq.guards import Check, OperatingPoint, check_circuit_sanity
+from silq.sim.probe import (
     CTLE_INSTANCES, CTLE_NODES, CTLE_TAIL_DEVICES, DEVICE_PARAMS, NFET, ProbeError,
     build_operating_point, device_ref, op_commands, parse_assignments,
     probe_operating_point,
@@ -90,7 +90,7 @@ class TestProbeMatchesTheNetlist:
     """
 
     def test_every_probed_instance_exists_in_the_server_deck(self):
-        from eqrl.circuits.ctle import param_deck
+        from silq.circuits.ctle import param_deck
         deck = param_deck("tt")
         for inst in CTLE_INSTANCES:
             assert any(ln.split()[0].upper() == inst.upper()
@@ -98,14 +98,14 @@ class TestProbeMatchesTheNetlist:
                 f"probe watches {inst}, which the server deck does not instantiate"
 
     def test_every_probed_node_exists_in_the_server_deck(self):
-        from eqrl.circuits.ctle import param_deck
+        from silq.circuits.ctle import param_deck
         deck = param_deck("tt").lower()
         for node in CTLE_NODES:
             assert node.lower() in deck, \
                 f"probe reads v({node}), which appears nowhere in the server deck"
 
     def test_every_probed_instance_exists_in_the_standalone_netlist(self):
-        from eqrl.circuits.ctle import DesignVars, netlist
+        from silq.circuits.ctle import DesignVars, netlist
         deck = netlist(DesignVars(), models="sky130")
         for inst in CTLE_INSTANCES:
             assert any(ln.split()[0].upper() == inst.upper()
@@ -143,8 +143,8 @@ class TestParsing:
 
     def test_result_is_healthy_under_tier2(self, tmp_path):
         """The end the parser exists for: a good transcript must survive check 5-7."""
-        from eqrl.guards import ArtifactStore
-        from eqrl.circuits.ctle import DesignVars
+        from silq.guards import ArtifactStore
+        from silq.circuits.ctle import DesignVars
         store = ArtifactStore(tmp_path / "raw")
         a = store.new_run()
         a.exit_code = 0

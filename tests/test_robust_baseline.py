@@ -2,10 +2,10 @@
 import numpy as np
 import pytest
 
-from eqrl.baselines.robust import robust_design, robust_unit_action
-from eqrl.circuits.ctle import decode_action
-from eqrl.sim.measures import Measures
-from eqrl.envs.sequential_env import SequentialEqualizerEnv
+from silq.baselines.robust import robust_design, robust_unit_action
+from silq.circuits.ctle import decode_action
+from silq.sim.measures import Measures
+from silq.envs.sequential_env import SequentialEqualizerEnv
 
 
 def _good():

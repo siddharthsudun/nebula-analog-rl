@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
 
-from eqrl.envs.noise_env import NoiseEqualizerEnv
-from eqrl.sim.measures import Measures
+from silq.envs.noise_env import NoiseEqualizerEnv
+from silq.sim.measures import Measures
 
 
 @pytest.fixture
 def env(monkeypatch):
     # The unit tests never initialize a simulator. Integration is separate.
-    monkeypatch.setattr('eqrl.evaluator.build_evaluator', lambda *a, **kw: object())
+    monkeypatch.setattr('silq.evaluator.build_evaluator', lambda *a, **kw: object())
     obj = NoiseEqualizerEnv(seed=31)
     def measurement(x):
         obj._noise_score = 1.0

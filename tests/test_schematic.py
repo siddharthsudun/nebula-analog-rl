@@ -1,4 +1,4 @@
-"""The schematic renderer, which `eqrl.solve` now calls on every successful run.
+"""The schematic renderer, which `silq.solve` now calls on every successful run.
 
 `solve.py` wraps the call in try/except so that a drawing bug can never fail a sizing
 run whose design and provenance are already written to disk. That is the right choice
@@ -14,8 +14,8 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from eqrl.circuits.ctle import DesignVars
-from eqrl.schematic import render
+from silq.circuits.ctle import DesignVars
+from silq.schematic import render
 
 SVG_NS = "{http://www.w3.org/2000/svg}"
 

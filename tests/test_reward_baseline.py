@@ -7,10 +7,10 @@ step collected the whole gap as improvement and the excursion could be repeated 
 import numpy as np
 import pytest
 
-from eqrl.sim.measures import Measures
+from silq.sim.measures import Measures
 
 gym = pytest.importorskip("gymnasium")
-from eqrl.envs.sequential_env import SequentialEqualizerEnv, _shaped
+from silq.envs.sequential_env import SequentialEqualizerEnv, _shaped
 
 
 def _env(monkeypatch, sequence):

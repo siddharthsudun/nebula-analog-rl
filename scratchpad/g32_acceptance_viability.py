@@ -62,12 +62,12 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from eqrl.circuits.ctle import ACTION_SPACE, DesignVars                     # noqa: E402
-from eqrl.experiments.chance_baseline import make_targets_exact             # noqa: E402
-from eqrl.experiments.fastest_hedge import load_fastest_assets              # noqa: E402
-from eqrl.experiments.thinking_starts import diverse_seeds, plausible_mask  # noqa: E402
-from eqrl.specs import Spec                                                 # noqa: E402
-from eqrl.surrogate import KEYS, _HI, _LO, _LOG                             # noqa: E402
+from silq.circuits.ctle import ACTION_SPACE, DesignVars                     # noqa: E402
+from silq.experiments.chance_baseline import make_targets_exact             # noqa: E402
+from silq.experiments.fastest_hedge import load_fastest_assets              # noqa: E402
+from silq.experiments.thinking_starts import diverse_seeds, plausible_mask  # noqa: E402
+from silq.specs import Spec                                                 # noqa: E402
+from silq.surrogate import KEYS, _HI, _LO, _LOG                             # noqa: E402
 
 POOL = 512          # thinking_starts.diverse_seeds default
 N_SEEDS = 4         # pipeline's THINKING_SURROGATE_STARTS
@@ -209,7 +209,7 @@ def main():
               % (changed, N_SPECS, empt))
 
     # ---- the boundary probe the 32-draw sweep structurally cannot perform --------------
-    from eqrl.experiments.thinking_starts import acceptance_mask
+    from silq.experiments.thinking_starts import acceptance_mask
     print("\nEDGE PROBE at the DEFAULT spec (nothing tightened) -- the region the 32 draws")
     print("never sample. 'differs' here refutes 'inert at the defaults'.")
     print("   %8s %10s %10s %8s  %s" % ("target", "pool_min", "pool_max", "outside", "seeds"))

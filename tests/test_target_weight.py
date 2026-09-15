@@ -21,10 +21,10 @@ import dataclasses
 import numpy as np
 import pytest
 
-from eqrl.envs.sequential_env import (TARGET_PRICE_REF_DB, SequentialEqualizerEnv,
+from silq.envs.sequential_env import (TARGET_PRICE_REF_DB, SequentialEqualizerEnv,
                                       _shaped)
-from eqrl.sim.measures import Measures
-from eqrl.specs import DEFAULT_SPEC
+from silq.sim.measures import Measures
+from silq.specs import DEFAULT_SPEC
 
 
 def passing(**over) -> Measures:
@@ -63,7 +63,7 @@ class TestOffByDefaultAndUnchangedWhenOff:
         m, spec = passing(boost_db=7.0), spec_at(9.0)
         got, passed = _shaped(m, spec)
         soft = 0.5 * (1.0 - min(abs(7.0 - 9.0) / 3.0, 1.0))
-        from eqrl.envs.equalizer_env import _margins
+        from silq.envs.equalizer_env import _margins
         base = float(sum(np.clip(v, -2.0, 1.0) for v in _margins(m, spec).values()))
         assert got == pytest.approx(base + soft)
         assert passed is True

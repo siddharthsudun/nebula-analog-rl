@@ -4,8 +4,8 @@
 `results/g32_selfcal_bench*.json` and no results section for it. Check `git log` on this
 file against the artifact timestamp rather than trusting the sentence.
 
-Nothing on the default code path changes. `src/eqrl/experiments/g32_repair.py` and the
-transcription inside `src/eqrl/experiments/final_comparison.py` are not edited, not
+Nothing on the default code path changes. `src/silq/experiments/g32_repair.py` and the
+transcription inside `src/silq/experiments/final_comparison.py` are not edited, not
 imported-and-monkeypatched, and not re-frozen. The delivered circuit remains the one
 produced by the frozen-slope controller regardless of how this comes out.
 
@@ -33,9 +33,9 @@ self-calibrating variant is better and should ship — see §6.
 
 ## 2. The instrument — FROZEN HERE, BEFORE THE RUN
 
-`src/eqrl/experiments/g32_selfcal.calibrate_plane`, already committed in `520f7fbf0` and
+`src/silq/experiments/g32_selfcal.calibrate_plane`, already committed in `520f7fbf0` and
 already gated against `results/g32_peak_probe.json` by
-`src/eqrl/experiments/g32_selfcal_gate.py`. Its settings for this run, fixed now:
+`src/silq/experiments/g32_selfcal_gate.py`. Its settings for this run, fixed now:
 
 | setting | value | why |
 |---|---|---|

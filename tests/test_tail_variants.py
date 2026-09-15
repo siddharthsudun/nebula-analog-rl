@@ -4,15 +4,15 @@ import re
 
 import pytest
 
-from eqrl.circuits import ctle
-from eqrl.circuits.tail_variants import (
+from silq.circuits import ctle
+from silq.circuits.tail_variants import (
     TailConfig, TailDesign, geometry, instances, nodes, param_deck, parameters, snapshot, tail_devices,
 )
 
 
 @pytest.fixture(autouse=True)
 def fake_pdk(monkeypatch):
-    from eqrl.circuits import pdk
+    from silq.circuits import pdk
     monkeypatch.setattr(pdk, "lib_include", lambda c: f"* PDK corner {c}")
 
 
@@ -69,7 +69,7 @@ def test_invalid_vcm_is_rejected(value):
 def test_pilot_writes_numpy_check_flags_as_json_booleans(tmp_path):
     import json
     import numpy as np
-    from eqrl.experiments.tail_mirror_pilot import write_json
+    from silq.experiments.tail_mirror_pilot import write_json
     path = tmp_path / "row.json"
     write_json(path, {"passed": np.bool_(True)})
     assert json.loads(path.read_text()) == {"passed": True}

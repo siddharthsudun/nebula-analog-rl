@@ -102,14 +102,14 @@ def check_imports() -> None:
             _emit("SKIP", f"import {mod} (optional)", f"not installed; {why}")
 
 
-def check_eqrl_imports() -> None:
+def check_silq_imports() -> None:
     section("project imports")
     import importlib
 
-    for mod in ("eqrl.specs", "eqrl.circuits.ctle", "eqrl.circuits.pdk",
-                "eqrl.guards", "eqrl.evaluator", "eqrl.sim.measures",
-                "eqrl.sim.ngspice_runner", "eqrl.sim.server", "eqrl.envs.equalizer_env",
-                "eqrl.envs.sequential_env", "eqrl.llm.spec_parser"):
+    for mod in ("silq.specs", "silq.circuits.ctle", "silq.circuits.pdk",
+                "silq.guards", "silq.evaluator", "silq.sim.measures",
+                "silq.sim.ngspice_runner", "silq.sim.server", "silq.envs.equalizer_env",
+                "silq.envs.sequential_env", "silq.llm.spec_parser"):
         try:
             importlib.import_module(mod)
             ok(f"import {mod}")
@@ -130,9 +130,9 @@ def check_pdk() -> bool:
         ok("PDK_ROOT set", os.environ["PDK_ROOT"])
 
     try:
-        from eqrl.circuits import pdk
+        from silq.circuits import pdk
     except Exception as exc:                           # noqa: BLE001
-        fail("import eqrl.circuits.pdk", str(exc))
+        fail("import silq.circuits.pdk", str(exc))
         return False
 
     try:
@@ -197,9 +197,9 @@ def check_libngspice() -> bool:
     """True if the resident server can start."""
     section("libngspice (resident server path -- the fast one)")
     try:
-        from eqrl.sim.server import _tolerant_shared_instance
+        from silq.sim.server import _tolerant_shared_instance
     except Exception as exc:                           # noqa: BLE001
-        fail("import eqrl.sim.server", str(exc))
+        fail("import silq.sim.server", str(exc))
         return False
     try:
         # Claim shared-instance id 0 through the project's own tolerant subclass. Probing
@@ -226,8 +226,8 @@ def check_one_evaluation() -> None:
     import time
 
     try:
-        from eqrl.circuits.ctle import DesignVars
-        from eqrl.sim.measures import measure_all
+        from silq.circuits.ctle import DesignVars
+        from silq.sim.measures import measure_all
     except Exception as exc:                           # noqa: BLE001
         fail("import the measurement path", str(exc))
         return
@@ -274,7 +274,7 @@ def check_one_evaluation() -> None:
 #: for whoever clones the repo.
 PRODUCED_BY = {
     "results/seq_agent.zip":
-        "python -m eqrl.agents.train_sequential --guarded  (writes this path by default; "
+        "python -m silq.agents.train_sequential --guarded  (writes this path by default; "
         "long -- real SPICE on every step)",
 }
 
@@ -282,10 +282,10 @@ PRODUCED_BY = {
 OUTPUT_DESTS = {"--out", "--outdir", "--outfile", "--o"}
 
 CLI_FILES = [
-    "src/eqrl/solve.py",
-    "src/eqrl/experiments/honest_benchmark.py",
-    "src/eqrl/experiments/generalization.py",
-    "src/eqrl/experiments/compare.py",
+    "src/silq/solve.py",
+    "src/silq/experiments/honest_benchmark.py",
+    "src/silq/experiments/generalization.py",
+    "src/silq/experiments/compare.py",
 ]
 
 
@@ -337,23 +337,23 @@ def check_cli_defaults() -> None:
 
     # solve.py --model is required=True with no default. Assert that stays true, because
     # a default here would silently point at a checkpoint that does not load.
-    solve = (ROOT / "src/eqrl/solve.py").read_text(errors="ignore")
+    solve = (ROOT / "src/silq/solve.py").read_text(errors="ignore")
     if '"--model", required=True' in solve.replace("\n", " ").replace("  ", " "):
-        ok("src/eqrl/solve.py --model has no default", "must be passed explicitly")
+        ok("src/silq/solve.py --model has no default", "must be passed explicitly")
     else:
-        warn("src/eqrl/solve.py --model has no default",
+        warn("src/silq/solve.py --model has no default",
              "could not confirm by inspection; check it by hand")
 
 
 # ---------------------------------------------------------------------------
 
 def main() -> int:
-    print("eqrl smoke test")
+    print("silq smoke test")
     print(f"python {sys.version.split()[0]} :: {sys.executable}")
     print(f"repo   {ROOT}")
 
     check_imports()
-    check_eqrl_imports()
+    check_silq_imports()
     have_pdk = check_pdk()
     check_ngspice_exe()
     have_lib = check_libngspice()

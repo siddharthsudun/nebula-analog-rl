@@ -8,7 +8,7 @@ not a description of the current system.
 > ### ⚠️ WHAT THIS DOCUMENT NOW GETS WRONG
 >
 > **The title is stale.** There are five modes, not four. Current `MODES`
-> (`src/eqrl/pipeline.py:77`) = `default, fastest, thinking, retarget, auto` — plus
+> (`src/silq/pipeline.py:77`) = `default, fastest, thinking, retarget, auto` — plus
 > `g32_acceptance`, added 07 Sep 2026, which this V2 spec predates and does not cover.
 > It is deliberately absent from `UI_MODES`; see `docs/PREREG_G32_ACCEPTANCE.md`.
 >
@@ -342,7 +342,7 @@ relaxation all leave it at 1.936 dB — confirmed in §4's table.
 correct physics: `rs·cs` sets the CTLE zero, so with `rs` railed, `cs` is the remaining
 degeneration control.
 
-### ✅ IMPLEMENTED — `src/eqrl/experiments/axis_retarget.py`, mode `"retarget"`
+### ✅ IMPLEMENTED — `src/silq/experiments/axis_retarget.py`, mode `"retarget"`
 
 Shipped as its own arm. `g32_solve` is called **twice, completely unmodified**; the new logic
 lives only between the two calls, the same way `fastest_hedge` does it. The second call

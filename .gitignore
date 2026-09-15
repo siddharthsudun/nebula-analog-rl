@@ -16,9 +16,6 @@ pdk/
 results/checkpoints/
 results/*.zip
 
-# vercel
-.vercel/
-
 # --- trained policy -----------------------------------------------------------
 # The headline experiments (generalization.py, compare.py) both start with
 # PPO.load(...), so without the weights nothing in RESULTS.md can be reproduced by

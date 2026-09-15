@@ -13,7 +13,7 @@ The historical audit contains 22 nominally successful candidates, each evaluated
 
 ## Production behavior
 
-`eqrl.pipeline.design()` now runs nominal PPO/corpus search and G3.2, nominal verification, then `apply_pvt_stage`. The stage performs fresh full-grid checks, searches if needed, and uses a second simulator process for final acceptance. A successful repair replaces the actual returned sizing, SPICE netlist and verification measurements. The previous candidate is retained under `pre_pvt`. A failed or interrupted PVT stage returns `pvt_not_verified`, never `solved`.
+`silq.pipeline.design()` now runs nominal PPO/corpus search and G3.2, nominal verification, then `apply_pvt_stage`. The stage performs fresh full-grid checks, searches if needed, and uses a second simulator process for final acceptance. A successful repair replaces the actual returned sizing, SPICE netlist and verification measurements. The previous candidate is retained under `pre_pvt`. A failed or interrupted PVT stage returns `pvt_not_verified`, never `solved`.
 
 A fixed delivered-sizing anchor is remeasured at the requested target/channel and can be selected. Such reuse is explicitly marked `fixed_anchor_reused` and `is_ai_generated=false`. PPO itself is unchanged. `pvt=False` preserves the explicit historical nominal benchmark path; production uses PVT by default. SNR remains optional and separate. If requested, its sampled assessment cannot override failed PVT acceptance. This is not a joint SNR-by-PVT sign-off.
 

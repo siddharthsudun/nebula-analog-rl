@@ -39,7 +39,7 @@ That is a statement about the specification, not about anybody's optimizer.
 
 ## 2. Why the published checks may be insufficient
 
-The eight published checks (`hard_pass`, `src/eqrl/specs.py:97`) are:
+The eight published checks (`hard_pass`, `src/silq/specs.py:97`) are:
 
 `boost_range`, `peak_in_band`, `hd3`, `noise`, `power`, `area`, `eye_h`, `eye_v`
 
@@ -47,7 +47,7 @@ The eight published checks (`hard_pass`, `src/eqrl/specs.py:97`) are:
 > (18 Aug 2026) `DEFAULT_SPEC.dc_gain_db_min = 0.0`, so `hard_pass` against our *own* default
 > spec emits **nine** checks. The measurement below scores against the **competition's**
 > published set — `dc_gain_db_min=None`, pinned explicitly in `spec_pass`
-> (`src/eqrl/experiments/pass_vs_valid.py:76`). That is the correct experimental design: the
+> (`src/silq/experiments/pass_vs_valid.py:76`). That is the correct experimental design: the
 > question is whether designs meeting the *published* spec are real circuits, so the
 > published spec is what they must be scored against.
 >

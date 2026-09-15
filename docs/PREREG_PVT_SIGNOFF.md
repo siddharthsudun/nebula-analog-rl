@@ -46,7 +46,7 @@ The pool size is whatever that yields. It is **not** capped, trimmed, or sampled
 
 ## 3. The sweep
 
-For each candidate, all 45 corners of `eqrl.envs.pvt.corner_grid(spec, mode="full")`:
+For each candidate, all 45 corners of `silq.envs.pvt.corner_grid(spec, mode="full")`:
 
 ```
 process   tt, ss, ff, sf, fs                     (5)

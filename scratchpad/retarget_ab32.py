@@ -29,11 +29,11 @@ from pathlib import Path
 REPO = Path(r"C:\Users\talk2.000\Desktop\Claude\nebula-analog-rl")
 sys.path.insert(0, str(REPO / "src"))
 os.chdir(REPO)
-_NG = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
+_NG = Path(os.environ["USERPROFILE"]) / "silq-ngspice"
 os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
 os.environ["PATH"] = f"{_NG / 'shim'};{_NG / 'Library' / 'bin'};{os.environ['PATH']}"
 
-from eqrl import pipeline as pl  # noqa: E402
+from silq import pipeline as pl  # noqa: E402
 
 SPEC_SEED = 137
 N_SPECS = 32
@@ -41,8 +41,8 @@ OUT = Path(sys.argv[1] if len(sys.argv) > 1 else "scratchpad/retarget_ab32.json"
 
 
 def main() -> None:
-    from eqrl.experiments.final_comparison import load_policy
-    from eqrl.experiments.target_audit import make_specs
+    from silq.experiments.final_comparison import load_policy
+    from silq.experiments.target_audit import make_specs
 
     specs = make_specs(N_SPECS, SPEC_SEED)
     t = time.perf_counter()

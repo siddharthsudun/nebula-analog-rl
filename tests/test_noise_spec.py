@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from eqrl.noise_spec import (
+from silq.noise_spec import (
     NOISE_REFERENCE,
     NOISE_SPECTRUM,
     OBSERVATION_FEATURES,

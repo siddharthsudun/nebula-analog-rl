@@ -1,7 +1,10 @@
-# EqRL: RL-Driven Analog Equalizer Design
+# silQ: RL-Driven Analog Equalizer Design
 
 **Nebula @ BITS Goa 2026 · Analog Track · Astera Labs**
 *AI/ML for Analog Circuit Design*
+
+Team BGG, BITS Pilani: Siddharth Hariharan, Siddharth Sudunagunta, Rishit Gupta.
+Report: [`report/silq_report_final.pdf`](report/silq_report_final.pdf).
 
 A reinforcement-learning framework that takes an equalizer spec sheet as input, talks to
 a SPICE simulator in a closed loop, sizes the devices, and checks the operating point of
@@ -69,7 +72,7 @@ The judges (Astera Labs) are not asking us to invent RL-for-analog. That lineage
 open PDK that hits a hard spec across PVT.** That is an execution problem, and the part of
 it we have executed is verification.
 
-1. **The scoring is guarded** (`src/eqrl/guards.py`). Twenty checks in five tiers run
+1. **The scoring is guarded** (`src/silq/guards.py`). Twenty checks in five tiers run
    against the operating point of the actual candidate, and `measure_all` is sealed so no
    number can reach a reward unvalidated. This is not decoration: **86% of the designs
    that pass all eight published specs are not valid circuits**: 24 of 28, measured
@@ -85,7 +88,7 @@ it we have executed is verification.
 3. **The simulator loop is fast enough to train on.** 77.5 ms per AC evaluation against
    6370.5 ms for a fresh ngspice subprocess, a measured 82.2× (`results/speedup.json`).
 4. **LLM front-end (the bonus)**: natural-language spec → `Spec` object, with a keyword
-   fallback when no API key is set. (`src/eqrl/llm/spec_parser.py`)
+   fallback when no API key is set. (`src/silq/llm/spec_parser.py`)
 
 ## Architecture
 
@@ -123,33 +126,33 @@ it we have executed is verification.
 | Path | What lives here |
 |---|---|
 | `docs/` | Problem statement, roadmap, references, design decisions |
-| `src/eqrl/specs.py` | The `Spec` dataclass, target numbers as code |
-| `src/eqrl/circuits/` | Parametric CTLE + DFE netlist generators |
-| `src/eqrl/sim/` | ngspice/PySpice runner + measurement extraction |
-| `src/eqrl/envs/` | Gymnasium environment wrapping the testbench |
-| `src/eqrl/agents/` | RL training + evaluation scripts |
-| `src/eqrl/guards.py` | The validation layer: 20 checks, 5 tiers, sealed measurement path |
-| `src/eqrl/baselines/` | Random + Bayesian (Optuna) sweeps; CMA-ES lives in `experiments/honest_benchmark.py` |
-| `src/eqrl/experiments/` | Measurement scripts; each writes its own artifact into `results/` |
-| `src/eqrl/llm/` | Natural-language spec parser |
+| `src/silq/specs.py` | The `Spec` dataclass, target numbers as code |
+| `src/silq/circuits/` | Parametric CTLE + DFE netlist generators |
+| `src/silq/sim/` | ngspice/PySpice runner + measurement extraction |
+| `src/silq/envs/` | Gymnasium environment wrapping the testbench |
+| `src/silq/agents/` | RL training + evaluation scripts |
+| `src/silq/guards.py` | The validation layer: 20 checks, 5 tiers, sealed measurement path |
+| `src/silq/baselines/` | Random + Bayesian (Optuna) sweeps; CMA-ES lives in `experiments/honest_benchmark.py` |
+| `src/silq/experiments/` | Measurement scripts; each writes its own artifact into `results/` |
+| `src/silq/llm/` | Natural-language spec parser |
 | `testbench/` | Raw SPICE testbenches (hand-written, for debugging) |
 
 ## Quickstart
 
-```bash
-# Phase 0 infra (do this FIRST, it is the real risk)
-brew install ngspice
-# install SKY130 PDK models (see docs/ROADMAP.md Phase 0)
+ngspice and the SKY130 models are the part that takes time. [`SETUP.md`](SETUP.md) has
+both verified paths, macOS and native Windows. After that:
 
-python3 -m venv .venv && source .venv/bin/activate
+```bash
 pip install -r requirements.txt
 
 # sanity-check the simulator loop end to end
-python -m eqrl.sim.ngspice_runner --selftest
+PYTHONPATH=src python -m silq.sim.ngspice_runner --selftest
 
-# train
-python -m eqrl.agents.train --algo ppo --timesteps 20000
+# run the tests
+PYTHONPATH=src python -m pytest tests/ -q
 ```
+
+On Windows, `start_server.bat` starts the dashboard described at the top.
 
 ## Status
 
@@ -162,9 +165,11 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
 
 - **PPO learns the feasible design space.** The frozen policy `results/seq_clean40k.zip`
   reaches a valid circuit in a median of **4 evaluations**, against **2,394** for the full
-  parameter sweep the poster names as the baseline. It supplies feasibility, not sizing
-  precision; on its own it does not hit a *requested* boost above a matched-chance null,
-  and that is reported as the boundary of the RL claim, not hidden.
+  parameter sweep the poster names as the baseline. Those two are historical counts from
+  different runs with no matched chance line, so read them as context; the budget-matched
+  comparison is the mode table below. The policy supplies feasibility, not sizing
+  precision: on its own, requested and achieved boost correlate at only +0.114
+  (`docs/REPRODUCE.md` §8), and that is reported as the boundary of the RL claim, not hidden.
 - **G3.2 closes the requested spec.** A numerical stage that refines the PPO handoff,
   constrained to the requested boost and the peak-frequency band (`boost_axis`,
   `peak_axis`, `band_ghz` at `final_comparison.py:128-132`) — *not* to the acceptance
@@ -176,6 +181,23 @@ spec  →  PPO global feasibility search  →  G3.2 constrained target refinemen
 - **The delivered circuit passes all 45 PVT corners** (`results/delivered_circuit.json`):
   target 8.920 dB over a 14.83 dB channel, worst-corner error 1.081 dB, DC gain the binding
   constraint. 1 of 22 held-out candidates was PVT-clean; optimisation ran at TT only.
+- **Inference modes, against a budget-matched chance line** (31 specs, spec seed 137,
+  nominal TT; `docs/STATUS.md` §2). Every mode is a search strategy over the same frozen
+  policy, not a separately trained model.
+
+  | mode | solved | median wall | median sims | chance | vs chance |
+  |---|---|---|---|---|---|
+  | auto | 30/31 | 16.8 s | 2 | 20.3 | +9.7 |
+  | fastest | 24/31 | 14.8 s | 2 | 18.1 | +5.9 |
+  | thinking | 30/31 | 127.9 s | 32 | 30.5 | −0.5 |
+
+  `thinking` and `auto` both solve 30/31, but `thinking` spends 40 simulations to get
+  there and sits at its chance line. The margin belongs to `auto` and `fastest`.
+- **SNR, post-hoc** (not part of the problem statement; `docs/RESULTS_SNR_ROBUSTNESS.md`).
+  Eye-opening pass rate is 0.833 at 20 dB, the same as the noiseless reference, 0.333 at
+  15 dB, 0.042 at 14 dB (one design of 24) and 0.000 at 13 dB and below. The policy has no
+  noise input, so this measures how its designs qualify under noise, not robustness it
+  learned.
 
 **What the training never asked for.** Stated here because it is the first thing a
 reader should be able to check about an RL entry, and because both facts are readable
@@ -184,7 +206,7 @@ straight off the trainer's own config files (`results/*_train.json`, nine of the
 - **No policy in this repo was ever trained against corner variation.** `pvt: False` in
   all nine configs, the frozen `seq_clean40k` included. A worst-corner reward path
   exists and works — `self.pvt` selects the lowest-reward V×T corner rather than the
-  nominal one (`src/eqrl/envs/sequential_env.py:274`) — and no checkpoint has used it.
+  nominal one (`src/silq/envs/sequential_env.py:274`) — and no checkpoint has used it.
   Note what it is and is not even when switched on: it sweeps voltage and temperature
   at `self.corner`, a *single* process corner, so it would not by itself amount to
   training across the 45-corner grid the spec table names. Robustness today is
@@ -198,8 +220,19 @@ straight off the trainer's own config files (`results/*_train.json`, nine of the
   method: `channel_range: [8.0, 16.0]` against those targets makes "requested boost
   exceeds channel loss" a thin sliver of what the agent ever saw.
 
-Both are being addressed on a separately named checkpoint. The frozen path and every
-number derived from it are unchanged either way.
+Neither gap has been closed by a qualified checkpoint. The frozen path and every number
+derived from it are unchanged.
+
+**Other limits, stated in the report as well:**
+
+- **No training run has a reward curve.** `train_sequential.py` builds its vectorized
+  environment without a `Monitor` wrapper, so SB3 never logged `rollout/ep_rew_mean`.
+- **Area is analytic, not extracted from layout** (the 22× margin below is a bound over the
+  action space, not a measured layout).
+- **The DFE is behavioural.** It is an adapted 1-tap model inside the eye computation, not a
+  transistor-level circuit.
+- **Per-request simulation counts exclude training cost.** They describe amortized request
+  cost only.
 
 **Infrastructure, on real SKY130:**
 
@@ -216,7 +249,7 @@ number derived from it are unchanged either way.
   physics (nothing valid above it across 90 samples); no other range was narrowed.
 - `area` cannot fail as a constraint: every term of `area_mm2` is increasing in its own
   variable, so the upper corner of `ACTION_SPACE` is the true supremum — **0.002227 mm²
-  against a 0.05 mm² budget, a 22× margin** (`src/eqrl/circuits/ctle.py:62-75`; 200k
+  against a 0.05 mm² budget, a 22× margin** (`src/silq/circuits/ctle.py:62-75`; 200k
   log-uniform samples peak at 0.002069, consistent). This is an analytic *bound over the
   whole space*, not a worst case observed in the runs we happened to do. It replaces an
   earlier 0.0113 mm² figure that predated capping the tail current at 1 mA — the mirror
@@ -231,5 +264,6 @@ measurements and `HANDOVER.md` is the mid-project working log.
 
 ## References
 
-See [`docs/REFERENCES.md`](docs/REFERENCES.md). Start with AutoCkt (Berkeley); it is the
-closest published analogue to what this competition is asking for.
+See [`docs/REFERENCES.md`](docs/REFERENCES.md), the same IEEE-style list the report uses.
+Start with AutoCkt (Berkeley); it is the closest published analogue to what this
+competition is asking for.

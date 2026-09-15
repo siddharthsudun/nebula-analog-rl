@@ -1,5 +1,5 @@
 // silQ dashboard. Vanilla JS, no build step. Talks to server.py's JSON API, which wraps
-// the same eqrl functions the CLI and the benchmarks use.
+// the same silq functions the CLI and the benchmarks use.
 //
 // Shape of the page: an intro splash, then one product surface (Design) whose spine is
 // "type to circuit": the composer at the top reads the request as it is typed, the spec
@@ -274,7 +274,7 @@ function initTheme() {
 
 //: The resident simulator accumulates internal state across every run for as long as
 //: this dashboard process is up, and gets slower call by call as it does -- see
-//: eqrl.sim.server.NgspiceServer.destroy_all_plots. This button is the user-facing
+//: silq.sim.server.NgspiceServer.destroy_all_plots. This button is the user-facing
 //: escape hatch: clear it without paying for a full process restart (~15s model
 //: reparse).
 function initSimRefresh() {
@@ -2105,7 +2105,7 @@ function deliveredHtml(d) {
   const tt = d.pvt.tt_nominal, pvt = d.pvt, p = d.provenance, dv = d.design;
   const wcRows = Object.entries(pvt.worst_case_by_metric).map(([metric, v]) => `<tr><td>${escapeHtml(metric)}</td><td>${fmt(v.min, 3)}</td><td style="font-size:10.5px; color:var(--ink-faint);">${escapeHtml(v.min_at)}</td><td>${fmt(v.max, 3)}</td><td style="font-size:10.5px; color:var(--ink-faint);">${escapeHtml(v.max_at)}</td><td>${v.limit_lo ?? "n/a"}</td><td>${v.limit_hi ?? "n/a"}</td></tr>`).join("");
   return `
-    <div class="section-label">Design (eqrl.circuits.ctle.DesignVars)</div>
+    <div class="section-label">Design (silq.circuits.ctle.DesignVars)</div>
     <div class="card">${kpiGrid([
       { label: "W / L", value: `${fmt(dv.w_in * 1e6, 2)} / ${fmt(dv.l_in * 1e6, 4)} µm` }, { label: "I_tail", value: `${fmt(dv.i_tail * 1e6, 1)} µA` },
       { label: "Rs / Cs", value: `${fmt(dv.rs / 1e3, 2)} k / ${fmt(dv.cs * 1e15, 1)} f` }, { label: "R_load", value: `${fmt(dv.r_load, 1)} Ω` },

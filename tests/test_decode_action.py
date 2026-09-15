@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from eqrl.circuits.ctle import ACTION_SPACE, DesignVars, decode_action, encode_action
+from silq.circuits.ctle import ACTION_SPACE, DesignVars, decode_action, encode_action
 
 FIELDS = list(ACTION_SPACE)
 
@@ -126,7 +126,7 @@ class TestEnvWiring:
 
     def test_equalizer_env_declares_pm1(self):
         import inspect
-        from eqrl.envs import equalizer_env
+        from silq.envs import equalizer_env
         src = inspect.getsource(equalizer_env.EqualizerEnv.step)
         assert 'domain="pm1"' in src, (
             "EqualizerEnv passes an ABSOLUTE Box(-1,1) action straight to the decoder, "
@@ -135,7 +135,7 @@ class TestEnvWiring:
 
     def test_sequential_env_keeps_state_in_unit(self):
         import inspect
-        from eqrl.envs import sequential_env
+        from silq.envs import sequential_env
         src = inspect.getsource(sequential_env.SequentialEqualizerEnv)
         assert "np.clip(self._x" in src, (
             "SequentialEqualizerEnv's internal state must stay clipped to [0,1] for the "

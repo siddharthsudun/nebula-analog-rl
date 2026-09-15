@@ -20,9 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from eqrl import pareto                                         # noqa: E402
-from eqrl.specs import DEFAULT_SPEC                             # noqa: E402
-from eqrl.circuits import pdk                                   # noqa: E402
+from silq import pareto                                         # noqa: E402
+from silq.specs import DEFAULT_SPEC                             # noqa: E402
+from silq.circuits import pdk                                   # noqa: E402
 
 #: The PVT pool is stubbed, but `_pareto_worker` still calls `pareto.finalize`, which
 #: renders a SKY130 netlist per published choice. Without the PDK that raises inside the
@@ -89,13 +89,13 @@ class StubPool:
 
 def install(monkeypatch, srv, pool, n_candidates=10):
     """Point the worker at the stub pool and at synthetic candidate sizings."""
-    monkeypatch.setattr("eqrl.pvt_workers.get_pool", lambda deadline=None: pool)
+    monkeypatch.setattr("silq.pvt_workers.get_pool", lambda deadline=None: pool)
     monkeypatch.setattr(pareto, "proposals", lambda result, spec, cap: [
         dict(id=f"c{i}", origin=f"stub {i}", design=design(i + 1))
         for i in range(n_candidates)])
     monkeypatch.setattr(pareto, "verification_from_row", lambda row: row)
     spec = dataclasses.replace(DEFAULT_SPEC, target_boost_db=8.0)
-    monkeypatch.setattr("eqrl.pipeline.spec_for", lambda *a, **k: spec)
+    monkeypatch.setattr("silq.pipeline.spec_for", lambda *a, **k: spec)
 
 
 @needs_pdk

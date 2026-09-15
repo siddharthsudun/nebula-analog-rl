@@ -1,5 +1,8 @@
 # Where the entry actually stands — 07 Sep 2026
 
+> **Snapshot, not updated after 07 Sep.** The submitted report and the README are current.
+> Counts that moved since (the test count, for one) are stale here; the measurements are not.
+
 **Final submission: 15 Sep.** Eight days. Architecture frozen 26 Aug; everything below
 that changes behaviour is either inference-time or a separately-named arm.
 
@@ -11,15 +14,15 @@ This is a status list, not a pitch. Anything not measured is marked as not measu
 
 | | evidence |
 |---|---|
-| ngspice 47 + real SKY130 device models; parametric CTLE netlist from an action vector | `testbench/`, `src/eqrl/circuits/ctle.py` |
-| Full measurement suite — AC boost/peak, DC gain, HD3 (transient+FFT), input-referred noise (`.noise`), power, area | `src/eqrl/measures.py` |
+| ngspice 47 + real SKY130 device models; parametric CTLE netlist from an action vector | `testbench/`, `src/silq/circuits/ctle.py` |
+| Full measurement suite — AC boost/peak, DC gain, HD3 (transient+FFT), input-referred noise (`.noise`), power, area | `src/silq/measures.py` |
 | Gym env + PPO through the real simulator; a frozen working policy at 40,960 steps | `results/seq_clean40k.zip` |
-| Guard layer: 20 checks in 5 tiers, `measure_all` sealed so nothing reaches a reward unguarded, every rejection logged **by check** | `src/eqrl/guards.py` |
+| Guard layer: 20 checks in 5 tiers, `measure_all` sealed so nothing reaches a reward unguarded, every rejection logged **by check** | `src/silq/guards.py` |
 | 45-corner PVT sign-off runner (5 process × 3 V × 3 T), HD3 and noise simulated at each | `results/pvt_signoff_seed23.json` |
-| Real eye: minimum-phase PCIe channel + CTLE + adapted 1-tap DFE, Monte-Carlo | `src/eqrl/eye.py` |
-| NL → `Spec` parser, with a keyword fallback when no API key is set | `src/eqrl/llm/spec_parser.py` |
+| Real eye: minimum-phase PCIe channel + CTLE + adapted 1-tap DFE, Monte-Carlo | `src/silq/eye.py` |
+| NL → `Spec` parser, with a keyword fallback when no API key is set | `src/silq/llm/spec_parser.py` |
 | Web dashboard; delivered netlist carries its own verification status in its header | `server.py`, `dashboard/` |
-| Five inference modes, plus `g32_acceptance` as a named experimental arm | `src/eqrl/pipeline.py` |
+| Five inference modes, plus `g32_acceptance` as a named experimental arm | `src/silq/pipeline.py` |
 | 541 tests green, including ratchets that check prose numbers against the code they cite | `tests/` |
 
 ### The two results that are genuinely ours
@@ -109,7 +112,7 @@ This is a status list, not a pitch. Anything not measured is marked as not measu
 4. **Do not use `results/final_report.json` as a PVT source.** It has no
    `all_pvt_pass` field. The separate `results/solved_design_pvt.json → all_pvt_pass`
    artifact is a different pre-mirror-fix design; its schema is constructed by
-   `src/eqrl/experiments/characterize.py::characterize`, whose CLI writes
+   `src/silq/experiments/characterize.py::characterize`, whose CLI writes
    `<outdir>/final_report.json` without recording the invocation in that historical file.
 
 ### High value, inference-time only (respects the freeze)

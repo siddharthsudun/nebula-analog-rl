@@ -6,7 +6,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$NgPrefix = "$env:USERPROFILE\eqrl-ngspice"
+$NgPrefix = "$env:USERPROFILE\silq-ngspice"
 $PdkRoot  = "$env:USERPROFILE\pdk"
 
 if (-not (Test-Path "$NgPrefix\shim\ngspice.exe")) {
@@ -26,7 +26,7 @@ $env:PATH = "$NgPrefix\shim;$NgPrefix\Library\bin;$env:PATH"
 $env:SPICE_LIB_DIR = "$NgPrefix\Library\share\ngspice"
 $env:PDK_ROOT = $PdkRoot
 
-# For the resident server (PySpice -> libngspice). src/eqrl/sim/server.py discovers this
+# For the resident server (PySpice -> libngspice). src/silq/sim/server.py discovers this
 # on its own, but setting it explicitly makes the shell self-describing and lets a
 # non-standard install location override the search. The {} is a placeholder PySpice
 # fills with the instance id.

@@ -7,17 +7,17 @@ The original VCM sweep also has a confirmed control-path error. Its claimed
 
 ## What changed
 
-- `src/eqrl/circuits/tail_variants.py`: explicit simple and wide-swing cascode
+- `src/silq/circuits/tail_variants.py`: explicit simple and wide-swing cascode
   tail decks. The differential input pair, resistive loads, source-degeneration
   Rs/Cs, and receiver DFE remain the existing single-stage CTLE architecture.
-- `src/eqrl/evaluator.py`: optional netlist and operating-point probe adapters.
+- `src/silq/evaluator.py`: optional netlist and operating-point probe adapters.
   Default behavior is unchanged. Experimental candidates use `build_evaluator`
   with `fast=False`, real transient HD3 and noise, and the existing guard thresholds.
-- `src/eqrl/experiments/tail_mirror_pilot.py`: separate resident-simulator worker
+- `src/silq/experiments/tail_mirror_pilot.py`: separate resident-simulator worker
   processes, explicit VCM parameters, measured VCM validation, complete transistor
   probes, supply-current power measurement, expanded analytical transistor area,
   exact parameter snapshots, incremental output, and evaluation/time bounds.
-- `src/eqrl/experiments/vcm_physics_check.py`: runs the existing SKY130 physics
+- `src/silq/experiments/vcm_physics_check.py`: runs the existing SKY130 physics
   tests at both VCM settings, setting both the batch and resident control paths.
 
 No training, optimizer integration, PPO action-space change, checkpoint promotion,
@@ -156,10 +156,10 @@ new output directories so existing evidence is never overwritten:
 
 ```powershell
 .venv/Scripts/python.exe -m pytest tests/test_tail_variants.py tests/test_evaluator.py tests/test_probe.py -q --basetemp=work/tail-variant/pytest-new
-.venv/Scripts/python.exe -m eqrl.experiments.tail_mirror_pilot --phase screen --output results/tail_screen_new
-.venv/Scripts/python.exe -m eqrl.experiments.tail_mirror_pilot --phase refine --output results/tail_refine_new
-.venv/Scripts/python.exe -m eqrl.experiments.tail_mirror_pilot --phase confirm --output results/tail_confirm_new
-.venv/Scripts/python.exe -m eqrl.experiments.vcm_physics_check --output results/vcm_physics_new
+.venv/Scripts/python.exe -m silq.experiments.tail_mirror_pilot --phase screen --output results/tail_screen_new
+.venv/Scripts/python.exe -m silq.experiments.tail_mirror_pilot --phase refine --output results/tail_refine_new
+.venv/Scripts/python.exe -m silq.experiments.tail_mirror_pilot --phase confirm --output results/tail_confirm_new
+.venv/Scripts/python.exe -m silq.experiments.vcm_physics_check --output results/vcm_physics_new
 ```
 
 ## Handoff corrections

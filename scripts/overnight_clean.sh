@@ -22,17 +22,17 @@ if [ ! -f "$MODEL" ]; then
 fi
 
 echo "[2/5] reward audit -- does the fix hold? (honest ceiling ~25)"
-$PY -m eqrl.experiments.reward_audit --model "$MODEL" --episodes 12 \
+$PY -m silq.experiments.reward_audit --model "$MODEL" --episodes 12 \
     --out results/reward_audit_clean40k.json 2>&1 | grep -viE "^Note:|^Warning" | tail -25
 
 echo "[3/5] UNANCHORED 32-spec rollout of the final model (compare against the old 2/32)"
-$PY -m eqrl.experiments.policy_rollout --model "$MODEL" --specs 32 \
+$PY -m silq.experiments.policy_rollout --model "$MODEL" --specs 32 \
     --out results/rollout_clean40k_32.json 2>&1 | grep -E "spec [0-9]|solved [0-9]+/|median|invalid"
 
 echo "[4/5] checkpoint curve, 8 specs, every other checkpoint"
 for CK in $(ls -1 results/checkpoints/seq_clean40k_*_steps.zip | sed 's/.*_\([0-9]*\)_steps.zip/\1 &/' | sort -n | awk 'NR%2==1' | cut -d' ' -f2); do
   N=$(echo "$CK" | sed 's/.*_\([0-9]*\)_steps.zip/\1/')
-  R=$($PY -m eqrl.experiments.policy_rollout --model "$CK" --specs 8 \
+  R=$($PY -m silq.experiments.policy_rollout --model "$CK" --specs 8 \
         --out "results/rollouts/clean40k_${N}.json" 2>&1 | grep -oE "solved [0-9]+/[0-9]+" | tail -1)
   echo "  ${N} steps: ${R:-no result}"
 done
@@ -56,7 +56,7 @@ PYX
 )
 if [ -n "$BEST" ]; then
   echo "  best on the 8-spec curve: $BEST steps"
-  $PY -m eqrl.experiments.policy_rollout \
+  $PY -m silq.experiments.policy_rollout \
       --model "results/checkpoints/seq_clean40k_${BEST}_steps.zip" --specs 32 \
       --out results/rollout_clean40k_best32.json 2>&1 | grep -E "solved [0-9]+/|median|invalid"
 else

@@ -111,7 +111,7 @@ jobs:
 
       - name: requirements.txt installs cleanly
         # This step is the point of the job. requirements.txt had PySpice commented out
-        # while src/eqrl/sim/server.py imported it, and listed cma without anyone having
+        # while src/silq/sim/server.py imported it, and listed cma without anyone having
         # installed it from the file, so a fresh clone could not run the main path. A
         # resolver failure or a missing wheel now breaks the build instead of a judge.
         run: |
@@ -127,7 +127,7 @@ jobs:
           python -m compileall -q src scripts
 
       - name: Import the library modules
-        # Only the library, not src/eqrl/experiments/*: nine of those touch the PDK at
+        # Only the library, not src/silq/experiments/*: nine of those touch the PDK at
         # module scope (build a netlist / start a server at import), so importing them
         # without a PDK raises FileNotFoundError. compileall above still covers their
         # syntax.
@@ -135,24 +135,24 @@ jobs:
           PYTHONPATH=src python - <<'PY'
           import importlib
           mods = [
-              "eqrl.specs", "eqrl.guards", "eqrl.evaluator",
-              "eqrl.circuits.ctle", "eqrl.circuits.pdk",
-              "eqrl.sim.measures", "eqrl.sim.ngspice_runner", "eqrl.sim.server",
-              "eqrl.sim.eye", "eqrl.sim.channel", "eqrl.sim.probe",
-              "eqrl.envs.equalizer_env", "eqrl.envs.sequential_env", "eqrl.envs.pvt",
-              "eqrl.agents.train", "eqrl.agents.train_sequential", "eqrl.agents.tracking",
-              "eqrl.baselines.sweep", "eqrl.llm.spec_parser", "eqrl.solve",
-              # eqrl.solve imports this lazily, inside a try/except, so that a rendering
+              "silq.specs", "silq.guards", "silq.evaluator",
+              "silq.circuits.ctle", "silq.circuits.pdk",
+              "silq.sim.measures", "silq.sim.ngspice_runner", "silq.sim.server",
+              "silq.sim.eye", "silq.sim.channel", "silq.sim.probe",
+              "silq.envs.equalizer_env", "silq.envs.sequential_env", "silq.envs.pvt",
+              "silq.agents.train", "silq.agents.train_sequential", "silq.agents.tracking",
+              "silq.baselines.sweep", "silq.llm.spec_parser", "silq.solve",
+              # silq.solve imports this lazily, inside a try/except, so that a rendering
               # bug can never fail a sizing run that already has its design on disk. That
               # is the right behaviour there and the wrong one for CI -- without this
               # line a broken renderer would be invisible until a demo. Pure string
               # formatting over the design vector; no PDK, no simulator.
-              "eqrl.schematic",
-              # eqrl.pipeline defers its import of experiments.final_comparison (and that
+              "silq.schematic",
+              # silq.pipeline defers its import of experiments.final_comparison (and that
               # module's ngspice/PDK env bootstrap) to call time. Importing it here is what
               # keeps that deferral honest: if it ever becomes a module-scope import, this
               # step fails on a runner with no PDK and no USERPROFILE.
-              "eqrl.pipeline",
+              "silq.pipeline",
           ]
           for m in mods:
               importlib.import_module(m)
@@ -164,14 +164,14 @@ jobs:
         # cannot even build its parser is the fastest way to lose a reviewer.
         run: |
           export PYTHONPATH=src
-          for m in eqrl.solve \
-                   eqrl.agents.train \
-                   eqrl.agents.train_sequential \
-                   eqrl.baselines.sweep \
-                   eqrl.experiments.characterize \
-                   eqrl.experiments.honest_benchmark \
-                   eqrl.experiments.generalization \
-                   eqrl.experiments.compare; do
+          for m in silq.solve \
+                   silq.agents.train \
+                   silq.agents.train_sequential \
+                   silq.baselines.sweep \
+                   silq.experiments.characterize \
+                   silq.experiments.honest_benchmark \
+                   silq.experiments.generalization \
+                   silq.experiments.compare; do
             echo "--- $m"
             python -m "$m" --help > /dev/null
           done

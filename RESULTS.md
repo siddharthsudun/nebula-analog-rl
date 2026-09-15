@@ -54,7 +54,7 @@ and every design that passed all eight hard specs was then put through the guard
 | — rejected `T2.5_mosfet_not_in_saturation` | 10 |
 
 Measured twice with identical results. Artifact: `results/pass_vs_valid.json`, script
-`src/eqrl/experiments/pass_vs_valid.py`.
+`src/silq/experiments/pass_vs_valid.py`.
 
 **Why the specs can be passed by a stage that amplifies nothing.** Boost is defined as peak
 gain minus DC gain. It is a ratio, so a stage that *attenuates* at DC manufactures boost
@@ -83,7 +83,7 @@ behaved as a resistor rather than a current source and delivered 16–46% of the
 current: 116 µA of a requested 250 µA, 326 µA of 1000 µA, 649 µA of 4000 µA. `i_tail` was
 therefore a compressed non-linear knob, and the mirror supplied none of the PVT behaviour
 it was added for. Fixed by moving the common mode (measured trade, both directions
-tabulated in `src/eqrl/circuits/ctle.py`) and by setting the mirror length from a measured
+tabulated in `src/silq/circuits/ctle.py`) and by setting the mirror length from a measured
 accuracy sweep: worst-case delivery error 34.0% at 0.5 µm, 8.3% at 1 µm, 3.7% at 2 µm.
 The check requires 10%; the circuit was changed to meet it rather than the threshold
 relaxed.
@@ -187,7 +187,7 @@ about the delivered design either way.)*
 The eye is computed, not assumed: the SPICE-extracted **complex** CTLE response is put in
 series with a minimum-phase PCIe-Gen2 channel (skin + dielectric loss, 12 dB at Nyquist)
 and a 1-tap DFE adapted to the first post-cursor, then a random NRZ pattern is run through
-and folded. `src/eqrl/sim/eye.py`.
+and folded. `src/silq/sim/eye.py`.
 
 ### The same 45 corners, measured twice by two different eye scorers
 
@@ -198,7 +198,7 @@ bit rather than by the receiver's own decision sign, convolves with a finite cau
 instead of a circular FFT, and adapts its DFE tap by decision-directed LMS rather than
 clipping to the first post-cursor. It is a different algorithm, not a re-tuning, and it
 enters the frozen guard before any of its numbers can be exposed
-(`src/eqrl/experiments/delivered_eye_audit.py`). Both versions were run over the whole
+(`src/silq/experiments/delivered_eye_audit.py`). Both versions were run over the whole
 45-corner grid, with HD3 and input-referred noise simulated at every corner:
 
 ```
@@ -223,7 +223,7 @@ artifact of how the frozen scorer folds and labels its samples — and nothing b
 *(Note: `results/final_report.json` is a stale legacy artifact from the honest-benchmark
 line, but it has no `all_pvt_pass` field. The committed artifact that carries that field is
 `results/solved_design_pvt.json → all_pvt_pass`, for a different design. The schema is
-constructed by `src/eqrl/experiments/characterize.py::characterize`; its CLI writes that
+constructed by `src/silq/experiments/characterize.py::characterize`; its CLI writes that
 schema as `<outdir>/final_report.json`, while `solved_design_pvt.json` records no generator
 provenance. The delivered result is `results/delivered_circuit.json`, whose PVT fields are
 cited above.)*
@@ -240,7 +240,7 @@ the models once:
 | fresh subprocess per evaluation | 6370.5 ms |
 | | **82.2×** |
 
-n = 10 each, `results/speedup.json`, script `src/eqrl/experiments/speedup.py`. The AC sweep
+n = 10 each, `results/speedup.json`, script `src/silq/experiments/speedup.py`. The AC sweep
 here runs to 100 GHz at 40 points/decade, which is wider than the sweep earlier numbers
 were taken on. An older figure of 350× compared one evaluation against a whole process
 launch plus model reparse, which is not the quantity that matters during a search.
@@ -277,13 +277,13 @@ the git history rather than deleted.
 Each script writes its own artifact into `results/` and needs no arguments:
 
 ```bash
-python -m eqrl.experiments.speedup          # -> results/speedup.json
-python -m eqrl.experiments.pass_vs_valid    # -> results/pass_vs_valid.json
-python -m eqrl.experiments.space_validity   # -> results/space_validity.json
-python -m eqrl.experiments.itail_profile    # -> results/itail_profile.json
+python -m silq.experiments.speedup          # -> results/speedup.json
+python -m silq.experiments.pass_vs_valid    # -> results/pass_vs_valid.json
+python -m silq.experiments.space_validity   # -> results/space_validity.json
+python -m silq.experiments.itail_profile    # -> results/itail_profile.json
 
 # the delivered circuit's 45-corner PVT sign-off (read the frozen record, no simulation)
-python -m eqrl.experiments.pvt_signoff --report-only
+python -m silq.experiments.pvt_signoff --report-only
 ```
 
 See `SETUP.md` for environment setup and `docs/ROADMAP.md` for status.

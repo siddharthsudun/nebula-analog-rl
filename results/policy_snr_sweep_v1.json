@@ -1,5 +1,5 @@
 {
-  "schema": "eqrl.policy_snr_sweep.v1",
+  "schema": "silq.policy_snr_sweep.v1",
   "reachability": {
     "note": "the eye opening is a worst-case (min-max) statistic, so it shrinks by ~k*sigma; below the ceiling SNR the eye_v check is unsatisfiable by ANY design and a low pass rate is not a policy failure",
     "k_assumed": 7.0,

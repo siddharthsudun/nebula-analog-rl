@@ -32,7 +32,7 @@ test('no failing checks is an empty string, not "undefined"',()=>{
 // A key with no CHECK_META entry is a key whose English nobody wrote. Pin the set so a
 // new check in pipeline.py shows up here rather than in the UI as a bare field name.
 test('every check the pipeline can fail has a human label',()=>{
- const py=fs.readFileSync('src/eqrl/pipeline.py','utf8');
+ const py=fs.readFileSync('src/silq/pipeline.py','utf8');
  const block=py.slice(py.indexOf('check_of = {'),py.indexOf('user_checks ='));
  const keys=[...new Set([...block.matchAll(/:\s*"([a-z_0-9]+)"/g)].map((m)=>m[1]))];
  assert.ok(keys.length>=9,`expected the check_of map, found ${keys.length} keys`);
@@ -56,7 +56,7 @@ test('a status the map has never heard of still loses its underscores',()=>{
 // Every one of the twenty, read from guards.py rather than retyped: a hand-copied list
 // would pass while the real vocabulary moved underneath it.
 test('every guard reason in guards.py renders with its tier and without underscores',()=>{
- const codes=[...new Set([...fs.readFileSync('src/eqrl/guards.py','utf8')
+ const codes=[...new Set([...fs.readFileSync('src/silq/guards.py','utf8')
    .matchAll(/"(T\d+\.\d+_[a-z0-9_]+)"/g)].map((m)=>m[1]))];
  assert.ok(codes.length>=20,`expected the guard vocabulary, found ${codes.length}`);
  for(const c of codes){

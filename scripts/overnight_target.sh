@@ -21,28 +21,28 @@ OLD=results/seq_clean40k.zip
 [ -f "$NEW" ] || NEW=$(ls -1 results/checkpoints/seq_target40k_*_steps.zip | sed 's/.*_\([0-9]*\)_steps.zip/\1 &/' | sort -n | tail -1 | cut -d' ' -f2)
 
 echo "[2/6] NEW model, STRICT test (+/- ${TOL} dB on target) -- the honest retargeting number"
-$PY -m eqrl.experiments.policy_rollout --model "$NEW" --specs 32 --boost-tol $TOL \
+$PY -m silq.experiments.policy_rollout --model "$NEW" --specs 32 --boost-tol $TOL \
     --out results/rollout_target40k_strict.json 2>&1 | grep -E "solved [0-9]+/|median"
 
 echo "[3/6] CONTROL: OLD model, SAME strict test -- did the training do the work?"
-$PY -m eqrl.experiments.policy_rollout --model "$OLD" --specs 32 --boost-tol $TOL \
+$PY -m silq.experiments.policy_rollout --model "$OLD" --specs 32 --boost-tol $TOL \
     --out results/rollout_clean40k_strict.json 2>&1 | grep -E "solved [0-9]+/|median"
 
 echo "[4/6] NEW model, OLD loose test -- did we lose general solve ability? (was 26/32)"
-$PY -m eqrl.experiments.policy_rollout --model "$NEW" --specs 32 \
+$PY -m silq.experiments.policy_rollout --model "$NEW" --specs 32 \
     --out results/rollout_target40k_loose.json 2>&1 | grep -E "solved [0-9]+/|median"
 
 echo "[5/6] reward audit -- the baseline fix must still hold under the new margin"
-$PY -m eqrl.experiments.reward_audit --model "$NEW" --episodes 12 \
+$PY -m silq.experiments.reward_audit --model "$NEW" --episodes 12 \
     --out results/reward_audit_target40k.json 2>&1 | grep -viE "^Note:|^Warning" | tail -12
 
 echo "[6/6] target tracking: correlation between requested and achieved boost"
 $PY - <<'PYX' 2>&1 | grep -viE "^Note:|^Warning"
 import json, dataclasses, statistics as st
 import numpy as np
-from eqrl.circuits.ctle import DesignVars
-from eqrl.evaluator import build_evaluator
-from eqrl.specs import DEFAULT_SPEC
+from silq.circuits.ctle import DesignVars
+from silq.evaluator import build_evaluator
+from silq.specs import DEFAULT_SPEC
 
 fields = {f.name for f in dataclasses.fields(DesignVars)}
 guards, summary = {}, {}

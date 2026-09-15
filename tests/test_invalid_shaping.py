@@ -30,16 +30,16 @@ import math
 import numpy as np
 import pytest
 
-from eqrl.circuits.ctle import ACTION_SPACE, DesignVars
-from eqrl.envs.sequential_env import (
+from silq.circuits.ctle import ACTION_SPACE, DesignVars
+from silq.envs.sequential_env import (
     INVALID_REWARD, INVALID_SHAPING_SCALE, INVALID_SHAPING_SPAN, SequentialEqualizerEnv,
     shaped_invalid_reward,
 )
-from eqrl.guards import (
+from silq.guards import (
     ArtifactStore, Check, DeviceOP, Invalid, OperatingPoint, RunArtifacts, Valid,
     check_circuit_sanity, check_run_integrity,
 )
-from eqrl.sim.measures import Measures
+from silq.sim.measures import Measures
 
 N = len(ACTION_SPACE)
 FLOOR = INVALID_REWARD - INVALID_SHAPING_SPAN          # -10.0 at the defaults

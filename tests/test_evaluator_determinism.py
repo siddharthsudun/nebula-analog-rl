@@ -19,10 +19,10 @@ from __future__ import annotations
 
 import pytest
 
-from eqrl.circuits.ctle import DesignVars
+from silq.circuits.ctle import DesignVars
 
 pytestmark = pytest.mark.skipif(
-    not __import__("eqrl.circuits.pdk", fromlist=["available"]).available(),
+    not __import__("silq.circuits.pdk", fromlist=["available"]).available(),
     reason="needs the SKY130 PDK and a working ngspice",
 )
 
@@ -34,8 +34,8 @@ def _verdict(ev, dv):
 
 @pytest.fixture(scope="module")
 def ev():
-    from eqrl.evaluator import build_evaluator
-    from eqrl.specs import DEFAULT_SPEC
+    from silq.evaluator import build_evaluator
+    from silq.specs import DEFAULT_SPEC
     return build_evaluator(DEFAULT_SPEC, corner="tt", fast=True)
 
 
@@ -75,8 +75,8 @@ def test_the_probed_operating_point_belongs_to_the_design_evaluated(ev):
     some other design, the delivered current bears no relation to what was requested. Two
     designs an order of magnitude apart in tail current must not report the same one.
     """
-    from eqrl.evaluator import make_raw_eval
-    from eqrl.guards import ArtifactStore
+    from silq.evaluator import make_raw_eval
+    from silq.guards import ArtifactStore
     import tempfile
     from pathlib import Path
 
@@ -107,8 +107,8 @@ def test_probe_reflects_the_requested_current_not_the_deck_default(ev):
     come back with the default's delivered current, which is what made T2.6 fire on
     nearly everything.
     """
-    from eqrl.evaluator import make_raw_eval
-    from eqrl.guards import ArtifactStore
+    from silq.evaluator import make_raw_eval
+    from silq.guards import ArtifactStore
     import tempfile
     from pathlib import Path
 

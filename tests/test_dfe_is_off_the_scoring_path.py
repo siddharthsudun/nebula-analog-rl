@@ -39,10 +39,10 @@ import inspect
 import re
 from pathlib import Path
 
-from eqrl.sim.eye import compute_eye
+from silq.sim.eye import compute_eye
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src" / "eqrl"
+SRC = ROOT / "src" / "silq"
 
 MEASURES = SRC / "sim" / "measures.py"
 
@@ -74,7 +74,7 @@ _MENTION = re.compile(r"\bw_dfe\b")
 
 
 def _sources() -> list[tuple[str, str]]:
-    """(repo-relative-under-src/eqrl path, text) for every module in the package."""
+    """(repo-relative-under-src/silq path, text) for every module in the package."""
     return [(p.relative_to(SRC).as_posix(), p.read_text(encoding="utf-8", errors="replace"))
             for p in sorted(SRC.rglob("*.py")) if "__pycache__" not in p.parts]
 

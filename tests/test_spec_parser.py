@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import pytest
 
-from eqrl.llm import spec_parser as sp
-from eqrl.llm.spec_parser import parse_spec_verbose
+from silq.llm import spec_parser as sp
+from silq.llm.spec_parser import parse_spec_verbose
 
 
 def parse(text: str) -> sp.ParseResult:
@@ -434,7 +434,7 @@ class TestTheKeySurfaceCannotDrift:
         assert self._advertised() - set(sp.PLAUSIBLE) == set()
 
     def test_every_settable_requirement_is_something_the_llm_can_return(self):
-        from eqrl.pipeline import REQUIREMENT_FIELDS
+        from silq.pipeline import REQUIREMENT_FIELDS
         assert set(REQUIREMENT_FIELDS) - self._advertised() == set()
 
     def test_the_llm_is_told_the_same_point_ask_convention_the_rules_use(self):

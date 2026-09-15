@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from eqrl.simcount import MEASURE_ALL_BINDINGS, counting
+from silq.simcount import MEASURE_ALL_BINDINGS, counting
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -96,7 +96,7 @@ def test_it_patches_the_same_places_the_published_audit_patches():
     Read as source text rather than imported: `simcount_audit` performs the ngspice/PDK
     environment bootstrap at import, and this assertion is about code, not environment.
     """
-    src = (ROOT / "src/eqrl/experiments/simcount_audit.py").read_text(encoding="utf-8")
+    src = (ROOT / "src/silq/experiments/simcount_audit.py").read_text(encoding="utf-8")
     body = src[src.index("def install_counters"):src.index("def take")]
 
     # Left-hand sides of the assignments that install the counters.
@@ -106,8 +106,8 @@ def test_it_patches_the_same_places_the_published_audit_patches():
 
     # `measures_mod` and `se` are aliases; confirm what they alias, then that this module
     # names the same two modules.
-    assert "from eqrl.sim import measures as measures_mod" in src
-    assert "import eqrl.envs.sequential_env as se" in body
-    assert {m for m, _a in MEASURE_ALL_BINDINGS} == {"eqrl.sim.measures",
-                                                     "eqrl.envs.sequential_env"}
+    assert "from silq.sim import measures as measures_mod" in src
+    assert "import silq.envs.sequential_env as se" in body
+    assert {m for m, _a in MEASURE_ALL_BINDINGS} == {"silq.sim.measures",
+                                                     "silq.envs.sequential_env"}
     assert {a for _m, a in MEASURE_ALL_BINDINGS} == {"measure_all"}

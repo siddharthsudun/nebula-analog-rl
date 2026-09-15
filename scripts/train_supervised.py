@@ -38,12 +38,12 @@ def toolchain_env() -> dict:
     """Same variables scripts/win-env.ps1 exports, so the child needs no shell setup."""
     env = dict(os.environ)
     home = Path(env["USERPROFILE"])
-    ng, pdk = home / "eqrl-ngspice", home / "pdk"
+    ng, pdk = home / "silq-ngspice", home / "pdk"
     env.setdefault("NGSPICE_LIBRARY_PATH", str(ng / "Library" / "bin" / "ngspice{}.dll"))
     env.setdefault("SPICE_LIB_DIR", str(ng / "Library" / "share" / "ngspice"))
     env.setdefault("PDK_ROOT", str(pdk))
     env["PATH"] = f"{ng/'shim'};{ng/'Library'/'bin'};{env['PATH']}"
-    # eqrl is not pip-installed into .venv, so `python -m eqrl.agents...` only resolves
+    # silq is not pip-installed into .venv, so `python -m silq.agents...` only resolves
     # when src/ is on the path. The previous runs got that from whichever shell launched
     # them, which is why they could not be restarted from anywhere else.
     src = str(ROOT / "src")
@@ -112,7 +112,7 @@ def main() -> None:
             return
 
         remaining = args.target - steps
-        cmd = [py, "-m", "eqrl.agents.train_sequential",
+        cmd = [py, "-m", "silq.agents.train_sequential",
                "--timesteps", str(remaining), "--out", str(out), *extra]
         if ckpt is not None:
             # train_sequential passes reset_num_timesteps=False when resuming, and SB3

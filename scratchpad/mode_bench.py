@@ -23,11 +23,11 @@ REPO = Path(r"C:\Users\talk2.000\Desktop\Claude\nebula-analog-rl")
 sys.path.insert(0, str(REPO / "src"))
 os.chdir(REPO)
 
-_NG = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
+_NG = Path(os.environ["USERPROFILE"]) / "silq-ngspice"
 os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
 os.environ["PATH"] = f"{_NG / 'shim'};{_NG / 'Library' / 'bin'};{os.environ['PATH']}"
 
-from eqrl import pipeline as pl  # noqa: E402
+from silq import pipeline as pl  # noqa: E402
 
 SPECS = [(9.0, 12.0, 0), (7.5, 10.0, 1), (10.5, 14.0, 2)]
 MODES = ("default", "accurate", "fastest", "thinking")
@@ -45,7 +45,7 @@ def cost_of(r: dict) -> tuple:
 
 
 def main() -> None:
-    from eqrl.experiments.final_comparison import load_policy
+    from silq.experiments.final_comparison import load_policy
     t = time.perf_counter()
     load_policy(str(REPO / "results" / "seq_clean40k.zip"))
     print(f"warm-up {time.perf_counter() - t:.1f}s\n", flush=True)

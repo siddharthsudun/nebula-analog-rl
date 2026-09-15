@@ -1,5 +1,5 @@
 import json,subprocess,sys,time,threading
-from eqrl import runtime
+from silq import runtime
 
 
 def fake_worker(monkeypatch, body):

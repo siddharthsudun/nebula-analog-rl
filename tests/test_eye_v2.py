@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from eqrl.sim.eye import _contiguous_open_width, compute_eye_v2
+from silq.sim.eye import _contiguous_open_width, compute_eye_v2
 
 
 BIT_RATE = 5e9

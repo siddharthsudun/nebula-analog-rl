@@ -16,8 +16,8 @@ import dataclasses
 import numpy as np
 import pytest
 
-from eqrl import pipeline
-from eqrl.specs import DEFAULT_SPEC
+from silq import pipeline
+from silq.specs import DEFAULT_SPEC
 
 from tests.test_solve_pipeline import AI_DESIGN, stub  # noqa: F401  (fixture re-use)
 
@@ -91,8 +91,8 @@ class TestEveryLimitBinds:
 
     @pytest.mark.parametrize("field", pipeline.REQUIREMENT_FIELDS)
     def test_a_tightened_limit_is_applied_labelled_and_enforced(self, field):
-        from eqrl.sim.measures import Measures
-        from eqrl.specs import hard_pass
+        from silq.sim.measures import Measures
+        from silq.specs import hard_pass
 
         attr, measured, tight = self.BIND[field]
         m = dataclasses.replace(Measures(**self.BASE), **{attr: measured})
@@ -133,7 +133,7 @@ class TestStamping:
 class TestVerifyReportsBothBars:
     def test_competition_verdict_alongside_user_verdict(self, monkeypatch):
         """`verify` on a relaxed spec must also say whether the unmodified spec passes."""
-        from eqrl.sim.measures import Measures
+        from silq.sim.measures import Measures
 
         class _Verdict:
             is_valid = True
@@ -148,7 +148,7 @@ class TestVerifyReportsBothBars:
             def evaluate(self, dv, vdd):
                 return _Verdict()
 
-        import eqrl.evaluator as evmod
+        import silq.evaluator as evmod
         monkeypatch.setattr(evmod, "build_evaluator", lambda *a, **k: _Ev())
         spec = pipeline.spec_for(9.0, 14.0, 1.5, {"hd3_db_max": -25.0})
         v = pipeline.verify(pipeline.DesignVars(**AI_DESIGN), spec)

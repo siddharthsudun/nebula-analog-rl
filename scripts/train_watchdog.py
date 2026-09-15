@@ -206,7 +206,7 @@ def _terminate_tree(pid: int) -> str:
 
     `os.kill(pid, SIGTERM)` is TerminateProcess on Windows and reaches exactly one
     process. The tree here is three deep -- this watchdog signals scripts/train_supervised,
-    whose child is `python -m eqrl.agents.train_sequential`, which itself holds --n-envs
+    whose child is `python -m silq.agents.train_sequential`, which itself holds --n-envs
     SubprocVecEnv workers, each with a resident libngspice. Signalling only the top of that
     leaves ten processes training on while this script prints "stopping" and exits.
 

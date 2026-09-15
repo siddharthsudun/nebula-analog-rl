@@ -40,7 +40,7 @@ then quantified guard violation. Among feasible candidates it maximizes the mini
 normalized margin across specs, saturation headroom, and tail delivery, with
 worst-case target error as a tiebreak. This is an optimization objective in the new
 module; the frozen RL reward is unchanged. Margin normalization is explicit in
-`src/eqrl/pvt_refinement.py::signed_slacks`. `hard_pass` remains authoritative for
+`src/silq/pvt_refinement.py::signed_slacks`. `hard_pass` remains authoritative for
 strict and inclusive boundaries, including the strict noise limit.
 
 Eight search corners are chosen from freshly measured baseline weaknesses, including
@@ -70,9 +70,9 @@ Every measured candidate retains raw simulator artifacts.
 
 ## Implementation
 
-- `src/eqrl/pvt_refinement.py`: explicit margins, search ranking, stress selection,
+- `src/silq/pvt_refinement.py`: explicit margins, search ranking, stress selection,
   exact-grid acceptance, correct recorded PVT decks, and guarded batched evaluation.
-- `src/eqrl/experiments/pvt_optimize.py`: reproducible repair case, bounded CMA-ES,
+- `src/silq/experiments/pvt_optimize.py`: reproducible repair case, bounded CMA-ES,
   full-grid selection, independent verification, and conditional candidate export.
 - `tests/test_pvt_refinement.py`: partial-grid/duplicate rejection, guard and target
   failures, process coverage, strict boundary semantics, budget enforcement, and
@@ -86,7 +86,7 @@ Run from the project root after activating the existing ngspice/SKY130 environme
 and setting `PYTHONPATH=src`. Use a new output directory:
 
 ```powershell
-.venv/Scripts/python.exe -m eqrl.experiments.pvt_optimize --output results/pvt_optimization_new
+.venv/Scripts/python.exe -m silq.experiments.pvt_optimize --output results/pvt_optimization_new
 .venv/Scripts/python.exe -m pytest tests/test_pvt_refinement.py tests/test_evaluator.py tests/test_probe.py -q --basetemp=work/pvt-refinement/pytest-new
 ```
 
