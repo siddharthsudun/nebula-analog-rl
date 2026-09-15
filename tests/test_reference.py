@@ -29,11 +29,11 @@ import shutil
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import DesignVars
+from eqrl.circuits.ctle import DesignVars
 
 TOL = 0.05          # 5%, as specified. Do not widen to make a test pass.
 VOV = 0.15          # behavioural backend: gm = I_tail / Vov
-C_LOAD = 30e-15     # silq.circuits.ctle.C_LOAD
+C_LOAD = 30e-15     # eqrl.circuits.ctle.C_LOAD
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ def analytic_response(gm: float, rs: float, cs: float, rl: float, cl: float,
 def analytic_metrics(gm: float, rs: float, cs: float, rl: float, cl: float,
                      fmin: float = 1e6, fmax: float = 1e13, n: int = 20001) -> dict:
     """NOTE on fmax: the -3 dB point of this topology sits around 57 GHz at nominal —
-    far above the 10 GHz that silq.sim.ngspice_runner.ac and NgspiceServer.ac sweep.
+    far above the 10 GHz that eqrl.sim.ngspice_runner.ac and NgspiceServer.ac sweep.
     A 10 GHz ceiling makes every bandwidth reading saturate at the sweep edge, which
     reads as 'bandwidth does not respond to any parameter'. See the project report."""
     f = np.logspace(math.log10(fmin), math.log10(fmax), n)
@@ -141,7 +141,7 @@ def _ngspice() -> bool:
 
 def _pdk() -> bool:
     try:
-        from silq.circuits import pdk
+        from eqrl.circuits import pdk
         return pdk.available()
     except (ImportError, FileNotFoundError):
         return False
@@ -154,8 +154,8 @@ def test_pipeline_matches_reference_behavioural(dv, expected):
 
     Needs ngspice only — no PDK — so it can gate every commit in CI.
     """
-    from silq.circuits.ctle import netlist
-    from silq.sim.ngspice_runner import ac
+    from eqrl.circuits.ctle import netlist
+    from eqrl.sim.ngspice_runner import ac
 
     r = ac(netlist(dv, analysis="none", models="behavioral"))
     freq, mag = r["freq"], r["mag_db"]
@@ -193,8 +193,8 @@ def test_pipeline_sky130_matches_transconductance_from_op():
     real gm is substituted in. A mismatch here means the transistor netlist is not the
     circuit the algebra describes.
     """
-    from silq.circuits.ctle import netlist
-    from silq.sim.ngspice_runner import ac
+    from eqrl.circuits.ctle import netlist
+    from eqrl.sim.ngspice_runner import ac
 
     dv = DesignVars(i_tail=2e-3, rs=1e3, cs=200e-15, r_load=1e3, w_in=20e-6, l_in=0.15e-6)
     r = ac(netlist(dv, analysis="none", models="sky130"))

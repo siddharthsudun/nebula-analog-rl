@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 
-from silq.experiments.audit_support import write_new
-from silq.experiments.mode_error_report import (
+from eqrl.experiments.audit_support import write_new
+from eqrl.experiments.mode_error_report import (
     conditional_chance, distribution, paired_cluster_interval)
 
 

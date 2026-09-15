@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from silq.sim.noise_budget import flat_noise_gain, combined_output_rms, differential_output_noise
-from silq.sim.ngspice_runner import NgspiceError
+from eqrl.sim.noise_budget import flat_noise_gain, combined_output_rms, differential_output_noise
+from eqrl.sim.ngspice_runner import NgspiceError
 
 
 def test_flat_response_refers_noise_by_voltage_gain():

@@ -19,7 +19,7 @@ import shutil
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import DesignVars
+from eqrl.circuits.ctle import DesignVars
 
 N_POINTS = 7
 MONOTONIC_SLACK = 0.02       # tolerated fraction of the total span per backward step
@@ -113,11 +113,11 @@ def _headroom_v(vdd: float) -> float:
     Falls back to the old constant only when the simulator is unavailable, so the
     behavioural tests still have a bound.
     """
-    from silq.circuits.ctle import DesignVars
+    from eqrl.circuits.ctle import DesignVars
     try:
-        from silq.guards import SATURATION_HEADROOM_V
-        from silq.sim.probe import probe_operating_point
-        from silq.sim.server import NgspiceServer
+        from eqrl.guards import SATURATION_HEADROOM_V
+        from eqrl.sim.probe import probe_operating_point
+        from eqrl.sim.server import NgspiceServer
         srv = NgspiceServer("tt")
         dv = DesignVars()
         srv._prime(dv, vdd, 27.0)
@@ -227,7 +227,7 @@ def _ngspice() -> bool:
 
 def _pdk() -> bool:
     try:
-        from silq.circuits import pdk
+        from eqrl.circuits import pdk
         return pdk.available()
     except (ImportError, FileNotFoundError):
         return False
@@ -245,8 +245,8 @@ def _sweep_pipeline(field: str, values, models: str, *, wide: bool = False,
     wide=True uses AC_WIDE so bandwidth is reachable; everything else is identical to
     the production path.
     """
-    from silq.circuits.ctle import netlist
-    from silq.sim.ngspice_runner import ac, run
+    from eqrl.circuits.ctle import netlist
+    from eqrl.sim.ngspice_runner import ac, run
 
     out = []
     for v in values:
@@ -294,8 +294,8 @@ class TestPipelineBehavioural:
         """The production sweep stops at 10 GHz; -3 dB lands near 57 GHz. Until the
         sweep is widened, no bandwidth number from `ngspice_runner.ac` or
         `NgspiceServer.ac` is a bandwidth number."""
-        from silq.circuits.ctle import netlist
-        from silq.sim.ngspice_runner import ac
+        from eqrl.circuits.ctle import netlist
+        from eqrl.sim.ngspice_runner import ac
         r = ac(netlist(DesignVars(l_in=0.3e-6), analysis="none", models="behavioral"))
         bandwidth_ghz(r["freq"], r["mag_db"])   # raises if the sweep cannot reach it
 
@@ -424,7 +424,7 @@ def test_dfe_tap_sweep_changes_the_slicer_eye():
     filter, which is why it is a separate stage rather than part of the CTLE `.ac` deck),
     so it can only be exercised in the transient domain.
     """
-    from silq.circuits.dfe import dfe_stage_eye
+    from eqrl.circuits.dfe import dfe_stage_eye
 
     c1 = 0.28
     eyes = [dfe_stage_eye(tap, c0=0.5, c1=c1) for tap in (0.0, 0.5 * c1, c1, 1.5 * c1)]

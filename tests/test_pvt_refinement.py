@@ -4,14 +4,14 @@ from dataclasses import replace
 
 import pytest
 
-from silq.circuits.ctle import DesignVars
-from silq.envs.pvt import corner_grid
-from silq.pvt_refinement import (
+from eqrl.circuits.ctle import DesignVars
+from eqrl.envs.pvt import corner_grid
+from eqrl.pvt_refinement import (
     EvaluationBudgetExceeded, PVTEvaluator, full_grid_pass, rank_key,
     recorded_netlist, signed_slacks, stress_corners, summarize,
 )
-from silq.sim.measures import Measures
-from silq.specs import DEFAULT_SPEC, hard_pass
+from eqrl.sim.measures import Measures
+from eqrl.specs import DEFAULT_SPEC, hard_pass
 
 
 SPEC = replace(DEFAULT_SPEC, boost_target_tol_db=1.5)
@@ -89,7 +89,7 @@ def test_batch_over_budget_is_rejected_before_simulation(tmp_path):
 
 
 def test_recorded_netlist_matches_resident_vdd_scaling(monkeypatch):
-    from silq.circuits import pdk
+    from eqrl.circuits import pdk
     monkeypatch.setattr(pdk, "lib_include", lambda c: f"* process {c}")
     deck = recorded_netlist(DesignVars(), vdd=1.71, temp_c=125, corner="ss")
     assert "Vcm cm 0 'vddp*0.72'" in deck

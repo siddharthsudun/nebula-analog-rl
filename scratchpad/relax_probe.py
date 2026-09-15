@@ -18,12 +18,12 @@ from pathlib import Path
 
 REPO = Path(r"C:\Users\talk2.000\Desktop\Claude\nebula-analog-rl")
 sys.path.insert(0, str(REPO / "src")); os.chdir(REPO)
-_NG = Path(os.environ["USERPROFILE"]) / "silq-ngspice"
+_NG = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
 os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
 os.environ["PATH"] = f"{_NG / 'shim'};{_NG / 'Library' / 'bin'};{os.environ['PATH']}"
 
-from silq import guards, pipeline as pl
-from silq.experiments import final_comparison as fc
+from eqrl import guards, pipeline as pl
+from eqrl.experiments import final_comparison as fc
 
 SPECS = [(9.0, 12.0, 0), (11.0, 12.5, 4), (10.0, 11.5, 6), (10.5, 14.0, 2), (7.5, 10.0, 1)]
 FLOORS = [0.0, -6.0]          # control, then relaxed

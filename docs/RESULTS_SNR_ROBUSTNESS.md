@@ -38,7 +38,7 @@ what cannot.
 
 | file | why |
 |---|---|
-| `src/silq/experiments/policy_snr_sweep.py` | the whole experiment: rollouts, injection, verification, metrics, aggregation, plot, CSV |
+| `src/eqrl/experiments/policy_snr_sweep.py` | the whole experiment: rollouts, injection, verification, metrics, aggregation, plot, CSV |
 | `tests/test_policy_snr_sweep.py` | 24 sanity tests on the noise mathematics and the measured-SNR recovery; no SPICE, no checkpoint |
 | `docs/RESULTS_SNR_ROBUSTNESS.md` | this file |
 
@@ -136,7 +136,7 @@ interesting happens between 10 and 20 dB and the module's default grid
 single 5 dB segment:
 
 ```bash
-PYTHONPATH=src python -m silq.experiments.policy_snr_sweep --specs 24 \
+PYTHONPATH=src python -m eqrl.experiments.policy_snr_sweep --specs 24 \
   --snr-db -5 0 5 10 12 13 14 15 16 18 20
 ```
 
@@ -147,7 +147,7 @@ which is expected: the noise stream is derived from `(spec, base seed)` and not 
 the SNR value or its position in the list, so adding points is purely additive.
 
 ```bash
-PYTHONPATH=src python -m silq.experiments.policy_snr_sweep --specs 24
+PYTHONPATH=src python -m eqrl.experiments.policy_snr_sweep --specs 24
 ```
 
 Full run: 24 held-out specs, ~8.5 minutes at six points, ~12 at eleven — the extra
@@ -155,13 +155,13 @@ points re-score the same designs and re-run no search. Re-aggregate and re-plot 
 existing artifact without re-simulating:
 
 ```bash
-PYTHONPATH=src python -m silq.experiments.policy_snr_sweep --report-only
+PYTHONPATH=src python -m eqrl.experiments.policy_snr_sweep --report-only
 ```
 
 Options: `--model`, `--specs`, `--snr-db`, `--n-bits`, `--eye-seed`, `--corner`,
 `--vdd`, `--temp-c`, `--boost-tol`, `--out`, `--csv`, `--plot`, `--overwrite`.
 
-Artifacts: `results/policy_snr_sweep_v1.json` (schema `silq.policy_snr_sweep.v1`, carries
+Artifacts: `results/policy_snr_sweep_v1.json` (schema `eqrl.policy_snr_sweep.v1`, carries
 every per-spec and per-point record), `results/policy_snr_sweep_v1.csv` (one row per
 spec × SNR), `results/policy_snr_sweep_v1.png`.
 

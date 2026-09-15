@@ -267,7 +267,7 @@ def test_attribution_window_excludes_the_citation_itself():
     # Split so the fixture's own fake pointer is not a citation IN THIS FILE -- the
     # scanner reads its own source, and a literal here would be collected and checked.
     src = ["irrelevant preamble",
-           "the `SENTINEL_SYMBOL` lives at (`src/silq/pipeline." + "py:1`) and nowhere"]
+           "the `SENTINEL_SYMBOL` lives at (`src/eqrl/pipeline." + "py:1`) and nowhere"]
     lines_seen = []
     for i, ln in enumerate(src, 1):
         for m in _CITE.finditer(ln):

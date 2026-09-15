@@ -385,11 +385,11 @@
       <h2>Open tools, top to bottom.</h2>
       <p class="section-intro">Python · PPO (stable-baselines3) · Gymnasium · ngspice via libngspice · SkyWater SKY130 open PDK · Optuna and CMA-ES (baselines). The repository holds the circuit generator, the resident-simulator server, the RL environment, the guard layer, the baselines, the PVT engine and the characterization. Every number on this page is written to an artifact in <code>results/</code> by the script that measured it, and each of these runs with no arguments:</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
-        <span class="pill">python -m silq.experiments.pass_vs_valid</span>
-        <span class="pill">python -m silq.experiments.space_validity</span>
-        <span class="pill">python -m silq.experiments.itail_profile</span>
-        <span class="pill">python -m silq.experiments.speedup</span>
-        <span class="pill">python -m silq.experiments.pvt_signoff --report-only</span>
+        <span class="pill">python -m eqrl.experiments.pass_vs_valid</span>
+        <span class="pill">python -m eqrl.experiments.space_validity</span>
+        <span class="pill">python -m eqrl.experiments.itail_profile</span>
+        <span class="pill">python -m eqrl.experiments.speedup</span>
+        <span class="pill">python -m eqrl.experiments.pvt_signoff --report-only</span>
       </div>
       <p class="caveat">Scope notes for review. The CTLE sizing, the AC / HD3 / noise / power / area measurements, the eye (channel + CTLE + adapted 1-tap DFE) and the 45-corner PVT sweep are simulated on SKY130. The channel is a minimum-phase PCIe-Gen2 model, at the loss each spec asks for — 14.83&nbsp;dB at Nyquist for the delivered circuit; the eye is Monte-Carlo over a random NRZ pattern. Boost is treated as the poster's 3–12&nbsp;dB tunable range for pass/fail everywhere on this page <em>except</em> the delivered circuit, which is additionally scored against its requested target with a ±1.5&nbsp;dB tolerance. The baselines are random search, Bayesian optimization (Optuna TPE) and CMA-ES — there is no grid baseline. Area is measured but cannot fail against the 0.05&nbsp;mm² budget. The natural-language front-end parses a plain-English request into the framework's <code>Spec</code> object, with a keyword fallback when no API key is present. Two things the delivered circuit does <em>not</em> establish: the policy alone does not demonstrate target-conditioned design — closing the target is the refinement stage's job — and strict solve counts over the held-out spec set do not clear their matched chance null, so they are not claimed here.</p>
     </div>

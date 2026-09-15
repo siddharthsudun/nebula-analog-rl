@@ -11,7 +11,7 @@ PY=./.venv/Scripts/python.exe
 bash scripts/rollout_curve.sh 2>&1 | grep -E "steps|solved|/8|wrote"
 
 echo "=== final model ==="
-$PY -m silq.experiments.policy_rollout --model results/seq_dcfix40k.zip --specs 8 \
+$PY -m eqrl.experiments.policy_rollout --model results/seq_dcfix40k.zip --specs 8 \
     --out results/rollouts/rollout_final.json 2>&1 | grep -E "spec [0-9]|solved [0-9]+/"
 
 echo "=== best checkpoint, 32 held-out specs ==="
@@ -32,6 +32,6 @@ print(best)
 PYX
 )
 echo "best checkpoint: $BEST steps"
-$PY -m silq.experiments.policy_rollout \
+$PY -m eqrl.experiments.policy_rollout \
     --model "results/checkpoints/seq_dcfix40k_${BEST}_steps.zip" --specs 32 \
     --out "results/rollout_best_32spec.json" 2>&1 | grep -E "spec [0-9]|solved [0-9]+/|median|ratio|sweep"

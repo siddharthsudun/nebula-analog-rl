@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from silq.llm.snr_parser import parse_noise_intent, resolve_snr_request
-from silq.llm.spec_parser import parse_spec_verbose
+from eqrl.llm.snr_parser import parse_noise_intent, resolve_snr_request
+from eqrl.llm.spec_parser import parse_spec_verbose
 
 
 def test_noise_is_strictly_opt_in():
@@ -33,7 +33,7 @@ def test_unsupported_output_target_cannot_execute_as_measured_input():
 
 
 def test_llm_wrapper_retains_nested_snr_without_polluting_nominal_fields(monkeypatch):
-    import silq.llm.spec_parser as parser
+    import eqrl.llm.spec_parser as parser
     monkeypatch.setattr(parser, '_pick_backend', lambda *a: 'api')
     monkeypatch.setattr(parser, '_llm_fields', lambda *a, **k: ({'_noise_request': {
         'mode': 'measured', 'input_snr_db': 23., 'signal_reference': 'tx_vpp',
@@ -44,8 +44,8 @@ def test_llm_wrapper_retains_nested_snr_without_polluting_nominal_fields(monkeyp
 
 
 def test_full_budget_and_qualification_are_distinct():
-    from silq.agents.train_noise_pilot import _build_parser, _validated_config
-    from silq.experiments.noise_holdout import qualification_cases, cases
+    from eqrl.agents.train_noise_pilot import _build_parser, _validated_config
+    from eqrl.experiments.noise_holdout import qualification_cases, cases
     config = _validated_config(_build_parser().parse_args(['--run-dir','unused',
         '--profile','full','--timesteps','40960','--wall-seconds','64785','--warm-start-frozen']))
     assert config['timesteps_effective'] == 40960
@@ -61,7 +61,7 @@ def test_nominal_transfer_preserves_predictions_with_new_columns_zero():
     import gymnasium as gym
     import torch
     from stable_baselines3 import PPO
-    from silq.agents.train_noise_pilot import transfer_nominal_policy
+    from eqrl.agents.train_noise_pilot import transfer_nominal_policy
     class Dummy(gym.Env):
         def __init__(self, width):
             self.observation_space = gym.spaces.Box(-np.inf, np.inf, (width,), dtype=np.float32)
@@ -83,7 +83,7 @@ def test_nominal_api_never_invokes_snr_when_omitted(monkeypatch):
     """A run that asks for no SNR must not touch the SNR path at all.
 
     Rewritten for the resident-worker dispatch: `pipeline_run` no longer calls `design`
-    in-process, it hands ONE payload to `silq.runtime`. So the thing to assert is that the
+    in-process, it hands ONE payload to `eqrl.runtime`. So the thing to assert is that the
     dispatched payload carries `noise_request=None` and that exactly one dispatch happens.
 
     Patching `ready` is not decoration. An unready runtime answers 503 *and*
@@ -94,9 +94,9 @@ def test_nominal_api_never_invokes_snr_when_omitted(monkeypatch):
     which is what made `test_runtime_watchdog` fail only when this module preceded it.
     """
     import server
-    from silq import runtime
-    import silq.llm.snr_parser as noise_parser
-    import silq.snr_pipeline as noise_pipeline
+    from eqrl import runtime
+    import eqrl.llm.snr_parser as noise_parser
+    import eqrl.snr_pipeline as noise_pipeline
     monkeypatch.setattr(noise_parser, 'resolve_snr_request', lambda *a: pytest.fail('SNR parsing while off'))
     monkeypatch.setattr(noise_pipeline, 'attach_noise_result', lambda *a, **k: pytest.fail('SNR scoring while off'))
     payloads = []

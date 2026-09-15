@@ -16,7 +16,7 @@ from Python.
 - [ ] Install SKY130 SPICE models (open_pdks / volare) OR IHP sg13g2. Record path.
       *(still behavioral; real PDK models come in Phase 1)*
 - [x] Hand-write a CTLE testbench in `testbench/ctle_ac.spice`, run it, see a peaking curve.
-- [x] `silq.sim.ngspice_runner --selftest` runs the netlist and parses AC output.
+- [x] `eqrl.sim.ngspice_runner --selftest` runs the netlist and parses AC output.
 - [x] Extract peak gain in dB from Python.
 
 **Exit criterion MET:** boost responds correctly to Cs (50fF→3.0dB, 200fF→11dB,
@@ -85,7 +85,7 @@ from Python.
 
 - [x] `llm/spec_parser.py`: natural language → `Spec` object (Anthropic API, keyword
       fallback without a key). ✅
-- [ ] `silq.solve` end-to-end demo. The parser half works; the half that sizes the circuit
+- [ ] `eqrl.solve` end-to-end demo. The parser half works; the half that sizes the circuit
       needs a policy that runs against the current env.
 - [x] Real eye: minimum-phase PCIe channel + CTLE + adapted 1-tap DFE, Monte-Carlo. ✅
 - [x] Export sized netlist + spec report + eye figure. ✅

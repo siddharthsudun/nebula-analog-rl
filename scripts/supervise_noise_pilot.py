@@ -57,13 +57,13 @@ def main():
         parser.error('run directory must be fresh')
     control.mkdir(parents=True, exist_ok=False)
     repo = Path(__file__).resolve().parents[1]
-    command = [sys.executable, '-m', 'silq.agents.train_noise_pilot',
+    command = [sys.executable, '-m', 'eqrl.agents.train_noise_pilot',
         '--run-dir', str(run_dir), '--timesteps', '5120', '--n-envs', '4',
         '--wall-seconds', str(args.wall_seconds - 15)]
     if args.preflight:
-        command = [sys.executable, '-m', 'silq.experiments.noise_v2_preflight', '--run-dir', str(run_dir)]
+        command = [sys.executable, '-m', 'eqrl.experiments.noise_v2_preflight', '--run-dir', str(run_dir)]
     elif args.full:
-        command = [sys.executable, '-m', 'silq.agents.train_noise_pilot',
+        command = [sys.executable, '-m', 'eqrl.agents.train_noise_pilot',
             '--run-dir', str(run_dir), '--timesteps', '40960', '--n-envs', '4',
             '--profile', 'full', '--warm-start-frozen', '--wall-seconds', str(args.wall_seconds-15)]
     started = time.time()

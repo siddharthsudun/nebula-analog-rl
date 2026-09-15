@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 import server as dashboard_server
-from silq.guards import Check, SearchHalted
+from eqrl.guards import Check, SearchHalted
 
 
 def _catalog(n: int) -> dict[str, dict]:

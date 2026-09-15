@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from silq import realtime                                       # noqa: E402
+from eqrl import realtime                                       # noqa: E402
 
 
 def _function(source: str, name: str) -> ast.FunctionDef:
@@ -63,7 +63,7 @@ class TestStartupPrewarm:
                   if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
         for required in ("prepare", "get_evaluator", "load_policy"):
             assert required in called, f"{required} was dropped from warm-up"
-        worker = _function((ROOT / "src/silq/runtime.py").read_text(encoding="utf-8"), "worker_main")
+        worker = _function((ROOT / "src/eqrl/runtime.py").read_text(encoding="utf-8"), "worker_main")
         worker_calls = {n.func.id for n in ast.walk(worker) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name)}
         assert {"get_pool","load_policy","load_fastest_assets"} <= worker_calls
 
@@ -91,8 +91,8 @@ class TestSearchReserve:
 
     def test_the_reduced_grid_is_exactly_tt_ss_ff(self):
         """What "reduced" means is defined in envs.pvt, not restated here."""
-        from silq.envs.pvt import corner_grid
-        from silq import pipeline as pl
+        from eqrl.envs.pvt import corner_grid
+        from eqrl import pipeline as pl
         spec = pl.spec_for(9.0, 12.0, 1.5, None)
         assert [p for p, _, _ in corner_grid(spec, "reduced")] == ["tt", "ss", "ff"]
         assert len(corner_grid(spec, "full")) == 45
@@ -125,7 +125,7 @@ class TestBudgetOverrunStaysHonest:
     """
 
     def test_certify_call_is_guarded(self):
-        source = (ROOT / "src" / "silq" / "realtime.py").read_text(encoding="utf-8")
+        source = (ROOT / "src" / "eqrl" / "realtime.py").read_text(encoding="utf-8")
         design_realtime = None
         for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.FunctionDef) and node.name == "design_realtime":
@@ -144,7 +144,7 @@ class TestBudgetOverrunStaysHonest:
 
     def test_overrun_handler_does_not_swallow_interrupts(self):
         """Exception, not BaseException -- Ctrl-C and SystemExit must still propagate."""
-        source = (ROOT / "src" / "silq" / "realtime.py").read_text(encoding="utf-8")
+        source = (ROOT / "src" / "eqrl" / "realtime.py").read_text(encoding="utf-8")
         for node in ast.walk(ast.parse(source)):
             if not isinstance(node, ast.Try):
                 continue

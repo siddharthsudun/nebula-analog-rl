@@ -11,10 +11,10 @@ import io
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import ACTION_SPACE, DesignVars
-from silq.guards import Check, DeviceOP, Invalid, OperatingPoint, Valid
-from silq.sim.measures import Measures
-from silq.specs import DEFAULT_SPEC
+from eqrl.circuits.ctle import ACTION_SPACE, DesignVars
+from eqrl.guards import Check, DeviceOP, Invalid, OperatingPoint, Valid
+from eqrl.sim.measures import Measures
+from eqrl.specs import DEFAULT_SPEC
 
 N = len(ACTION_SPACE)
 
@@ -49,7 +49,7 @@ def invalid_verdict(tmp_path, check=Check.T2_NOT_SATURATED):
 
 @pytest.fixture
 def env_factory(monkeypatch, tmp_path):
-    from silq.envs import sequential_env as se
+    from eqrl.envs import sequential_env as se
 
     def make(verdicts, **kw):
         env = se.SequentialEqualizerEnv(seed=0, **kw)
@@ -61,7 +61,7 @@ def env_factory(monkeypatch, tmp_path):
 class TestDefaultIsUnguarded:
 
     def test_guarding_is_off_by_default(self):
-        from silq.envs.sequential_env import SequentialEqualizerEnv
+        from eqrl.envs.sequential_env import SequentialEqualizerEnv
         env = SequentialEqualizerEnv(seed=0)
         assert env.guarded is False and env._guard is None, (
             "guarded must default OFF: with the current fast-mode stubs, check 20 "
@@ -71,7 +71,7 @@ class TestDefaultIsUnguarded:
     def test_invalid_reward_matches_the_non_convergent_penalty(self):
         """A rejected design and a design that would not simulate are the same thing:
         no trustworthy measurement. They must not be scored differently."""
-        from silq.envs.sequential_env import INVALID_REWARD, _shaped
+        from eqrl.envs.sequential_env import INVALID_REWARD, _shaped
         bad, _ = _shaped(Measures(ok=False), DEFAULT_SPEC)
         assert INVALID_REWARD == bad
 

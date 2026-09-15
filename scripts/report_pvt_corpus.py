@@ -26,7 +26,7 @@ def render():
         '- The severe cases primarily fail DC-gain plausibility or saturation guards. Those failures do not establish a physical boost ceiling.',
         '- The previous case already became 45/45 with the fixed delivered-sizing anchor. CMA-ES improved margins; it was not solely responsible for closing that case.','',
         '## Production behavior','',
-        '`silq.pipeline.design()` now runs nominal PPO/corpus search and G3.2, nominal verification, then `apply_pvt_stage`. '+
+        '`eqrl.pipeline.design()` now runs nominal PPO/corpus search and G3.2, nominal verification, then `apply_pvt_stage`. '+
         'The stage performs fresh full-grid checks, searches if needed, and uses a second simulator process for final acceptance. '+
         'A successful repair replaces the actual returned sizing, SPICE netlist and verification measurements. '+
         'The previous candidate is retained under `pre_pvt`. A failed or interrupted PVT stage returns `pvt_not_verified`, never `solved`.','',

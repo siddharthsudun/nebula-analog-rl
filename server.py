@@ -1,8 +1,8 @@
 """Local dashboard backend -- FastAPI, not Streamlit.
 
 Serves the hand-built static frontend in dashboard/ and a small JSON API over the
-same silq entry points the CLI uses: GuardedEvaluator.evaluate() (guard demo),
-results/*.json (explorer), and silq.pipeline.design() (live pipeline -- inference
+same eqrl entry points the CLI uses: GuardedEvaluator.evaluate() (guard demo),
+results/*.json (explorer), and eqrl.pipeline.design() (live pipeline -- inference
 only, see that module's own docstring: it loads the frozen PPO checkpoint and never
 trains or touches a reward, hyperparameter, design bound, or guard threshold).
 
@@ -27,10 +27,10 @@ SRC = REPO_ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-# Same three-line ngspice/PDK bootstrap every silq/experiments/*.py module performs
-# at import time. silq.sim.server only locates the PySpice DLL, not PDK_ROOT, so any
-# entry point outside silq.experiments has to do this itself.
-_NGSPICE = Path(os.environ.get("USERPROFILE") or Path.home()) / "silq-ngspice"
+# Same three-line ngspice/PDK bootstrap every eqrl/experiments/*.py module performs
+# at import time. eqrl.sim.server only locates the PySpice DLL, not PDK_ROOT, so any
+# entry point outside eqrl.experiments has to do this itself.
+_NGSPICE = Path(os.environ.get("USERPROFILE") or Path.home()) / "eqrl-ngspice"
 os.environ.setdefault("PDK_ROOT", str(Path(os.environ.get("USERPROFILE") or Path.home()) / "pdk"))
 os.environ["PATH"] = os.pathsep.join(
     [str(_NGSPICE / "shim"), str(_NGSPICE / "Library" / "bin"), os.environ["PATH"]])
@@ -40,13 +40,13 @@ from fastapi.responses import FileResponse, JSONResponse, Response  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from silq.circuits.ctle import DesignVars  # noqa: E402
-from silq.evaluator import build_evaluator  # noqa: E402
-from silq.guards import SearchHalted  # noqa: E402
-from silq.pipeline import (  # noqa: E402
+from eqrl.circuits.ctle import DesignVars  # noqa: E402
+from eqrl.evaluator import build_evaluator  # noqa: E402
+from eqrl.guards import SearchHalted  # noqa: E402
+from eqrl.pipeline import (  # noqa: E402
     CLOSED_NOT_VERIFIED, FALLBACK, MODES, POLICY, SOLVED, UNSOLVED, describe, design)
-from silq.sim.ngspice_runner import NgspiceError  # noqa: E402
-from silq.specs import DEFAULT_SPEC, hard_pass  # noqa: E402
+from eqrl.sim.ngspice_runner import NgspiceError  # noqa: E402
+from eqrl.specs import DEFAULT_SPEC, hard_pass  # noqa: E402
 
 RESULTS_DIR = REPO_ROOT / "results"
 DASHBOARD_DIR = REPO_ROOT / "dashboard"
@@ -119,7 +119,7 @@ _startup: dict[str, Any] = {"ready": False, "warming": False, "error": None}
 _startup_lock = threading.Lock()
 #: Serialises every simulator-backed operation in this process: the warm-up, the guard
 #: sandbox, the pipeline run and the candidate gallery all take THIS object. It exists
-#: because `silq.sim.server.get_server()` hands back one resident libngspice process that
+#: because `eqrl.sim.server.get_server()` hands back one resident libngspice process that
 #: is not reentrant (see `_warm_up` below for the measured argument).
 #:
 #: There must be exactly ONE module-level binding of this name. A second `_run_lock = ...`
@@ -138,7 +138,7 @@ def _warm_up() -> None:
 
     `get_evaluator("tt", ...)` is what `/api/guard/evaluate` and `/api/pipeline/run`
     both call with their default corner, and `build_evaluator` pays a one-time ~15s
-    SKY130 model parse the first time any evaluator is built (see silq.sim.server). Doing
+    SKY130 model parse the first time any evaluator is built (see eqrl.sim.server). Doing
     that here means the first real request after boot doesn't stall on it.
 
     `load_policy()` is called for the same reason, and the split between the two is
@@ -149,7 +149,7 @@ def _warm_up() -> None:
     call, and a pre-call here is what moves it off the first request.
 
     That `load_policy()` reloads unconditionally is therefore not the cost it looks like:
-    `silq.sim.server.get_server(corner)` is a per-corner process singleton, so the env
+    `eqrl.sim.server.get_server(corner)` is a per-corner process singleton, so the env
     built inside it reuses the simulator this function already started rather than
     re-parsing SKY130. Nothing frozen has to change for that to hold.
 
@@ -158,7 +158,7 @@ def _warm_up() -> None:
     to serve the guard sandbox and the artifact browser, which do not need it.
 
     Runs under `_run_lock` -- the SAME lock `/api/pipeline/run` takes -- because both
-    paths call down to `silq.sim.server.get_server()`, a bare unlocked module-global
+    paths call down to `eqrl.sim.server.get_server()`, a bare unlocked module-global
     (`_SERVER`) wrapping one resident libngspice process. That module's own comment says
     "multiple NgSpiceShared instances share state and corrupt each other": two threads
     racing to construct it is not a slow path, it is a WRONG one, and the corruption gets
@@ -171,7 +171,7 @@ def _warm_up() -> None:
         _startup.update(warming=True, ready=False, error=None)
     try:
         with _run_lock:
-            from silq.runtime import prepare
+            from eqrl.runtime import prepare
             prepare()  # Prewarm the watchdog-owned pipeline and all PVT workers.
             get_evaluator("tt", fast=True, channel_loss_db=12.0)
             # Fastest's stage 1 is a corpus lookup, and the kNN tree over the 374,588-record
@@ -182,10 +182,10 @@ def _warm_up() -> None:
             # zero and the run returns no design at all. The Pareto worker pays the same
             # cost through pareto.proposals. Warming it here is what keeps the measured
             # budgets about search instead of about one-time setup.
-            from silq.experiments.fastest_hedge import load_fastest_assets
+            from eqrl.experiments.fastest_hedge import load_fastest_assets
             load_fastest_assets()
             if (REPO_ROOT / POLICY).exists():
-                from silq.experiments.final_comparison import load_policy
+                from eqrl.experiments.final_comparison import load_policy
                 # Absolute: uvicorn's cwd is the operator's, not necessarily the repo
                 # root, and PPO.load resolves a relative path against it.
                 load_policy(str(REPO_ROOT / POLICY))
@@ -210,7 +210,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         import asyncio
-        from silq.runtime import close
+        from eqrl.runtime import close
         await asyncio.to_thread(warmup.join)
         await asyncio.to_thread(close)
 
@@ -323,7 +323,7 @@ def _run_busy_error() -> JSONResponse:
             409, "pipeline_busy", "Still starting up",
             "The server is loading SKY130 device models and the trained policy. "
             "Both that warm-up and a live request drive the one resident ngspice "
-            "process (silq.sim.server.get_server), which is not reentrant, so the "
+            "process (eqrl.sim.server.get_server), which is not reentrant, so the "
             "request cannot start until warm-up releases it.",
             "Wait for the health indicator to show ready -- after "
             "boot -- then try again.")
@@ -424,7 +424,7 @@ def health():
 def sim_refresh():
     """Clear the resident ngspice process's accumulated plot history.
 
-    `silq.sim.server.get_server()` is one libngspice instance held for the life of
+    `eqrl.sim.server.get_server()` is one libngspice instance held for the life of
     this process; every AC/noise/transient/op call leaves a "plot" (ac1, ac2, ...)
     behind that ngspice never frees on its own. Left alone, that grows for as long as
     the dashboard is up and every call gets slower -- measured locally as 200s+ for a
@@ -436,7 +436,7 @@ def sim_refresh():
     if not _run_lock.acquire(blocking=False):
         return _run_busy_error()
     try:
-        from silq.sim.server import get_server
+        from eqrl.sim.server import get_server
         try:
             get_server().destroy_all_plots()
         except Exception as e:
@@ -469,7 +469,7 @@ class GalleryEvaluateRequest(BaseModel):
 def guard_presets():
     presets = [{
         "id": "defaults", "label": "Defaults",
-        "description": "silq.circuits.ctle.DesignVars() as written",
+        "description": "eqrl.circuits.ctle.DesignVars() as written",
         "fields": _human_fields(vars(DesignVars())),
     }]
 
@@ -718,15 +718,15 @@ def _gallery_eye_payload(dv: DesignVars, candidate: dict[str, Any], *, scope: st
     diagnostic used only to reconstruct the matrix that the legacy measurement discards;
     it never reaches a reward or turns a rejected candidate into a valid one.
     """
-    from silq.sim.server import get_server
+    from eqrl.sim.server import get_server
     try:
-        from silq.sim.eye import compute_eye_v2 as eye_function
+        from eqrl.sim.eye import compute_eye_v2 as eye_function
         metric_version = "audited_eye_v2"
     except ImportError:
         # The dashboard can be staged independently of Task 2.  Keeping the fields with
         # null values makes the old measurement's missing BER data explicit, rather than
         # inventing an error count from its height or width.
-        from silq.sim.eye import compute_eye as eye_function
+        from eqrl.sim.eye import compute_eye as eye_function
         metric_version = "legacy_eye"
         scope = f"{scope} Legacy eye output: signed opening and BER fields are unavailable."
 
@@ -952,7 +952,7 @@ def snr_robustness():
         return _api_error(
             404, "artifact_missing", "SNR robustness artifact not generated",
             f"results/{SNR_ARTIFACT} is not on disk.",
-            "Run: PYTHONPATH=src python -m silq.experiments.policy_snr_sweep --specs 24")
+            "Run: PYTHONPATH=src python -m eqrl.experiments.policy_snr_sweep --specs 24")
     inv, rch = doc["snr_invariant"], doc["reachability"]
     return {
         "what": doc["what"],
@@ -1059,7 +1059,7 @@ def design_time():
             "measure_all_spent": prov.get("measure_all_spent"),
             "measure_all_budget": prov.get("measure_all_budget"),
             "unit_warning": "total_evals and measure_all are DIFFERENT units. Do not add or "
-                            "compare them in one sentence -- see silq.experiments.simcount_audit.",
+                            "compare them in one sentence -- see eqrl.experiments.simcount_audit.",
             "wall_clock_s_at_resident_rate": round(prov.get("total_evals", 0) * per_eval, 3),
         },
         "arms": arms,
@@ -1084,7 +1084,7 @@ def design_time():
         "caveats": [
             "PPO training is a ONE-TIME cost that must be amortized over future specs. "
             "The 6-evaluation figure is inference-time design cost, not total cost. The "
-            "break-even curve is computed by silq.experiments.honest_benchmark.",
+            "break-even curve is computed by eqrl.experiments.honest_benchmark.",
             "The strict solve COUNT is at the chance-matched line (see the chance column). "
             "The evaluation-count result is the claim; the solve count is not.",
             "The sweep baseline ran at TT only, like the optimization. Neither number is a "
@@ -1321,7 +1321,7 @@ class SchematicRequest(BaseModel):
 @app.get("/api/schematic")
 def schematic_delivered():
     """The frozen delivered circuit, drawn from its own manifest."""
-    from silq.schematic import render_delivered
+    from eqrl.schematic import render_delivered
     return Response(content=render_delivered(str(RESULTS_DIR / "delivered_circuit.json")),
                     media_type="image/svg+xml")
 
@@ -1330,8 +1330,8 @@ def schematic_delivered():
 def schematic_custom(req: SchematicRequest):
     """Draw an arbitrary candidate -- so the schematic tracks whatever is in the guard
     fields, rather than only ever showing the delivered design."""
-    from silq.circuits.ctle import DesignVars
-    from silq.schematic import render
+    from eqrl.circuits.ctle import DesignVars
+    from eqrl.schematic import render
 
     dv = DesignVars(**_to_si(req.fields)) if req.fields else DesignVars()
     return Response(content=render(dv, title=req.title, subtitle=req.subtitle),
@@ -1348,7 +1348,7 @@ class PipelineRunRequest(BaseModel):
     allow_fallback: bool = False
     mode: str = "auto"
     #: Acceptance constraints in the Spec's own SI units (watts, volts), keyed by the
-    #: fields in silq.pipeline.REQUIREMENT_FIELDS. Null or absent means the competition
+    #: fields in eqrl.pipeline.REQUIREMENT_FIELDS. Null or absent means the competition
     #: default. See that constant for what setting one does and does not change.
     requirements: dict[str, float | None] | None = None
 
@@ -1377,7 +1377,7 @@ class ParseSpecRequest(BaseModel):
 
 #: The modes the dashboard offers, in display order. Auto is the landing choice: the fast
 #: corpus-seeded search, escalating to Thinking only on the specs it does not verify.
-#: `MODES` (silq.pipeline) stays wider; see the comment in `pipeline_defaults` for why
+#: `MODES` (eqrl.pipeline) stays wider; see the comment in `pipeline_defaults` for why
 #: "default" survives in the API but not in the UI.
 UI_MODES = ("auto", "fastest", "thinking")
 
@@ -1426,8 +1426,8 @@ MODE_COPY = {
 
 @app.get("/api/pipeline/defaults")
 def pipeline_defaults():
-    from silq.llm.spec_parser import LABELS, UNITS
-    from silq.pipeline import REQUIREMENT_FIELDS
+    from eqrl.llm.spec_parser import LABELS, UNITS
+    from eqrl.pipeline import REQUIREMENT_FIELDS
 
     return {
         "target_boost_db": DEFAULT_SPEC.target_boost_db,
@@ -1474,8 +1474,8 @@ def pipeline_parse_spec(req: ParseSpecRequest):
     producing -- a fabricated interpretation. So this reports what was actually
     recognised and 422s when that is empty.
     """
-    from silq.llm.spec_parser import BACKENDS, LABELS, UNITS, parse_spec_verbose
-    from silq.pipeline import REQUIREMENT_FIELDS, _TIGHTER_IS_LOWER
+    from eqrl.llm.spec_parser import BACKENDS, LABELS, UNITS, parse_spec_verbose
+    from eqrl.pipeline import REQUIREMENT_FIELDS, _TIGHTER_IS_LOWER
 
     if req.backend not in BACKENDS:
         return _api_error(422, "invalid_request", f'"{req.backend}" is not a parser backend',
@@ -1506,7 +1506,7 @@ def pipeline_parse_spec(req: ParseSpecRequest):
 
     # Which parsed fields steer or score this run. The target and channel steer the
     # search; the REQUIREMENT_FIELDS are acceptance constraints the verification scores
-    # against (silq.pipeline.design(requirements=...)). Everything else (data rate,
+    # against (eqrl.pipeline.design(requirements=...)). Everything else (data rate,
     # supply, Nyquist) is fixed by the simulated environment and is reported as a
     # directional conflict so the user sees what the run cannot honour.
     STEERS = {"target_boost_db", "channel_loss_db"}
@@ -1587,7 +1587,7 @@ def pipeline_parse_spec(req: ParseSpecRequest):
 #
 # Nothing about the architecture changes to report this. The wrappers below call straight
 # through and only read what the frozen functions already return, in the same way
-# `silq.simcount.counting` already wraps `measure_all` to count it. They are installed for
+# `eqrl.simcount.counting` already wraps `measure_all` to count it. They are installed for
 # the duration of one run and removed in a `finally`, and because they rebind module
 # globals, exactly one run at a time is allowed -- a second concurrent request gets a 202
 # error rather than quietly corrupting the first one's narration.
@@ -1613,12 +1613,12 @@ def _pareto_worker(result: dict[str, Any], target: float, channel: float,
     """Measure alternative sizings at TT and publish the Pareto set as it fills in.
 
     Runs after `/api/pipeline/run` has already responded. It touches only the PVT worker
-    pool -- separate processes -- and never `silq.sim.server`'s resident ngspice, which is
+    pool -- separate processes -- and never `eqrl.sim.server`'s resident ngspice, which is
     why it is safe to run without `_run_lock` while the next request is being served.
     """
-    from silq import pareto as pareto_mod
-    from silq import pipeline as pl
-    from silq.pvt_workers import get_pool
+    from eqrl import pareto as pareto_mod
+    from eqrl import pipeline as pl
+    from eqrl.pvt_workers import get_pool
 
     def cancelled() -> bool:
         with _state_lock:
@@ -1682,8 +1682,8 @@ def _emit(stage: str, text: str, kind: str = "note", **extra: Any) -> None:
 @contextmanager
 def _narrating():
     """Report what the frozen pipeline is doing, without changing what it does."""
-    from silq import pipeline as pl
-    from silq.experiments import final_comparison as fc
+    from eqrl import pipeline as pl
+    from eqrl.experiments import final_comparison as fc
 
     orig_load, orig_s1 = fc.load_policy, fc.stage1_rollout
     orig_g32, orig_make = fc.g32_solve, fc.Evaluation.make_eval
@@ -1739,7 +1739,7 @@ def _narrating():
     def rec_design(x):
         """The design a rejected proposal WOULD have been, for the live schematic."""
         try:
-            from silq.circuits.ctle import decode_action
+            from eqrl.circuits.ctle import decode_action
             import dataclasses as _dc
             import numpy as _np
             return _dc.asdict(decode_action(_np.asarray(x)))
@@ -1855,8 +1855,8 @@ def _runtime_unavailable():
 
 @app.post("/api/pipeline/run")
 def pipeline_run(req: PipelineRunRequest):
-    from silq.runtime import get_runtime, ready, NotReady
-    from silq.realtime import LIMITS
+    from eqrl.runtime import get_runtime, ready, NotReady
+    from eqrl.realtime import LIMITS
     if req.mode not in MODES:
         return _api_error(422,"invalid_request","Unknown mode",str(req.mode),"Choose a listed mode.")
     # `fastest` never loads the checkpoint (pipeline.py:829) and `auto` starts with it, so
@@ -1871,7 +1871,7 @@ def pipeline_run(req: PipelineRunRequest):
         # incomplete SNR request used to spend a whole simulator budget on a design the
         # response then threw away as a 422. This is what makes "must not search" true,
         # and it is why the error keeps its own code rather than the generic one.
-        from silq.llm.snr_parser import resolve_snr_request
+        from eqrl.llm.snr_parser import resolve_snr_request
         try:
             resolve_snr_request(req.noise_request,req.channel_loss_db)
         except (ValueError,TypeError,KeyError) as exc:
@@ -1919,9 +1919,9 @@ _pvt_check_lock = threading.Lock()
 @app.post("/api/pipeline/pvt")
 def pipeline_pvt(req: PvtCheckRequest):
     """Check exactly this sizing, with no substitute anchor and no nominal-cache pass."""
-    from silq.runtime import get_runtime, ready, NotReady
-    from silq.circuits.ctle import DesignVars
-    from silq import pipeline as pl
+    from eqrl.runtime import get_runtime, ready, NotReady
+    from eqrl.circuits.ctle import DesignVars
+    from eqrl import pipeline as pl
     try:
         dv=DesignVars(**req.design)
         pl.spec_for(req.target_boost_db,req.channel_loss_db,1.5 if req.tol is None else req.tol,req.requirements)

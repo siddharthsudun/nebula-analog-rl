@@ -35,8 +35,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import ACTION_SPACE, DesignVars
-from silq.specs import DEFAULT_SPEC, hard_pass
+from eqrl.circuits.ctle import ACTION_SPACE, DesignVars
+from eqrl.specs import DEFAULT_SPEC, hard_pass
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,7 +46,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROSE_SITES = ("README.md", "docs/PREREG_G32_ACCEPTANCE.md", "docs/PROBLEM.md",
                "docs/DESIGN_MODES_V2.md", "docs/REPRODUCE.md",
                "docs/RESULTS_INFERENCE_MODES.md", "web/index.html", "site/index.html",
-               "src/silq/circuits/ctle.py", "src/silq/experiments/thinking_starts.py")
+               "src/eqrl/circuits/ctle.py", "src/eqrl/experiments/thinking_starts.py")
 
 #: The area budget the specification sets. Quoted as "0.05 mm²" wherever the margin is.
 AREA_BUDGET_MM2 = 0.05
@@ -227,8 +227,8 @@ EXPECTED_SEED_POOL = 512
 
 def _acceptance_seeds_identical(target_db: float, surrogate, *, pool: int) -> bool:
     """Do the acceptance-filtered restarts equal the unfiltered ones at this target?"""
-    from silq.experiments.thinking_starts import diverse_seeds
-    from silq.pipeline import spec_for
+    from eqrl.experiments.thinking_starts import diverse_seeds
+    from eqrl.pipeline import spec_for
 
     spec = spec_for(target_db, DEFAULT_SPEC.channel_loss_db, 1.5)
     kw = dict(pool=pool)
@@ -247,7 +247,7 @@ def test_quiet_interval_endpoints_are_where_the_prose_says():
     too wide. The step below and above the endpoints is what pins them.
     """
     try:
-        from silq.experiments.fastest_hedge import load_fastest_assets
+        from eqrl.experiments.fastest_hedge import load_fastest_assets
         surrogate, _corpus_x, _radius = load_fastest_assets()
     except Exception as exc:                      # noqa: BLE001 -- asset, not logic
         pytest.skip(f"surrogate corpus unavailable ({exc}); this checks prose against it")
@@ -282,7 +282,7 @@ def test_quiet_interval_is_contiguous_not_just_its_endpoints():
     lucky endpoints with holes between them.
     """
     try:
-        from silq.experiments.fastest_hedge import load_fastest_assets
+        from eqrl.experiments.fastest_hedge import load_fastest_assets
         surrogate, _corpus_x, _radius = load_fastest_assets()
     except Exception as exc:                      # noqa: BLE001 -- asset, not logic
         pytest.skip(f"surrogate corpus unavailable ({exc}); this checks prose against it")
@@ -310,8 +310,8 @@ def test_the_quiet_interval_still_has_the_two_constants_it_was_measured_at():
     """
     import inspect
 
-    from silq.experiments.thinking_starts import diverse_seeds
-    from silq.pipeline import THINKING_SURROGATE_STARTS
+    from eqrl.experiments.thinking_starts import diverse_seeds
+    from eqrl.pipeline import THINKING_SURROGATE_STARTS
 
     assert THINKING_SURROGATE_STARTS == EXPECTED_SURROGATE_STARTS, (
         f"THINKING_SURROGATE_STARTS is now {THINKING_SURROGATE_STARTS}, not "

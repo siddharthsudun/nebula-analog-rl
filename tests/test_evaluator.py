@@ -9,14 +9,14 @@ import io
 
 import pytest
 
-from silq.circuits.ctle import DesignVars
-from silq.guards import (
+from eqrl.circuits.ctle import DesignVars
+from eqrl.guards import (
     ArtifactStore, Check, DeviceOP, GuardConfigError, Invalid, OperatingPoint,
     SearchMonitor, Valid,
 )
-from silq.sim.measures import Measures
-from silq.sim.ngspice_runner import NgspiceError
-from silq.specs import DEFAULT_SPEC
+from eqrl.sim.measures import Measures
+from eqrl.sim.ngspice_runner import NgspiceError
+from eqrl.specs import DEFAULT_SPEC
 
 
 # ---------------------------------------------------------------------------
@@ -79,8 +79,8 @@ def marginal() -> Measures:
 @pytest.fixture
 def wired(monkeypatch, tmp_path):
     """build_evaluator with the simulator faked out."""
-    from silq import evaluator as ev_mod
-    from silq.sim import measures as m_mod
+    from eqrl import evaluator as ev_mod
+    from eqrl.sim import measures as m_mod
 
     monkeypatch.setattr(ev_mod, "probe_operating_point", lambda srv, **kw: sane_op())
     monkeypatch.setattr(m_mod, "measure_all", lambda dv, **kw: marginal())
@@ -129,21 +129,21 @@ class TestBackendGate:
 
     def test_refuses_a_backend_that_cannot_surface_diagnostics(self, tmp_path):
         """Refusing at setup beats returning an evaluator whose check 2 is a no-op."""
-        from silq.evaluator import build_evaluator
+        from eqrl.evaluator import build_evaluator
         with pytest.raises(GuardConfigError, match="check 2"):
             build_evaluator(DEFAULT_SPEC,
                             store=ArtifactStore(tmp_path / "raw"),
                             server_factory=lambda c: FakeServer(FakeNgNoCapture()))
 
     def test_can_be_overridden_deliberately(self, tmp_path):
-        from silq.evaluator import build_evaluator
+        from eqrl.evaluator import build_evaluator
         ev = build_evaluator(DEFAULT_SPEC, store=ArtifactStore(tmp_path / "raw"),
                              server_factory=lambda c: FakeServer(FakeNgNoCapture()),
                              check_backend=False)
         assert ev is not None
 
     def test_missing_ngspice_handle_is_rejected(self, tmp_path):
-        from silq.evaluator import build_evaluator
+        from eqrl.evaluator import build_evaluator
 
         class Bare:
             pass
@@ -176,7 +176,7 @@ class TestComposition:
         assert (v.artifact_dir / "ac.data").read_text().startswith("1.0 2.0")
 
     def test_simulator_error_becomes_invalid_with_nonzero_exit(self, wired, monkeypatch):
-        from silq import evaluator as ev_mod
+        from eqrl import evaluator as ev_mod
         monkeypatch.setattr(ev_mod, "probe_operating_point",
                             lambda srv, **kw: (_ for _ in ()).throw(
                                 NgspiceError("non-convergent: op")))
@@ -187,7 +187,7 @@ class TestComposition:
     def test_measure_all_ok_false_is_a_run_failure_not_a_metric(self, wired, monkeypatch):
         """A zeroed Measures must not reach Tier 4, where it would read as merely
         'implausible' rather than 'the simulation did not run'."""
-        from silq.sim import measures as m_mod
+        from eqrl.sim import measures as m_mod
         monkeypatch.setattr(m_mod, "measure_all", lambda dv, **kw: Measures(ok=False))
         v = wired().evaluate(DV, vdd=1.8)
         assert isinstance(v, Invalid)
@@ -204,10 +204,10 @@ class TestComposition:
         candidate's requested values. Measured: the same design evaluated twice in a row
         changed verdict on 9 of 14 designs.
         """
-        from silq import evaluator as ev_mod
-        from silq.evaluator import make_raw_eval
-        from silq.guards import ArtifactStore
-        from silq.sim import measures as m_mod
+        from eqrl import evaluator as ev_mod
+        from eqrl.evaluator import make_raw_eval
+        from eqrl.guards import ArtifactStore
+        from eqrl.sim import measures as m_mod
 
         # Same stand-ins the `wired` fixture uses; this test owns its server so it can
         # inspect what was primed.
@@ -226,7 +226,7 @@ class TestComposition:
         assert vdd_primed == 1.8
 
     def test_tier2_still_fires_through_the_wiring(self, wired, monkeypatch):
-        from silq import evaluator as ev_mod
+        from eqrl import evaluator as ev_mod
         triode = OperatingPoint(
             devices=(DeviceOP("XM2", vds=0.01, vdsat=0.30),),
             node_voltages={"outp": 1.2}, tail_currents={"Itp": 1e-3, "Itn": 1e-3})
@@ -236,7 +236,7 @@ class TestComposition:
         assert "XM2" in v.reason
 
     def test_tier4_still_fires_through_the_wiring(self, wired, monkeypatch):
-        from silq.sim import measures as m_mod
+        from eqrl.sim import measures as m_mod
         monkeypatch.setattr(m_mod, "measure_all",
                             lambda dv, **kw: Measures(**{**marginal().as_dict(),
                                                          "boost_db": 99.0}))
@@ -244,7 +244,7 @@ class TestComposition:
         assert isinstance(v, Invalid) and v.check is Check.T4_PEAKING
 
     def test_operating_point_can_be_disabled_only_explicitly(self, wired, monkeypatch):
-        from silq import evaluator as ev_mod
+        from eqrl import evaluator as ev_mod
         monkeypatch.setattr(ev_mod, "probe_operating_point",
                             lambda srv, **kw: pytest.fail("should not be probed"))
         ev = wired(with_operating_point=False)
@@ -267,8 +267,8 @@ class TestSetupFailuresStopTheRun:
         """A deck we cannot record is a run we cannot reproduce. This must NOT be
         downgraded to a per-candidate INVALID, or a whole sweep would quietly report
         'every design failed' when the real problem is an unset PDK_ROOT."""
-        from silq import evaluator as ev_mod
-        from silq.sim import measures as m_mod
+        from eqrl import evaluator as ev_mod
+        from eqrl.sim import measures as m_mod
 
         monkeypatch.setattr(ev_mod, "probe_operating_point", lambda srv, **kw: sane_op())
         monkeypatch.setattr(m_mod, "measure_all", lambda dv, **kw: marginal())

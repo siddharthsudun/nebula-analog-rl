@@ -206,7 +206,7 @@ enough to claim, and we are not claiming it.
 
 ### 7.1 The mid-flight source edits
 
-`src/silq/pipeline.py` and `src/silq/experiments/fastest_hedge.py` were edited partway
+`src/eqrl/pipeline.py` and `src/eqrl/experiments/fastest_hedge.py` were edited partway
 through this work by another session, implementing mode-report suggestions *in place*
 rather than as separately-named experiments.
 

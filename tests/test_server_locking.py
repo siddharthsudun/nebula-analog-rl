@@ -13,7 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import server as dashboard_server
-from silq.guards import Check, SearchHalted
+from eqrl.guards import Check, SearchHalted
 
 ROOT = Path(__file__).resolve().parents[1]
 

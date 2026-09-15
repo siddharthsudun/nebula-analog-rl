@@ -355,14 +355,14 @@
           <details class="explainer">
             <summary>What is this checking, and why does it stop early?</summary>
             <div class="explainer-body">
-              <p><code>src/silq/guards.py</code> sits between the simulator and every downstream number. A run returns exactly one of two things: <strong>Valid</strong> (trusted metrics) or <strong>Invalid</strong> (exactly which check failed, and why). There is no silent third option where a broken run reports a plausible-looking zero.</p>
+              <p><code>src/eqrl/guards.py</code> sits between the simulator and every downstream number. A run returns exactly one of two things: <strong>Valid</strong> (trusted metrics) or <strong>Invalid</strong> (exactly which check failed, and why). There is no silent third option where a broken run reports a plausible-looking zero.</p>
               <p>A single evaluation runs its tiers <strong>in order and stops at the first failure</strong>, so this page can only ever show you <em>where</em> a design died, not a full scorecard of all five:</p>
               <ol>
                 <li><strong>Run integrity</strong>: did the simulator exit cleanly and produce output?</li>
                 <li><strong>Circuit sanity</strong>: is the input pair in saturation, is the tail current the one requested, are node voltages inside the rails, is a device pinned at a PDK bound?</li>
                 <li><strong>Corner integrity</strong>: do the process-corner model files actually differ? A one-time startup check, see the button below.</li>
                 <li><strong>Physical plausibility</strong>: is the DC gain, peaking, power, noise, HD3 and eye opening physically reachable, or is "DC gain" secretly negative while "boost" inflates for free?</li>
-                <li><strong>Search pathology</strong>: watches a whole sequence of designs for suspicious patterns. It has no meaning for one design in isolation, so it cannot be demoed here; see <code>silq.guards.SearchMonitor</code>.</li>
+                <li><strong>Search pathology</strong>: watches a whole sequence of designs for suspicious patterns. It has no meaning for one design in isolation, so it cannot be demoed here; see <code>eqrl.guards.SearchMonitor</code>.</li>
               </ol>
             </div>
           </details>

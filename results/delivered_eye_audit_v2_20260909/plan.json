@@ -1,5 +1,5 @@
 {
-  "generator": "silq.experiments.delivered_eye_audit",
+  "generator": "eqrl.experiments.delivered_eye_audit",
   "corners": 45,
   "versions": [
     "frozen_working_tree",
@@ -20,31 +20,31 @@
       "bytes": 41903
     },
     {
-      "path": "src/silq/sim/eye.py",
+      "path": "src/eqrl/sim/eye.py",
       "sha256": "b9b161553315d109e6fe5b75598fcc39858d3d676b7e1934aa4d15255adde290",
       "mtime_ns": 1788946323051657400,
       "bytes": 22879
     },
     {
-      "path": "src/silq/sim/measures.py",
+      "path": "src/eqrl/sim/measures.py",
       "sha256": "e0719d7743a8a06569d153e2be275826bc83f8c2ae940a29259129f141aa8c9c",
       "mtime_ns": 1788778420460593100,
       "bytes": 7904
     },
     {
-      "path": "src/silq/guards.py",
+      "path": "src/eqrl/guards.py",
       "sha256": "41870d334df66eb5139fbb893459de2e405eb3c911e4ed75ab8b8f29fe85dc3b",
       "mtime_ns": 1788536650095355100,
       "bytes": 54287
     },
     {
-      "path": "src/silq/specs.py",
+      "path": "src/eqrl/specs.py",
       "sha256": "11157850537f66c03944310162d8ba63b795172119a8704b1b6f1dd1679261b9",
       "mtime_ns": 1788772310741388200,
       "bytes": 9047
     },
     {
-      "path": "C:/Users/talk2.000/Desktop/Claude/nebula-analog-rl/src/silq/experiments/delivered_eye_audit.py",
+      "path": "C:/Users/talk2.000/Desktop/Claude/nebula-analog-rl/src/eqrl/experiments/delivered_eye_audit.py",
       "sha256": "3b369146e5ee12b443a14899fe6216e2de7d9dd53c83af6a490769feb94e5897",
       "mtime_ns": 1788946323459341600,
       "bytes": 8325

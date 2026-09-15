@@ -14,7 +14,7 @@ plus a 4-mode × 3-spec bench and two single-spec traces described in §2–§4.
 
 > **Applicability — read before quoting §2–§4.** Every measurement in §2, §3 and §4 was
 > taken against the pipeline as it stood **before 02:33 on 06 Sep 2026**. At that time
-> `src/silq/pipeline.py` and `src/silq/experiments/fastest_hedge.py` were edited to
+> `src/eqrl/pipeline.py` and `src/eqrl/experiments/fastest_hedge.py` were edited to
 > implement suggestions 2 and 3 of §6 *in place*, rather than as the separately-named arms
 > §6 calls for. `thinking` now stops at the first rollout that reaches target, and
 > `fastest` now falls back to `PREREG["r"]` when its hedge is rejected. Consequently the
@@ -33,7 +33,7 @@ plus a 4-mode × 3-spec bench and two single-spec traces described in §2–§4.
 
 ## 1. What the modes actually are
 
-From `src/silq/pipeline.py`. Every mode runs the **same** frozen PPO stage 1 and the
+From `src/eqrl/pipeline.py`. Every mode runs the **same** frozen PPO stage 1 and the
 **same** frozen `g32_solve`; only the inference-time search budget differs.
 
 | mode | stage-2 budget `r` | stop tolerance | stage-1 rollouts |
@@ -224,7 +224,7 @@ refinement budget is not.**
 All of these are new, separately-named arms reported on a fresh **nonzero** `--spec-seed`.
 None edits `g32_solve`, the guard, the reward, or any recorded number. The precedent for a
 mode owning its own stage-2 without touching frozen code already exists: `fastest` does it
-via `silq.experiments.fastest_hedge.fastest_stage2`.
+via `eqrl.experiments.fastest_hedge.fastest_stage2`.
 
 1. **Re-scale `accurate` onto restarts rather than budget.** Same rough cost envelope,
    pointed at the constraint that binds. Concretely: N restarts at `r = PREREG["r"]`

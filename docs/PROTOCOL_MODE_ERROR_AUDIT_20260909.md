@@ -150,7 +150,7 @@ claims. It refuses existing output directories; it never deletes historical data
 Proposed commands, not executed:
 
 ```text
-python -m silq.experiments.mode_error_audit
-python -m silq.experiments.mode_error_audit --execute
-python -m silq.experiments.mode_error_report --input results/mode_error_audit_20260909/observations.json --out results/mode_error_audit_20260909/report.json
+python -m eqrl.experiments.mode_error_audit
+python -m eqrl.experiments.mode_error_audit --execute
+python -m eqrl.experiments.mode_error_report --input results/mode_error_audit_20260909/observations.json --out results/mode_error_audit_20260909/report.json
 ```

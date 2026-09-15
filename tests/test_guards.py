@@ -17,15 +17,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import DesignVars
-from silq.guards import (
+from eqrl.circuits.ctle import DesignVars
+from eqrl.guards import (
     ArtifactStore, Check, DeviceOP, EvalRecord, GuardConfigError, GuardedEvaluator,
     GuardError, Invalid, OperatingPoint, RunArtifacts, SearchHalted, SearchMonitor, Valid,
     check_circuit_sanity, check_corner_integrity, check_physical_plausibility,
     check_run_integrity, theoretical_eye_v_max_mv,
 )
-from silq.sim.measures import Measures
-from silq.specs import DEFAULT_SPEC, Spec
+from eqrl.sim.measures import Measures
+from eqrl.specs import DEFAULT_SPEC, Spec
 
 
 # ---------------------------------------------------------------------------
@@ -609,7 +609,7 @@ class TestVerdictContract:
         assert v.is_valid
 
     def test_every_check_has_a_tier(self):
-        from silq.guards import TIER_OF
+        from eqrl.guards import TIER_OF
         for c in Check:
             assert c in TIER_OF, f"{c} has no tier assignment"
 
@@ -636,7 +636,7 @@ class TestGuardedEvaluator:
 
     def _eval(self, store, tmp_path, *, measures=None, op=None, raises=None,
               monitor=None):
-        from silq.guards import GuardedEvaluator
+        from eqrl.guards import GuardedEvaluator
 
         def raw(dv, *, artifacts, vdd, **kw):
             if raises is not None:
@@ -668,7 +668,7 @@ class TestGuardedEvaluator:
             ev.verify_corners()
 
     def test_corner_verification_runs_and_caches(self, store, tmp_path):
-        from silq.guards import GuardedEvaluator
+        from eqrl.guards import GuardedEvaluator
         calls = []
 
         def probe(corner: str) -> float:
@@ -684,7 +684,7 @@ class TestGuardedEvaluator:
         assert len(calls) == 4
 
     def test_corner_verification_reports_a_dead_include(self, store, tmp_path):
-        from silq.guards import GuardedEvaluator
+        from eqrl.guards import GuardedEvaluator
         ev = GuardedEvaluator(lambda *a, **k: None, DEFAULT_SPEC, store,
                               corner_probe=lambda c: 0.45)
         assert_rejected(ev.verify_corners(("tt", "ss")), Check.T3_CORNER_IDENTICAL)
@@ -755,7 +755,7 @@ class TestGuardedEvaluator:
         first evaluation. That is the guard working. The fix belongs in measures.py
         (measure the stubbed quantities, or mark them explicitly unmeasured), not in
         this threshold."""
-        from silq.sim.measures import Measures as M
+        from eqrl.sim.measures import Measures as M
         stubbed = M(dc_gain_db=5.0, peak_gain_db=14.0, boost_db=9.0, peak_freq_ghz=2.0,
                     hd3_db=-40.0, noise_vrms=1.0e-3,        # <- the fast-mode literals
                     power_w=3.6e-3, area_mm2=0.002,
@@ -768,8 +768,8 @@ class TestGuardedEvaluator:
         assert ex.value.check is Check.T5_TOO_GOOD
 
     def test_seal_blocks_direct_measure_all(self):
-        from silq import guards
-        from silq.sim import measures as _m
+        from eqrl import guards
+        from eqrl.sim import measures as _m
         original = _m.measure_all
         try:
             guards.seal_direct_access()
@@ -786,7 +786,7 @@ class TestGuardedEvaluator:
 
 def _sim_available() -> bool:
     try:
-        from silq.circuits import pdk
+        from eqrl.circuits import pdk
         import shutil as _sh
         return pdk.available() and _sh.which("ngspice") is not None
     except Exception:                              # noqa: BLE001 - availability probe only
@@ -802,8 +802,8 @@ class TestAgainstRealSimulator:
     """
 
     def test_shorted_output_netlist(self, store):
-        from silq.sim.ngspice_runner import ac, NgspiceError
-        from silq.circuits.ctle import netlist
+        from eqrl.sim.ngspice_runner import ac, NgspiceError
+        from eqrl.circuits.ctle import netlist
         deck = netlist(DesignVars(), analysis="none")
         deck = deck.replace(".end", "Rshort outp outn 0.001\n.end")
         a = store.new_run(case="shorted_output")
@@ -816,10 +816,10 @@ class TestAgainstRealSimulator:
         assert (a.directory / "netlist.cir").exists()
 
     def test_missing_model_file(self, store, monkeypatch):
-        from silq.circuits import pdk
+        from eqrl.circuits import pdk
         monkeypatch.setattr(pdk, "sky130_lib", lambda: Path("/nonexistent/sky130.lib.spice"))
-        from silq.sim.ngspice_runner import ac, NgspiceError
-        from silq.circuits.ctle import netlist
+        from eqrl.sim.ngspice_runner import ac, NgspiceError
+        from eqrl.circuits.ctle import netlist
         with pytest.raises((NgspiceError, FileNotFoundError)):
             ac(netlist(DesignVars(), analysis="none"))
 

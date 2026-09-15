@@ -44,7 +44,7 @@ test on never-seen specs at a rate **above its own per-method matched chance lin
 
 ## 2. The instrument — FROZEN HERE, BEFORE ANY RUN
 
-`src/silq/envs/sequential_env.py`, opt-in third branch of `_shaped`:
+`src/eqrl/envs/sequential_env.py`, opt-in third branch of `_shaped`:
 
 ```
 TARGET_PRICE_REF_DB = 1.5                      # dB, frozen
@@ -82,7 +82,7 @@ both are given, because setting both would price the target twice and put it bac
 
 ## 3. What does not change
 
-Training is `python -m silq.agents.train_sequential` with **the manifest of
+Training is `python -m eqrl.agents.train_sequential` with **the manifest of
 `results/seq_clean40k_train.json` reproduced exactly**, plus `--target-weight W` and a new
 `--out`:
 
@@ -150,11 +150,11 @@ The Stage-A-selected model, and the frozen `seq_clean40k` control, each evaluate
 **seed 20260915**:
 
 ```
-python -m silq.experiments.target_audit --model results/seq_tc_<W>.zip \
+python -m eqrl.experiments.target_audit --model results/seq_tc_<W>.zip \
     --spec-seed 20260915 --specs 32 --budget 20 --tol 1.5 --fresh-restarts \
     --out results/target_audit_freshrestart_seed20260915.json
 
-python -m silq.experiments.target_audit --model results/seq_clean40k.zip \
+python -m eqrl.experiments.target_audit --model results/seq_clean40k.zip \
     --spec-seed 20260915 --specs 32 --budget 20 --tol 1.5 --fresh-restarts \
     --out results/target_audit_freshrestart_ctl_seed20260915.json
 ```

@@ -1,7 +1,7 @@
 import importlib.util
 import json
 from pathlib import Path
-from silq.experiments.noise_holdout import regressed, cases
+from eqrl.experiments.noise_holdout import regressed, cases
 
 spec = importlib.util.spec_from_file_location('noise_watchdog', Path(__file__).parents[1]/'scripts'/'supervise_noise_pilot.py')
 watchdog = importlib.util.module_from_spec(spec)
@@ -42,7 +42,7 @@ def test_nonfinite_reward_stops_callback(tmp_path):
     import numpy as np
     import gymnasium as gym
     from stable_baselines3 import PPO
-    from silq.agents.train_noise_pilot import _make_callback
+    from eqrl.agents.train_noise_pilot import _make_callback
     import time
     import pytest
     class Broken(gym.Env):
@@ -62,7 +62,7 @@ def test_callback_cooperative_deadline_keeps_finite_negative_rewards(tmp_path):
     import numpy as np
     import gymnasium as gym
     from stable_baselines3 import PPO
-    from silq.agents.train_noise_pilot import _make_callback
+    from eqrl.agents.train_noise_pilot import _make_callback
     import time
     class Healthy(gym.Env):
         observation_space = gym.spaces.Box(-1., 1., (26,))

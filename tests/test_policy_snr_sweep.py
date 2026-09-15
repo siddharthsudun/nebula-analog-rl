@@ -8,11 +8,11 @@ import math
 import numpy as np
 import pytest
 
-from silq.experiments.policy_snr_sweep import (
+from eqrl.experiments.policy_snr_sweep import (
     SNR_POINTS_DB, measured_snr_db, semi_analytic_ber, sigma_for_snr, spearman, wilson,
 )
-from silq.sim.channel import channel_response
-from silq.sim.eye import compute_eye_v2
+from eqrl.sim.channel import channel_response
+from eqrl.sim.eye import compute_eye_v2
 
 
 def _flat_response(n: int = 400):

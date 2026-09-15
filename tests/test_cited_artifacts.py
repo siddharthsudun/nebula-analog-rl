@@ -107,11 +107,11 @@ def _flat(s: str) -> str:
 #: file a reader cannot open, and it keeps the exemption from being a silent shrug.
 REGENERABLE = {
     "results/seq_agent.zip":
-        "python -m silq.agents.train_sequential --out results/seq_agent.zip",
+        "python -m eqrl.agents.train_sequential --out results/seq_agent.zip",
     "results/surrogate_corpus.npz":
-        "python -m silq.experiments.build_surrogate_corpus  (~20 min from results/raw)",
+        "python -m eqrl.experiments.build_surrogate_corpus  (~20 min from results/raw)",
     "results/feasibility_band.json":
-        "python -m silq.experiments.feasibility_band",
+        "python -m eqrl.experiments.feasibility_band",
     # Prospective: docs/PROTOCOL_MODE_ERROR_AUDIT_20260909.md specifies this output path
     # for a run that has NOT been performed and is not authorized here. What was verified
     # is the plan path -- the module runs without --execute and prints its budgets without
@@ -119,7 +119,7 @@ REGENERABLE = {
     # measure_all calls / 144 h of child time, so this row states how to obtain the file,
     # not that obtaining it is cheap. Do not silently shrink the sample to make it so.
     "results/mode_error_audit_20260909/observations.json":
-        "PYTHONPATH=src python -m silq.experiments.mode_error_audit --execute "
+        "PYTHONPATH=src python -m eqrl.experiments.mode_error_audit --execute "
         "--out-dir results/mode_error_audit_20260909  (plan-only without --execute)",
 }
 

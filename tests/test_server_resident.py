@@ -13,7 +13,7 @@ import shutil
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import DesignVars, netlist
+from eqrl.circuits.ctle import DesignVars, netlist
 
 # Same design as results/final_report.json, so failures are directly comparable
 # to the committed PVT table.
@@ -23,7 +23,7 @@ DESIGN = DesignVars(w_in=11.83e-6, l_in=0.15e-6, i_tail=1e-4, rs=5000.0,
 
 def _server_available() -> bool:
     try:
-        from silq.circuits import pdk
+        from eqrl.circuits import pdk
         if not pdk.available():
             return False
         # Must go through the project's factory. PySpice caches shared instances by id
@@ -31,7 +31,7 @@ def _server_available() -> bool:
         # claim id 0 for the intolerant base class and every later NgspiceServer in the
         # process would silently inherit it — which is exactly how the ff corner started
         # failing on benign "Note:" output.
-        from silq.sim.server import _tolerant_shared_instance
+        from eqrl.sim.server import _tolerant_shared_instance
         _tolerant_shared_instance()
         return True
     except Exception:                              # noqa: BLE001 - availability probe
@@ -44,7 +44,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def srv():
-    from silq.sim.server import NgspiceServer
+    from eqrl.sim.server import NgspiceServer
     s = NgspiceServer("tt")
     yield s
     s.close()
@@ -64,7 +64,7 @@ class TestAgreesWithSubprocess:
         runner `dec 50`, so argmax lands on neighbouring grid points. Gain and boost are
         grid-independent and must agree tightly.
         """
-        from silq.sim.ngspice_runner import ac as sub_ac
+        from eqrl.sim.ngspice_runner import ac as sub_ac
 
         r = srv.ac(DESIGN)
         dc_s, boost_s, fpk_s = _peak(r["mag_db"], r["freq"])
@@ -120,7 +120,7 @@ class TestCornersReallyChange:
         )
 
     def test_guard_layer_corner_check_passes_on_real_models(self, srv):
-        from silq.guards import check_corner_integrity
+        from eqrl.guards import check_corner_integrity
 
         def probe(corner: str) -> float:
             srv.set_corner(corner)

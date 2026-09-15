@@ -34,10 +34,10 @@ for _p in (str(ROOT), str(ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from silq import pipeline as pl                                    # noqa: E402
-from silq.experiments import final_comparison as fc                # noqa: E402
-from silq.sim.measures import Measures                             # noqa: E402
-from silq.specs import DEFAULT_SPEC                                # noqa: E402
+from eqrl import pipeline as pl                                    # noqa: E402
+from eqrl.experiments import final_comparison as fc                # noqa: E402
+from eqrl.sim.measures import Measures                             # noqa: E402
+from eqrl.specs import DEFAULT_SPEC                                # noqa: E402
 
 #: A design that passes every check EXCEPT, for some bands, where its peak sits. Every
 #: other value is comfortably inside the competition limits so only the band is in play.
@@ -113,7 +113,7 @@ class TestFeasibilityFollowsTheUsersBand:
 
     def test_the_guard_is_never_relaxed_by_a_user_requirement(self):
         """Acceptance is the user's to set. Device physics is not."""
-        src = _source("src/silq/experiments/final_comparison.py")
+        src = _source("src/eqrl/experiments/final_comparison.py")
         block = src[src.index("def guard_for("):src.index("def make_eval(")]
         assert "DEFAULT_SPEC" in block, (
             "guard_for must keep building on DEFAULT_SPEC; a user-relaxed guard would let "
@@ -174,7 +174,7 @@ class TestNothingMovesAtTheCompetitionDefaults:
         and the frozen order silently changes on runs that are reproducing the benchmark,
         and nothing else in this repo would notice.
         """
-        src = _source("src/silq/pipeline.py")
+        src = _source("src/eqrl/pipeline.py")
         i = src.index("band_first = search_band is not None")
         block = src[i:i + 1400]
         assert "reached = _run_seeds(_corpus_seeds(None)) if band_first else False" in block, (
@@ -190,7 +190,7 @@ class TestNothingMovesAtTheCompetitionDefaults:
         above and would still measure faster on a band ask, while quietly paying for five
         blind rollouts nobody needed.
         """
-        tree = ast.parse(_source("src/silq/pipeline.py"))
+        tree = ast.parse(_source("src/eqrl/pipeline.py"))
 
         def _rollout_loops(node):
             return [n for n in ast.walk(node) if isinstance(n, ast.For)
@@ -215,7 +215,7 @@ class TestNothingMovesAtTheCompetitionDefaults:
         the check happens to pass today because `_spent()` starts at 0, but the guard is
         what makes that true by construction rather than by arithmetic accident.
         """
-        src = _source("src/silq/pipeline.py")
+        src = _source("src/eqrl/pipeline.py")
         i = src.index("def _run_seeds(seeds)")
         block = src[i:i + 900]
         assert "if candidates and _spent() >= THINKING_MEASURE_ALL_BUDGET:" in block
@@ -234,7 +234,7 @@ class TestTheBandReachesTheRepairLoop:
 
     def test_g32_solve_aims_at_the_requested_bands_geometric_mean(self):
         """The aim point is derived the same way `plane_from_probe` derives its own."""
-        src = _source("src/silq/experiments/final_comparison.py")
+        src = _source("src/eqrl/experiments/final_comparison.py")
         i = src.index("def g32_solve(")
         block = src[i:i + 3000]
         assert "band is None" in block, "g32_solve must honour a caller-supplied band"
@@ -243,7 +243,7 @@ class TestTheBandReachesTheRepairLoop:
 
     def test_every_g32_solve_call_site_passes_the_band(self):
         """A call site that forgets `band=` silently reverts to the old behaviour."""
-        tree = ast.parse(_source("src/silq/pipeline.py"))
+        tree = ast.parse(_source("src/eqrl/pipeline.py"))
         sites = [n for n in ast.walk(tree)
                  if isinstance(n, ast.Call)
                  and isinstance(n.func, ast.Attribute) and n.func.attr == "g32_solve"]
@@ -254,7 +254,7 @@ class TestTheBandReachesTheRepairLoop:
                 f"would keep aiming at the probe's band whatever the user asked for")
 
     def test_the_search_evaluator_is_built_with_the_acceptance_spec(self):
-        tree = ast.parse(_source("src/silq/pipeline.py"))
+        tree = ast.parse(_source("src/eqrl/pipeline.py"))
         sites = [n for n in ast.walk(tree)
                  if isinstance(n, ast.Call)
                  and isinstance(n.func, ast.Attribute) and n.func.attr == "make_eval"]
@@ -262,7 +262,7 @@ class TestTheBandReachesTheRepairLoop:
 
     def test_fastest_seeds_the_corpus_lookup_from_the_users_band(self):
         """The corpus records each design's own peak; the lookup must be given the band."""
-        src = _source("src/silq/pipeline.py")
+        src = _source("src/eqrl/pipeline.py")
         i = src.index('elif mode == "fastest":')
         block = src[i:i + 1500]
         assert "seed_spec = user_spec if req_diff" in block, (
@@ -309,7 +309,7 @@ class TestAnUnreachableBandStillReturnsACircuit:
 
     def test_the_result_says_when_it_fell_back(self):
         """A relaxed answer that did not announce itself would be the worst outcome."""
-        src = _source("src/silq/pipeline.py")
+        src = _source("src/eqrl/pipeline.py")
         assert "fell_back_to_competition_bar" in src
         i = src.index("steering_relaxed = False")
         block = src[i:i + 1800]

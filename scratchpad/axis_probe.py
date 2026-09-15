@@ -7,11 +7,11 @@ import json, os, sys, numpy as np
 from pathlib import Path
 REPO = Path(r"C:\Users\talk2.000\Desktop\Claude\nebula-analog-rl")
 sys.path.insert(0, str(REPO / "src")); os.chdir(REPO)
-_NG = Path(os.environ["USERPROFILE"]) / "silq-ngspice"
+_NG = Path(os.environ["USERPROFILE"]) / "eqrl-ngspice"
 os.environ.setdefault("PDK_ROOT", str(Path(os.environ["USERPROFILE"]) / "pdk"))
 os.environ["PATH"] = f"{_NG / 'shim'};{_NG / 'Library' / 'bin'};{os.environ['PATH']}"
-from silq import pipeline as pl
-from silq.experiments import final_comparison as fc
+from eqrl import pipeline as pl
+from eqrl.experiments import final_comparison as fc
 
 TGT, CHAN, SI = 11.0, 12.5, 4
 

@@ -15,9 +15,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from silq.circuits.ctle import ACTION_SPACE
-from silq.experiments.g32_peak_report import AC_FSTART_GHZ, slopes
-from silq.experiments.g32_selfcal import (
+from eqrl.circuits.ctle import ACTION_SPACE
+from eqrl.experiments.g32_peak_report import AC_FSTART_GHZ, slopes
+from eqrl.experiments.g32_selfcal import (
     MIN_ABS_D_BOOST, MIN_ABS_D_LN_PEAK, PROBE_H, calibrate_plane,
 )
 
@@ -299,7 +299,7 @@ def test_calibrated_plane_does_not_inherit_the_frozen_probes_provenance():
 def test_probe_step_matches_the_one_the_frozen_plane_was_measured_with():
     """Read as source text: importing g32_peak_probe would bootstrap the simulator."""
     src = (Path(__file__).resolve().parents[1]
-           / "src/silq/experiments/g32_peak_probe.py").read_text(encoding="utf-8")
+           / "src/eqrl/experiments/g32_peak_probe.py").read_text(encoding="utf-8")
     m = re.search(r"^PROBE_H\s*=\s*([0-9.eE+-]+)", src, re.M)
     assert m, "PROBE_H not found in g32_peak_probe.py"
     assert float(m.group(1)) == PROBE_H
@@ -316,7 +316,7 @@ def test_frozen_constants_still_match_the_live_plane():
     probe = Path(__file__).resolve().parents[1] / "results/g32_peak_probe.json"
     if not probe.exists():
         pytest.skip("frozen probe artifact not present")
-    from silq.experiments.g32_peak_report import plane_from_probe
+    from eqrl.experiments.g32_peak_report import plane_from_probe
     live = plane_from_probe(str(probe))
     # `source` echoes the path the caller passed, so it differs between an absolute path
     # here and the relative one final_comparison uses. Every entry that carries meaning is

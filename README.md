@@ -72,7 +72,7 @@ The judges (Astera Labs) are not asking us to invent RL-for-analog. That lineage
 open PDK that hits a hard spec across PVT.** That is an execution problem, and the part of
 it we have executed is verification.
 
-1. **The scoring is guarded** (`src/silq/guards.py`). Twenty checks in five tiers run
+1. **The scoring is guarded** (`src/eqrl/guards.py`). Twenty checks in five tiers run
    against the operating point of the actual candidate, and `measure_all` is sealed so no
    number can reach a reward unvalidated. This is not decoration: **86% of the designs
    that pass all eight published specs are not valid circuits**: 24 of 28, measured
@@ -88,7 +88,7 @@ it we have executed is verification.
 3. **The simulator loop is fast enough to train on.** 77.5 ms per AC evaluation against
    6370.5 ms for a fresh ngspice subprocess, a measured 82.2× (`results/speedup.json`).
 4. **LLM front-end (the bonus)**: natural-language spec → `Spec` object, with a keyword
-   fallback when no API key is set. (`src/silq/llm/spec_parser.py`)
+   fallback when no API key is set. (`src/eqrl/llm/spec_parser.py`)
 
 ## Architecture
 
@@ -126,15 +126,15 @@ it we have executed is verification.
 | Path | What lives here |
 |---|---|
 | `docs/` | Problem statement, roadmap, references, design decisions |
-| `src/silq/specs.py` | The `Spec` dataclass, target numbers as code |
-| `src/silq/circuits/` | Parametric CTLE + DFE netlist generators |
-| `src/silq/sim/` | ngspice/PySpice runner + measurement extraction |
-| `src/silq/envs/` | Gymnasium environment wrapping the testbench |
-| `src/silq/agents/` | RL training + evaluation scripts |
-| `src/silq/guards.py` | The validation layer: 20 checks, 5 tiers, sealed measurement path |
-| `src/silq/baselines/` | Random + Bayesian (Optuna) sweeps; CMA-ES lives in `experiments/honest_benchmark.py` |
-| `src/silq/experiments/` | Measurement scripts; each writes its own artifact into `results/` |
-| `src/silq/llm/` | Natural-language spec parser |
+| `src/eqrl/specs.py` | The `Spec` dataclass, target numbers as code |
+| `src/eqrl/circuits/` | Parametric CTLE + DFE netlist generators |
+| `src/eqrl/sim/` | ngspice/PySpice runner + measurement extraction |
+| `src/eqrl/envs/` | Gymnasium environment wrapping the testbench |
+| `src/eqrl/agents/` | RL training + evaluation scripts |
+| `src/eqrl/guards.py` | The validation layer: 20 checks, 5 tiers, sealed measurement path |
+| `src/eqrl/baselines/` | Random + Bayesian (Optuna) sweeps; CMA-ES lives in `experiments/honest_benchmark.py` |
+| `src/eqrl/experiments/` | Measurement scripts; each writes its own artifact into `results/` |
+| `src/eqrl/llm/` | Natural-language spec parser |
 | `testbench/` | Raw SPICE testbenches (hand-written, for debugging) |
 
 ## Quickstart
@@ -146,7 +146,7 @@ both verified paths, macOS and native Windows. After that:
 pip install -r requirements.txt
 
 # sanity-check the simulator loop end to end
-PYTHONPATH=src python -m silq.sim.ngspice_runner --selftest
+PYTHONPATH=src python -m eqrl.sim.ngspice_runner --selftest
 
 # run the tests
 PYTHONPATH=src python -m pytest tests/ -q
@@ -206,7 +206,7 @@ straight off the trainer's own config files (`results/*_train.json`, nine of the
 - **No policy in this repo was ever trained against corner variation.** `pvt: False` in
   all nine configs, the frozen `seq_clean40k` included. A worst-corner reward path
   exists and works — `self.pvt` selects the lowest-reward V×T corner rather than the
-  nominal one (`src/silq/envs/sequential_env.py:274`) — and no checkpoint has used it.
+  nominal one (`src/eqrl/envs/sequential_env.py:274`) — and no checkpoint has used it.
   Note what it is and is not even when switched on: it sweeps voltage and temperature
   at `self.corner`, a *single* process corner, so it would not by itself amount to
   training across the 45-corner grid the spec table names. Robustness today is
@@ -249,7 +249,7 @@ derived from it are unchanged.
   physics (nothing valid above it across 90 samples); no other range was narrowed.
 - `area` cannot fail as a constraint: every term of `area_mm2` is increasing in its own
   variable, so the upper corner of `ACTION_SPACE` is the true supremum — **0.002227 mm²
-  against a 0.05 mm² budget, a 22× margin** (`src/silq/circuits/ctle.py:62-75`; 200k
+  against a 0.05 mm² budget, a 22× margin** (`src/eqrl/circuits/ctle.py:62-75`; 200k
   log-uniform samples peak at 0.002069, consistent). This is an analytic *bound over the
   whole space*, not a worst case observed in the runs we happened to do. It replaces an
   earlier 0.0113 mm² figure that predated capping the tail current at 1 mA — the mirror

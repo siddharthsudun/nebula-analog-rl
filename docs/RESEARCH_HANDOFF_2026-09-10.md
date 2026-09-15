@@ -41,11 +41,11 @@ record of what was measured and why it was misread — not as a live lead. **Lea
   **"1-Stage CTLE w/ source degeneration (variable Rs, Cs) + 1-Tap DFE."** A two-stage or
   cascaded CTLE is **out of scope** — this was proposed once in this project's history and
   explicitly retracted after the user caught the spec violation. Do not re-propose it.
-- `w_dfe` is deliberately excluded from `ACTION_SPACE` in `src/silq/circuits/ctle.py` — the
+- `w_dfe` is deliberately excluded from `ACTION_SPACE` in `src/eqrl/circuits/ctle.py` — the
   1-tap DFE is receiver-DSP applied at the slicer, not an analog knob. Don't add it back.
 - Frozen artifacts — never modify: `results/seq_clean40k.zip`, `results/delivered_circuit.json`,
-  reward functions/guard thresholds, `src/silq/sim/eye.py::compute_eye` (byte-for-byte),
-  `src/silq/experiments/final_report.py`, `PREREG["tol"] = 1.5` dB. Historical `results/`
+  reward functions/guard thresholds, `src/eqrl/sim/eye.py::compute_eye` (byte-for-byte),
+  `src/eqrl/experiments/final_report.py`, `PREREG["tol"] = 1.5` dB. Historical `results/`
   files are never deleted.
 - No long simulations or training runs without stating bounded cost up front (evals/time)
   before launching.
@@ -64,7 +64,7 @@ record of what was measured and why it was misread — not as a live lead. **Lea
 ## 1. Measured finding: VCM sweep — the headroom theory is WRONG as originally stated
 
 ### Background
-`src/silq/circuits/ctle.py` lines ~196-238 document that the input common-mode voltage
+`src/eqrl/circuits/ctle.py` lines ~196-238 document that the input common-mode voltage
 `VCM` trades tail-mirror headroom against input-pair/load headroom one-for-one (tail node
 sits at `sp = VCM - Vgs1`). The shipped value is `VCM_VDD_RATIO = 0.72` (line ~240), chosen
 because it's the only value where a monotonicity/physics-contract test suite (not a boost
@@ -94,7 +94,7 @@ file: `results/vcm_headroom_sweep.json` (already committed to the repo, 6 rows, 
 
 ### Interpretation (do not restate the monotonic theory as fact — it's falsified)
 - **All 6 points are physically valid circuits** — every device saturated, headroom well
-  clear of the `SATURATION_HEADROOM_V = 0.050` (50 mV) floor in `src/silq/guards.py`, tail
+  clear of the `SATURATION_HEADROOM_V = 0.050` (50 mV) floor in `src/eqrl/guards.py`, tail
   current delivery 97.0–97.9% of requested. The "is this a real circuit" question is fully
   answered: yes, for all 6.
 - **The boost-vs-VCM relationship is NOT monotonic.** It peaks at an interior point
@@ -192,7 +192,7 @@ for AI Infrastructure,"
 https://www.asteralabs.com/resources/blog/pcie-retimers-vs-redrivers-ensuring-signal-integrity-for-ai-infrastructure/
 — their own framing is "a Redriver amplifies blindly; a Retimer actively guarantees signal
 integrity." This project's guard-layer-first methodology (never trust a boost/gain number
-until every device is confirmed saturated with margin — see `src/silq/guards.py`) is the same
+until every device is confirmed saturated with margin — see `src/eqrl/guards.py`) is the same
 philosophy applied to circuit *design* rather than signal *transmission*. Usable as a framing
 line in the presentation, not a technical claim requiring further validation.
 

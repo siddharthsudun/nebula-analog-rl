@@ -4,8 +4,8 @@
 [2026-08-30 04:55:04] W=1.0  loose 29/32  strict 17/32  median|err| 1.282 dB  (over 29 specs)
 [2026-08-30 04:55:04] W=3.0  loose 24/32  strict 15/32  median|err| 1.116 dB  (over 24 specs)
 [2026-08-30 04:55:04] SELECTED W=3.0  (lower median |err|)
-[2026-08-30 04:55:04] launching Stage B TC: silq.experiments.target_audit --model results/seq_tc_w3.zip --spec-seed 20260915 --specs 32 --budget 20 --tol 1.5 --fresh-restarts --out results/target_audit_freshrestart_seed20260915.json
-[2026-08-30 04:55:04] launching Stage B CONTROL: silq.experiments.target_audit --model results/seq_clean40k.zip --spec-seed 20260915 --specs 32 --budget 20 --tol 1.5 --fresh-restarts --out results/target_audit_freshrestart_ctl_seed20260915.json
+[2026-08-30 04:55:04] launching Stage B TC: eqrl.experiments.target_audit --model results/seq_tc_w3.zip --spec-seed 20260915 --specs 32 --budget 20 --tol 1.5 --fresh-restarts --out results/target_audit_freshrestart_seed20260915.json
+[2026-08-30 04:55:04] launching Stage B CONTROL: eqrl.experiments.target_audit --model results/seq_clean40k.zip --spec-seed 20260915 --specs 32 --budget 20 --tol 1.5 --fresh-restarts --out results/target_audit_freshrestart_ctl_seed20260915.json
 [2026-08-30 07:29:09] Stage B TC finished rc=0
 [2026-08-30 07:34:17] Stage B CONTROL finished rc=0
 [2026-08-30 07:34:17] driver done. Primary endpoint NOT computed here -- that runs separately.

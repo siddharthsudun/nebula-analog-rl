@@ -53,7 +53,7 @@ function readNoiseRequest() {
     if (!el.value.trim() || !Number.isFinite(Number(el.value))) throw new Error('Complete the noise, signal, and bandwidth fields.');
     return Number(el.value);
   };
-  const request = {schema: 'silq.snr.request.v2', mode,
+  const request = {schema: 'eqrl.snr.request.v2', mode,
     signal_reference: document.querySelector('#noise-signal-reference').value,
     signal_value_v: value('noise-signal'),
     bandwidth_hz: [value('noise-band-low')*1e6, value('noise-band-high')*1e6]};

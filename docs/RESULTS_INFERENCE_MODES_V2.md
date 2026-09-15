@@ -63,7 +63,7 @@ new control flow around the frozen `stage1_rollout` / `g32_solve` calls, no chan
 either. Both are engineered so their worst case is bounded at "no worse than before"; see
 the evidence in §3/§4 below for whether that bound holds in practice, not just in theory.
 
-### 2.1 Adaptive `thinking` (v1 §6 suggestion 2) — `src/silq/pipeline.py`
+### 2.1 Adaptive `thinking` (v1 §6 suggestion 2) — `src/eqrl/pipeline.py`
 
 **Before:** always ran all 3 restarts (`THINKING_SEED_OFFSETS`), even when the first one
 already reached target — v1 §2's spec 2 example paid 17 evaluations for `default`'s exact
@@ -83,7 +83,7 @@ target-reached condition rather than exhausting their budget looking for somethi
 `mode_detail["adaptive_stopped_early"]` and `mode_detail["rollouts"]` record what happened,
 per design, for provenance.
 
-### 2.2 `fastest` floor (v1 §6 suggestion 3) — `src/silq/experiments/fastest_hedge.py`
+### 2.2 `fastest` floor (v1 §6 suggestion 3) — `src/eqrl/experiments/fastest_hedge.py`
 
 **Before:** `fastest`'s stage-2 budget was always `FASTEST_BUDGET - (1 if hedge spent)`,
 i.e. at most 4 evaluations total, win or lose. v1 §2's spec 2 example burned the same 7

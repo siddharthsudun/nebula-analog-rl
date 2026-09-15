@@ -32,7 +32,7 @@ cma==4.4.4
 # SPICE. PySpice drives libngspice in-process for the resident server, which is what
 # makes RL training on real SPICE practical (~78 ms/eval here vs ~6.4 s subprocess).
 # measure_all() -> get_server() needs it; only the ngspice_runner subprocess path does not.
-# Required, not optional -- it was commented out here while src/silq/sim/server.py imported
+# Required, not optional -- it was commented out here while src/eqrl/sim/server.py imported
 # it, so a fresh install could not run the main path at all.
 # Verified with PySpice 1.5 against ngspice 41 (it logs "Unsupported Ngspice version 41"
 # and works -- PySpice 1.5 predates 41, the warning is not an error) and ngspice 47.
@@ -44,7 +44,7 @@ pytest==9.1.1
 # ---------------------------------------------------------------------------
 # Optional. Nothing above depends on these; the repo runs without them.
 # ---------------------------------------------------------------------------
-# LLM wrapper (bonus). src/silq/llm/spec_parser.py falls back to a keyword heuristic when
+# LLM wrapper (bonus). src/eqrl/llm/spec_parser.py falls back to a keyword heuristic when
 # the package or ANTHROPIC_API_KEY is missing, so a fresh install does not need it.
 #   pip install anthropic==0.122.0
 

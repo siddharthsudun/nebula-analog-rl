@@ -4,8 +4,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from silq.snr_spec import SNRRequest
-from silq.sim.snr_evaluation import signal_calibration, channel_unit_rms, evaluate_snr
+from eqrl.snr_spec import SNRRequest
+from eqrl.sim.snr_evaluation import signal_calibration, channel_unit_rms, evaluate_snr
 
 
 def measured(**kw):
@@ -56,9 +56,9 @@ def test_both_signal_references_normalize_equivalently():
 
 
 def test_interior_failure_gates_result_and_band_reaches_noise(monkeypatch):
-    import silq.sim.snr_evaluation as scorer
-    from silq.sim.measures import Measures
-    from silq.specs import DEFAULT_SPEC
+    import eqrl.sim.snr_evaluation as scorer
+    from eqrl.sim.measures import Measures
+    from eqrl.specs import DEFAULT_SPEC
     data = measured(); data.pop('value_vrms'); data.update(mode='estimated', low_vrms=0., high_vrms=.04, bandwidth_hz=[1e8, 3e9])
     request = SNRRequest.from_dict(data)
     srv = SimpleNamespace(ac_complex=lambda *a, **k: dict(freq=np.array([1e6, 24e9]), H=np.ones(2)))
@@ -69,7 +69,7 @@ def test_interior_failure_gates_result_and_band_reaches_noise(monkeypatch):
         return SimpleNamespace(height_v=0. if bad else .3, width_ui=0. if bad else .8,
             errors=int(bad), count=480, ber=float(bad)/480, sample_phase=7, dfe_tap=.01)
     monkeypatch.setattr(scorer, 'compute_eye_v2', eye)
-    monkeypatch.setattr('silq.envs.sequential_env._shaped', lambda m, *a: (m.eye_v_mv, m.eye_v_mv > 100))
+    monkeypatch.setattr('eqrl.envs.sequential_env._shaped', lambda m, *a: (m.eye_v_mv, m.eye_v_mv > 100))
     _, _, passed, detail = evaluate_snr(srv, None, Measures(), DEFAULT_SPEC, request)
     assert not passed and detail['worst_point_index'] == 2
     assert detail['points'][0]['passed'] and detail['points'][-1]['passed']
@@ -79,12 +79,12 @@ def test_interior_failure_gates_result_and_band_reaches_noise(monkeypatch):
 
 
 def test_nominal_pass_cannot_hide_unknown_failure(monkeypatch):
-    import silq.sim.snr_evaluation as scorer
-    from silq.snr_pipeline import attach_noise_result
-    from silq.circuits.ctle import decode_action
+    import eqrl.sim.snr_evaluation as scorer
+    from eqrl.snr_pipeline import attach_noise_result
+    from eqrl.circuits.ctle import decode_action
     from dataclasses import asdict
-    from silq.sim.measures import Measures
-    monkeypatch.setattr('silq.sim.server.get_server', lambda *a: object())
+    from eqrl.sim.measures import Measures
+    monkeypatch.setattr('eqrl.sim.server.get_server', lambda *a: object())
     monkeypatch.setattr(scorer, 'evaluate_snr', lambda *a, **k: (None, 0., False,
         {'status': 'measured', 'passed': False}))
     result = {'status': 'solved', 'design': asdict(decode_action(np.ones(6)*.5)),

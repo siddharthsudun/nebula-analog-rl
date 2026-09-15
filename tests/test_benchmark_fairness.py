@@ -3,7 +3,7 @@
 TWO DEFECTS, TWO OPT-IN FIXES, ONE PROPERTY THAT MUST HOLD FOR BOTH
 -------------------------------------------------------------------
 1. `honest_benchmark.evaluate()` scored a candidate with `hard_pass` on a direct
-   `measure_all`, never consulting `silq.guards`. The RL policy is trained with the
+   `measure_all`, never consulting `eqrl.guards`. The RL policy is trained with the
    guard on. So the baselines were solving "meet the specs" while RL solved "meet the
    specs AND be a valid circuit". `--require-valid` closes that.
 
@@ -28,9 +28,9 @@ import dataclasses
 
 import pytest
 
-from silq.experiments import honest_benchmark as hb
-from silq.sim.measures import Measures
-from silq.specs import DEFAULT_SPEC, Spec, hard_pass
+from eqrl.experiments import honest_benchmark as hb
+from eqrl.sim.measures import Measures
+from eqrl.specs import DEFAULT_SPEC, Spec, hard_pass
 
 
 # ---------------------------------------------------------------------------

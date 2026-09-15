@@ -13,7 +13,7 @@ configuration, and the delivered result remain unchanged; a fresh revalidation i
 Reproduce:
 
 ```
-PYTHONPATH=src python -m silq.experiments.g32_selfcal_bench
+PYTHONPATH=src python -m eqrl.experiments.g32_selfcal_bench
 ```
 
 ## 1. What was compared

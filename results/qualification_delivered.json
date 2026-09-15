@@ -1,10 +1,10 @@
 {
  "what": "post-design qualification of the delivered SILQ circuit -- measures the frozen circuit, optimizes nothing, changes no recorded number",
- "generated_by": "silq.experiments.qualify_delivered",
+ "generated_by": "eqrl.experiments.qualify_delivered",
  "commit": "a87bea13952c19dbaf27c9a1fc07872ab15ca002",
  "circuit_source": "results/delivered_circuit.json",
  "circuit_commit": "15a7d27de6ba1ba6560fc9eddbc4b6d8a234e9d9",
- "guard": "silq.evaluator.build_evaluator -- the same guard the CLI and dashboard use",
+ "guard": "eqrl.evaluator.build_evaluator -- the same guard the CLI and dashboard use",
  "nominal": {
   "evaluator": "fast=False (full guard: real HD3 and input-referred noise)",
   "target_boost_db": 8.920073128007523,

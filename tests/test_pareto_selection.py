@@ -11,8 +11,8 @@ import itertools
 
 import pytest
 
-from silq import pareto
-from silq.circuits import pdk
+from eqrl import pareto
+from eqrl.circuits import pdk
 
 #: `pareto.finalize` renders a SKY130 netlist for every choice it returns -- that is
 #: exactly what test_every_choice_carries_its_objectives_and_a_netlist pins -- so the
@@ -133,7 +133,7 @@ class TestChoose:
 @needs_pdk
 class TestFinalizeHonesty:
     def _spec(self):
-        from silq.specs import DEFAULT_SPEC
+        from eqrl.specs import DEFAULT_SPEC
         import dataclasses
         return dataclasses.replace(DEFAULT_SPEC, target_boost_db=8.0)
 
@@ -193,7 +193,7 @@ def test_objectives_reject_a_negative_measurement():
 
 @needs_pdk
 def test_stream_ids_reference_and_published_choices_are_stable():
-    from silq.pipeline import spec_for
+    from eqrl.pipeline import spec_for
     spec=spec_for(8,12,1.5)
     primary=item(.005,.0005,.02,8,tag="primary")
     a=item(.003,.0007,.02,8,tag="a")

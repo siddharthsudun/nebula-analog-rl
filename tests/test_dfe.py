@@ -10,7 +10,7 @@ import shutil
 import numpy as np
 import pytest
 
-from silq.circuits.dfe import (dfe_stage_eye, dfe_testbench_netlist, optimal_tap)
+from eqrl.circuits.dfe import (dfe_stage_eye, dfe_testbench_netlist, optimal_tap)
 
 
 def _ngspice():

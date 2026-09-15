@@ -3,10 +3,10 @@ from dataclasses import asdict
 from pathlib import Path
 import json
 import pytest
-from silq import pipeline
-from silq.pvt_repair import apply_pvt_stage
-from silq.pvt_refinement import full_grid_pass
-from silq.envs.pvt import corner_grid
+from eqrl import pipeline
+from eqrl.pvt_repair import apply_pvt_stage
+from eqrl.pvt_refinement import full_grid_pass
+from eqrl.envs.pvt import corner_grid
 
 
 def sample():
@@ -19,7 +19,7 @@ def sample():
 
 
 def test_failed_pvt_can_never_keep_nominal_solved(monkeypatch):
-    import silq.pvt_repair as stage
+    import eqrl.pvt_repair as stage
     result,spec,_=sample();original=copy.deepcopy(result['design'])
     monkeypatch.setattr(stage,'run_repair',lambda *a,**k:dict(accepted=False,status='budget_exhausted',evaluations=45,cost_complete=False))
     apply_pvt_stage(result,spec)
@@ -29,7 +29,7 @@ def test_failed_pvt_can_never_keep_nominal_solved(monkeypatch):
 
 
 def test_success_replaces_actual_design_netlist_and_measurement(monkeypatch,tmp_path):
-    import silq.pvt_repair as stage
+    import eqrl.pvt_repair as stage
     result,spec,artifact=sample()
     artifact['candidate']['id']='anchor'
     (tmp_path/'verified_candidate.cir').write_text('* verified final sizing')
@@ -46,7 +46,7 @@ def test_success_replaces_actual_design_netlist_and_measurement(monkeypatch,tmp_
 
 
 def test_pipeline_defaults_to_pvt_and_explicit_legacy_path_skips_it(monkeypatch):
-    import silq.pvt_repair as stage
+    import eqrl.pvt_repair as stage
     result,spec,_=sample()
     result['spec']={'boost_tol_db':1.5}
     monkeypatch.setattr(pipeline,'_design_nominal',lambda *a,**k:copy.deepcopy(result))
@@ -59,7 +59,7 @@ def test_pipeline_defaults_to_pvt_and_explicit_legacy_path_skips_it(monkeypatch)
 
 
 def test_historical_triage_is_complete_and_does_not_assert_infeasibility():
-    from silq.experiments.pvt_corpus_repair import triage
+    from eqrl.experiments.pvt_corpus_repair import triage
     rows=triage()
     assert len(rows)==22 and len({r['spec_index'] for r in rows})==22
     assert rows[0]['spec_index']==2
@@ -68,15 +68,15 @@ def test_historical_triage_is_complete_and_does_not_assert_infeasibility():
 
 
 def test_snr_pass_cannot_override_failed_pvt(monkeypatch):
-    from silq.snr_pipeline import attach_noise_result
-    from silq.snr_spec import SNRRequest
-    from silq.sim.measures import Measures
-    import silq.sim.snr_evaluation as scorer
+    from eqrl.snr_pipeline import attach_noise_result
+    from eqrl.snr_spec import SNRRequest
+    from eqrl.sim.measures import Measures
+    import eqrl.sim.snr_evaluation as scorer
     result,spec,artifact=sample()
     nominal=next(r for r in artifact['rows'] if r['corner'][0]=='tt' and r['corner'][2]==27)
     result.update(status='pvt_not_verified',pvt={'accepted':False},
         verification=dict(guard_valid=True,passed=True,measures=nominal['measures']))
-    monkeypatch.setattr('silq.sim.server.get_server',lambda *a:object())
+    monkeypatch.setattr('eqrl.sim.server.get_server',lambda *a:object())
     monkeypatch.setattr(scorer,'evaluate_snr',lambda *a,**k:(Measures(),0.,True,{'passed':True,'points':[]}))
     attach_noise_result(result,SNRRequest.from_dict({'mode':'unknown'}),target=spec.target_boost_db,channel=spec.channel_loss_db)
     assert not result['overall_passed']

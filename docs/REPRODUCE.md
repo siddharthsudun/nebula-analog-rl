@@ -47,11 +47,11 @@ PDK           SKY130, sky130_fd_pr__nfet_01v8
 Toolchain environment variables (`scripts/train_supervised.py:toolchain_env`):
 
 ```
-NGSPICE_LIBRARY_PATH  %USERPROFILE%/silq-ngspice/Library/bin/ngspice{}.dll
-SPICE_LIB_DIR         %USERPROFILE%/silq-ngspice/Library/share/ngspice
+NGSPICE_LIBRARY_PATH  %USERPROFILE%/eqrl-ngspice/Library/bin/ngspice{}.dll
+SPICE_LIB_DIR         %USERPROFILE%/eqrl-ngspice/Library/share/ngspice
 PDK_ROOT              %USERPROFILE%/pdk
-PATH                  prepend  silq-ngspice/shim ; silq-ngspice/Library/bin
-PYTHONPATH            src      (silq is NOT pip-installed into .venv)
+PATH                  prepend  eqrl-ngspice/shim ; eqrl-ngspice/Library/bin
+PYTHONPATH            src      (eqrl is NOT pip-installed into .venv)
 ```
 
 ### Known provenance gap
@@ -85,7 +85,7 @@ and `model.predict(deterministic=True)`.
 
 ```bash
 export PYTHONPATH=src
-./.venv/Scripts/python.exe -m silq.experiments.policy_rollout \
+./.venv/Scripts/python.exe -m eqrl.experiments.policy_rollout \
     --model results/seq_clean40k.zip --specs 32 --out results/repro_loose.json
 ```
 
@@ -122,16 +122,16 @@ decision for the team.
    from its rows is conditioned on success. Under `--boost-tol`, success *means*
    |achieved − requested| ≤ tol, so such a correlation is selection on the dependent
    variable — this produced a reported +0.962 for a policy whose unconditioned correlation
-   is +0.114. Use `silq.experiments.target_audit` instead, which records every spec.
+   is +0.114. Use `eqrl.experiments.target_audit` instead, which records every spec.
 
 ## 5. Audit tooling added
 
 Measurement only. Neither changes a reward, a bound, a hyperparameter or a criterion.
 
-- `silq.experiments.target_audit` — unbiased target tracking. Records every spec's full
+- `eqrl.experiments.target_audit` — unbiased target tracking. Records every spec's full
   trajectory whether or not it succeeds, and runs PPO and random search on the **same**
   specs, budget and validity test.
-- `silq.experiments.chance_baseline` — empirical spec-blind expectation, computed from the
+- `eqrl.experiments.chance_baseline` — empirical spec-blind expectation, computed from the
   boosts the system has demonstrably achieved. The reference any retargeting claim must
   beat.
 - `scripts/audit_reproduce.sh` — re-runs the three headline measurements into `repro_*`.
@@ -144,7 +144,7 @@ Measurement only. Neither changes a reward, a bound, a hyperparameter or a crite
 | `results/seq_clean40k_train.json` | its config, as written by the trainer |
 | `results/target_tracking_clean40k.json` | 26 re-simulated designs; the chance-baseline pool |
 | `docs/PROBLEM.md` | the authority for design bounds (`l_in` 0.15–1 µm, line 59) |
-| `src/silq/guards.py` | thresholds and PDK bounds, owned by the project |
+| `src/eqrl/guards.py` | thresholds and PDK bounds, owned by the project |
 | `scripts/audit_reproduce.sh` | determinism check before publishing any number |
 
 ## 7. `l_in` lower bound — verified, unchanged
@@ -167,7 +167,7 @@ limit. **Not changed.**
 
 ## 8. Matched-protocol target audit — results
 
-`silq.experiments.target_audit`, 32 specs, budget 20 evaluations per method, identical
+`eqrl.experiments.target_audit`, 32 specs, budget 20 evaluations per method, identical
 validity test, strict tolerance ±1.5 dB. Artifact: `results/target_audit_clean40k.json`.
 
 | | PPO | Random search |
@@ -262,7 +262,7 @@ a different measurement and must be labelled as one.
 |---|---|
 | specs | 32, from `target_audit.make_specs` — `np.random.default_rng(0)`, per spec `uniform(5,11)` target then `uniform(8,16)` channel, in that order |
 | budget | 20 optimizer evaluations per spec per method |
-| evaluator | `silq.evaluator.build_evaluator(DEFAULT_SPEC, corner="tt", fast=False, channel_loss_db=<spec's channel>)`, one guard cached per channel |
+| evaluator | `eqrl.evaluator.build_evaluator(DEFAULT_SPEC, corner="tt", fast=False, channel_loss_db=<spec's channel>)`, one guard cached per channel |
 | validity | guard-valid (Tiers 1–4). A rejected candidate consumes its evaluation and records nothing |
 | loose criterion (A: feasibility) | `specs.hard_pass` with the target **unscored** — boost judged against the 3–12 dB range |
 | strict criterion (B: retargeting) | loose **and** \|achieved − requested\| ≤ 1.5 dB |
@@ -302,7 +302,7 @@ extended to it. That is the only `.gitignore` change in the freeze commit.
 
 ## 13. What "one simulation" means — measured, not assumed
 
-`silq.experiments.simcount_audit` counts at two chokepoints: `measures.measure_all` and
+`eqrl.experiments.simcount_audit` counts at two chokepoints: `measures.measure_all` and
 `NgspiceServer._analysis`, the single function every SPICE analysis passes through.
 Averaged over 3 specs × 6 steps (`results/simcount_audit.json`):
 
@@ -912,11 +912,11 @@ The claim this record supports, in full and with nothing beyond it:
 ### 20.8 Reproducing this section
 
 ```
-PYTHONPATH=src python -m silq.experiments.final_comparison --gate --spec-seed 3 \
+PYTHONPATH=src python -m eqrl.experiments.final_comparison --gate --spec-seed 3 \
     --first 8 --specs 10 --arms ab          # must print GATE PASSED before anything else
-PYTHONPATH=src python -m silq.experiments.final_comparison --spec-seed 23 \
+PYTHONPATH=src python -m eqrl.experiments.final_comparison --spec-seed 23 \
     --first 0 --specs 40 --arms abc
-PYTHONPATH=src python -m silq.experiments.final_comparison_report
+PYTHONPATH=src python -m eqrl.experiments.final_comparison_report
 ```
 
 The gate re-runs arms A and B on the burned seed-3 development slice and diffs every
@@ -952,7 +952,7 @@ freedom:
 
 ### 21.2 The sweep is stricter than anything already in this record
 
-`src/silq/experiments/pvt_signoff.py`, 990 guarded evaluations.
+`src/eqrl/experiments/pvt_signoff.py`, 990 guarded evaluations.
 
 * Every corner goes through `build_evaluator(fast=False)` — the **full guard layer** and
   **real** HD3 and noise. `experiments/characterize.py` sweeps the same grid but calls
@@ -1043,7 +1043,7 @@ the corner result is an out-of-distribution measurement, and it reads like one.
 ### 21.7 The frozen manifest, and the site
 
 `results/delivered_circuit.json` is the single file anything downstream quotes from. It is
-built by `silq.experiments.freeze_delivered`, which **measures nothing** — it reads the
+built by `eqrl.experiments.freeze_delivered`, which **measures nothing** — it reads the
 artifacts that already exist, checksums them, and refuses to run if the sweep is
 incomplete, if the flagship is not PVT-clean, or if the swept design is not the arm-B
 design for its spec. `--verify` rebuilds and diffs, exiting non-zero on drift.
@@ -1072,8 +1072,8 @@ chance null.
 ### 21.6 Reproducing this section
 
 ```
-PYTHONPATH=src python -m silq.experiments.pvt_signoff
-PYTHONPATH=src python -m silq.experiments.pvt_signoff --report-only   # no simulation
+PYTHONPATH=src python -m eqrl.experiments.pvt_signoff
+PYTHONPATH=src python -m eqrl.experiments.pvt_signoff --report-only   # no simulation
 ```
 
 `results/pvt_signoff_seed23.json` holds every corner of every candidate; the run writes it

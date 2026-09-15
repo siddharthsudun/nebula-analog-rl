@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from silq.experiments.g32_selfcal_bench import (CAL_BUDGET, ERR_ALLOWANCE_DB,
+from eqrl.experiments.g32_selfcal_bench import (CAL_BUDGET, ERR_ALLOWANCE_DB,
                                                 GATE_FIELDS, LOSS_ALLOWANCE,
                                                 validity_gate, verdict)
 
@@ -123,7 +123,7 @@ class TestTheInternalValidityGate:
         """Read as source text, not imported: `final_comparison` performs the Windows
         ngspice bootstrap at import and is unimportable on the PDK-free CI runner. This
         assertion is about code, not environment."""
-        src = (ROOT / "src/silq/experiments/final_comparison.py").read_text(
+        src = (ROOT / "src/eqrl/experiments/final_comparison.py").read_text(
             encoding="utf-8")
         block = src[src.index("def gate("):]
         listed = block[block.index("FIELDS = ["):block.index("SOLVER = [")]
@@ -150,10 +150,10 @@ class TestItCollectsWithoutASimulator:
         env["PYTHONPATH"] = str(ROOT / "src")
         r = subprocess.run(
             [sys.executable, "-c",
-             "import silq.experiments.g32_selfcal_bench as m; "
+             "import eqrl.experiments.g32_selfcal_bench as m; "
              "assert m.verdict and m.validity_gate and m.CAL_BUDGET; "
              "import sys; "
-             "assert 'silq.experiments.final_comparison' not in sys.modules, "
+             "assert 'eqrl.experiments.final_comparison' not in sys.modules, "
              "'imported at module level again'"],
             env=env, capture_output=True, text=True)
         assert r.returncode == 0, r.stderr[-2000:]

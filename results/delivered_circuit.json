@@ -1,6 +1,6 @@
 {
  "what": "the delivered SILQ circuit \u2014 frozen, not to be re-optimized",
- "generated_by": "silq.experiments.freeze_delivered (measures nothing)",
+ "generated_by": "eqrl.experiments.freeze_delivered (measures nothing)",
  "commit": "15a7d27de6ba1ba6560fc9eddbc4b6d8a234e9d9",
  "design": {
   "w_in": 5.5784369934553225e-05,
@@ -19,7 +19,7 @@
   "target_boost_db": 8.920073128007523,
   "channel_loss_db": 14.827656847721286,
   "boost_tol_db": 1.5,
-  "requirement_set": "silq.specs.Spec defaults + this target/channel; dc_gain_db_min=0.0 and boost_target_tol_db=1.5 both ON"
+  "requirement_set": "eqrl.specs.Spec defaults + this target/channel; dc_gain_db_min=0.0 and boost_target_tol_db=1.5 both ON"
  },
  "provenance": {
   "architecture": "PPO (global feasibility) -> G3.2 constrained refinement",
@@ -61,7 +61,7 @@
   "hand_tuning": "none \u2014 the design is exactly what G3.2 returned"
  },
  "measurement": {
-  "instrument": "silq.evaluator.build_evaluator(fast=False) \u2014 full guard layer, real HD3 and noise",
+  "instrument": "eqrl.evaluator.build_evaluator(fast=False) \u2014 full guard layer, real HD3 and noise",
   "ac_sweep": {
    "decade_pts": 40,
    "fstart_hz": 1000000.0,
